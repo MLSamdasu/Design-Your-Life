@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        다크 모드 LaunchTheme: 다크 모드 활성화 시 사용되는 스플래시 테마
+        앱이 라이트 모드를 기본으로 하지만, 시스템 다크 모드 사용자를
+        위해 검정 배경으로 처리한다
+    -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:windowTranslucentStatus">true</item>
+    </style>
+
+    <!--
+        다크 모드 NormalTheme: 다크 모드 시스템 설정에서 Flutter 초기화 후 적용
+    -->
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">?android:colorBackground</item>
+    </style>
+</resources>

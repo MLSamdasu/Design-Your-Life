@@ -1,0 +1,91 @@
+name: design_your_life
+description: "투두, 캘린더, 습관 트래킹, 목표 관리를 하나의 앱에서 처리하는 개인 생산성 대시보드"
+# pub.dev 실수 게시 방지
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  # Dart 3.7 이상 요구 (Flutter 3.29+ 동봉)
+  sdk: '>=3.7.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ── 인증 (Google Sign-In) ─────────────────────────────────────
+  # Google Sign-In (클라이언트 측 OAuth 인증)
+  google_sign_in: 6.2.2
+
+  # ── 상태 관리 (Riverpod 2.x) ─────────────────────────────
+  # Riverpod 메인 패키지 (Provider, StreamProvider 등)
+  flutter_riverpod: 2.6.1
+
+  # ── 라우팅 ──────────────────────────────────────────────
+  # 선언형 라우팅 + 인증 가드 + StatefulShellRoute
+  go_router: 14.8.1
+
+  # ── 로컬 캐시 ────────────────────────────────────────────
+  # 오프라인 고속 캐시 저장소 (IndexedDB/파일 시스템)
+  hive: 2.2.3
+  # Flutter + Hive 통합 초기화 헬퍼
+  hive_flutter: 1.1.0
+
+  # ── UI 컴포넌트 ──────────────────────────────────────────
+  # 월간/주간 캘린더 그리드 위젯
+  table_calendar: 3.2.0
+  # 도넛 차트, 바 차트 등 데이터 시각화
+  fl_chart: 0.70.2
+
+  # ── 유틸리티 ─────────────────────────────────────────────
+  # 날짜 포맷, 다국어 처리 (DateFormat, NumberFormat) - table_calendar 3.2.0이 ^0.20.0 요구
+  intl: 0.20.2
+  # Google Fonts 런타임 다운로드 + 번들링
+  google_fonts: 8.0.2
+  # ── 보안 저장소 ───────────────────────────────────────────
+  # Hive AES 키를 안전하게 저장 (Keychain/Keystore 활용)
+  flutter_secure_storage: 9.2.4
+
+  # ── 로컬 UUID 생성 ─────────────────────────────────────
+  # 로컬 퍼스트 아키텍처: 클라이언트에서 UUID v4를 생성한다
+  uuid: 4.5.1
+
+  # ── Google Calendar 연동 (F17) ────────────────────────────────────────────
+  # Google Calendar API v3 클라이언트
+  googleapis: 14.0.0
+  # Google 인증 HTTP 클라이언트 래퍼 (extension_google_sign_in_as_googleapis_auth 호환 버전)
+  googleapis_auth: 1.6.0
+  # Google Sign-In → googleapis 인증 브릿지
+  extension_google_sign_in_as_googleapis_auth: 2.0.12
+
+  # ── 광고 (Google AdMob) ──────────────────────────────────
+  # 전면 광고(interstitial)와 리워드 광고(rewarded) 지원
+  google_mobile_ads: 5.3.0
+
+  # ── 직렬화 / 불변 객체 ────────────────────────────────────
+  # 수동 fromMap/toMap 패턴 사용 (freezed/json_annotation 미사용)
+  # 향후 코드 생성 도입 시 json_annotation, freezed_annotation 추가
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  # 권장 린트 규칙 집합
+  flutter_lints: 5.0.0
+
+  # Android/iOS 앱 아이콘 자동 생성 (flutter_launcher_icons.yaml 참조)
+  # 사용법: flutter pub run flutter_launcher_icons
+  flutter_launcher_icons: 0.14.3
+
+  # 제거됨: build_runner, riverpod_generator, json_serializable, freezed
+  # 모든 모델이 수동 fromMap/toMap 패턴을 사용하므로 코드 생성 도구가 불필요하다
+
+flutter:
+  uses-material-design: true
+
+  # ── 앱 에셋 ──────────────────────────────────────────────────────────────
+  assets:
+    # 앱 아이콘 소스 파일
+    - assets/icon/
+    # 이미지 리소스 (향후 온보딩 일러스트, 빈 상태 이미지 등 추가)
+    - assets/images/

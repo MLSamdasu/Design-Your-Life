@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    API 21 이상 스플래시 배경 레이아웃
+    windowBackground 애니메이션 최적화를 위해 v21 디렉터리에 별도 정의한다
+    앱 그라디언트 시작 색상(#667eea)과 매칭된다
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 앱 메인 그라디언트의 시작 색상과 매칭되는 배경색 -->
+    <item android:drawable="@color/splash_background"/>
+</layer-list>

@@ -1,0 +1,104 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Firebase 설정 파일 (민감 정보 포함, Git 커밋 금지)
+# CI/CD에서 환경변수로 주입한다
+google-services.json
+GoogleService-Info.plist
+lib/firebase_options.dart
+
+# Android 서명 키 관련 파일 (절대 커밋 금지 - 유출 시 앱 탈취 위험)
+*.keystore
+*.jks
+key.properties
+android/key.properties
+
+# Android 로컬 빌드 환경 설정 (빌드 환경마다 경로가 다름)
+android/local.properties
+
+# 개발 환경 로그 (dev-start.sh/dev-stop.sh 에서 생성)
+.dev-logs/
+
+# 환경 변수
+.env
+.env.local
+.env.*.local
+
+# build_runner 자동 생성 파일 (재생성 가능하므로 선택적 제외)
+# *.g.dart
+# *.freezed.dart
+
+# 앱 아이콘 소스 임시 파일 (App.png에서 자동 생성되는 중간 파일)
+assets/icon/app_icon_source.png
+assets/icon/app_icon_cropped.png
+
+# Flutter 플러그인 자동 생성 (flutter pub get으로 재생성)
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Gradle 캐시 (Android 빌드 시 재생성)
+.gradle/
+android/.gradle/
+
+# iOS 빌드 캐시
+ios/Pods/
+ios/.symlinks/
+
+# macOS 빌드 캐시
+macos/Pods/
+macos/.symlinks/
+
+# 디버그 로그
+*.log
+firebase-debug.log
+firestore-debug.log
+
+# macOS 시스템 파일
+.DS_Store
+**/.DS_Store
+
+# Thumb 파일
+Thumbs.db

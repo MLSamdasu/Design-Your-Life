@@ -1,0 +1,24 @@
+# flutter_launcher_icons 설정 파일
+# flutter pub run flutter_launcher_icons 명령어로 아이콘을 자동 생성한다
+# 자세한 내용: https://pub.dev/packages/flutter_launcher_icons
+
+flutter_launcher_icons:
+  # Android 아이콘 생성 활성화
+  android: true
+  # iOS 아이콘 생성 비활성화 (이 프로젝트는 iOS 미지원)
+  ios: false
+
+  # 기본 앱 아이콘 소스 (1024x1024 이상 권장)
+  image_path: "assets/icon/app_icon.png"
+
+  # Android 적응형 아이콘 설정 (API 26+)
+  # 배경색: 앱 그라디언트 시작 색상 (#667eea)
+  adaptive_icon_background: "#667eea"
+  # 포그라운드 이미지: 동일 아이콘 사용 (중앙 콘텐츠 표시)
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+
+  # 최소 SDK (minSdk와 일치)
+  min_sdk_android: 21
+
+  # 아이콘 형태: 기본값 사용 (Android 시스템이 마스크 적용)
+  # android_format: png

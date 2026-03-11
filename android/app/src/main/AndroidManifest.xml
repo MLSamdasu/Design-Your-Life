@@ -1,0 +1,70 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- 인터넷 접근 권한: Firebase Auth, Firestore, Google Sign-In 연결에 필수 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- 네트워크 상태 감지: 오프라인 배너 표시를 위해 사용 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <application
+        android:label="Design Your Life"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <!-- Flutter 엔진 로딩 중 표시할 NormalTheme 지정 -->
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"/>
+
+            <!-- 앱 런처 진입점 인텐트 필터 -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Flutter 플러그인 자동 등록을 위한 임베딩 버전 선언 -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2"/>
+
+        <!-- AdMob 앱 ID (테스트용 Google 공식 샘플 앱 ID) -->
+        <!-- 프로덕션 배포 시 AdMob 콘솔에서 발급받은 실제 앱 ID로 교체한다 -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
+
+        <!-- Google Sign-In OAuth 클라이언트 ID 플레이스홀더 -->
+        <!-- 실제 배포 시 Firebase Console에서 발급받은 클라이언트 ID로 교체한다 -->
+        <!-- google-services.json 파일을 프로젝트에 추가하면 자동으로 처리된다 -->
+        <meta-data
+            android:name="com.google.android.gms.auth.api.signin.DEFAULT_WEB_CLIENT_ID"
+            android:value="@string/default_web_client_id"/>
+
+    </application>
+
+    <!-- 텍스트 처리 액티비티 쿼리: Flutter 엔진 ProcessTextPlugin 지원 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Google Sign-In 인텐트 처리를 위한 쿼리 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+    </queries>
+
+</manifest>

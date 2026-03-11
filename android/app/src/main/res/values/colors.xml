@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 스플래시 배경색: 앱 그라디언트 시작점 (#667eea = 연보라) -->
+    <!-- 이 값은 앱의 디자인 토큰에서 primary gradient start 색상과 동일하다 -->
+    <color name="splash_background">#667eea</color>
+</resources>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <!--
+    base href는 flutter build 시 --base-href 플래그로 자동 교체된다
+    경로 시작과 끝에 "/" 포함 필수
+  -->
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+
+  <!-- SEO 메타 태그 -->
+  <meta name="description" content="Design Your Life - 투두, 캘린더, 습관 트래킹, 목표 관리를 하나의 앱에서. 오늘을 디자인하세요.">
+  <meta name="keywords" content="투두, 할일, 캘린더, 습관 트래커, 목표 관리, 생산성, 플래너, Design Your Life">
+  <meta name="author" content="Design Your Life">
+
+  <!-- Open Graph (SNS 공유 시 미리보기) -->
+  <meta property="og:title" content="Design Your Life - 오늘을 디자인하다">
+  <meta property="og:description" content="투두, 캘린더, 습관 트래킹, 목표 관리를 하나의 앱에서 처리하는 개인 생산성 대시보드">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="icons/Icon-512.png">
+
+  <!-- 테마 색상: 앱 메인 퍼플 (#7C3AED) -->
+  <meta name="theme-color" content="#7C3AED">
+
+  <!-- PWA / 모바일 웹앱 메타 태그 -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Design Your Life">
+
+  <!-- 뷰포트 설정 (반응형 레이아웃) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Apple Touch 아이콘 (iOS 홈 화면 추가 시 사용) -->
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <!-- 파비콘 -->
+  <link rel="icon" type="image/png" href="favicon.png"/>
+
+  <!-- PWA 매니페스트 -->
+  <link rel="manifest" href="manifest.json">
+
+  <!-- 페이지 제목 -->
+  <title>Design Your Life - 오늘을 디자인하다</title>
+
+  <!--
+    CanvasKit 렌더러 강제 사용 설정
+    보안 스펙에 따라 XSS 방어를 위해 CanvasKit(WASM) 렌더러를 사용한다
+    HTML 렌더러는 DOM 직접 조작 가능성이 있어 보안상 취약하다
+    (spec-security-analysis.md 4.2절 참조)
+  -->
+  <script>
+    // Flutter 웹 렌더러를 canvaskit으로 강제 지정한다
+    // HTML 렌더러로의 자동 폴백을 방지한다
+    window.flutterWebRenderer = "canvaskit";
+  </script>
+</head>
+<body>
+  <!-- PWA 커스텀 설치 프롬프트: 방문 횟수/체류 시간 기반 배너 표시 -->
+  <script src="pwa_install.js" defer></script>
+
+  <!--
+    Flutter 부트스트랩 스크립트
+    CanvasKit WASM을 비동기로 로드한다 (약 2~3MB)
+    로딩 중에는 index.html 배경색 (#667eea)이 표시된다
+  -->
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

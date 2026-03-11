@@ -1,0 +1,41 @@
+Design Your Life
+Copyright 2026 Design Your Life Contributors
+
+This software includes the following open source packages:
+
+---
+
+Framework & Runtime:
+- Flutter: BSD-3-Clause - Copyright 2014 The Flutter Authors
+- Dart SDK: BSD-3-Clause - Copyright 2012 The Dart Authors
+
+State Management:
+- flutter_riverpod: MIT - Copyright Remi Rousselet
+
+Routing:
+- go_router: BSD-3-Clause - Copyright 2013 The Flutter Authors
+
+Firebase SDK:
+- firebase_core: BSD-3-Clause - Copyright 2017 Google LLC
+- firebase_auth: BSD-3-Clause - Copyright 2017 Google LLC
+- cloud_firestore: BSD-3-Clause - Copyright 2017 Google LLC
+
+Local Cache:
+- hive: Apache-2.0 - Copyright 2019 Simon Leier
+
+UI Widgets:
+- table_calendar: Apache-2.0 - Copyright Aleksander Wozniak
+- fl_chart: MIT - Copyright Iman Khoshabi
+
+Utilities:
+- intl: BSD-3-Clause - Copyright 2013 The Dart Authors
+- google_fonts: BSD-3-Clause - Copyright 2019 Google LLC
+
+Fonts:
+- Pretendard: SIL Open Font License 1.1 - Copyright Hyungkyung Gil
+
+---
+
+Full license texts for each package are available in the application's
+license screen (Settings > Open Source Licenses) and in the respective
+package repositories.

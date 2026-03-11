@@ -1,0 +1,2478 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Your Life - 모듈 설계서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* 전역 리셋 및 기본 설정 */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg-base:#0a0c12;--bg-s1:#10131e;--bg-s2:#171c2a;
+--in:#4ecdc4;--out:#f7a44c;--api:#56d4e0;
+--c0:#56d4e0;--f1:#5b8def;--f2:#9b7fed;--f3:#f7a44c;--f4:#4ecdc4;--f5:#e87fc4;
+--f6:#ef6868;--f7:#efd060;--f8:#8fd460;--f9:#5b8def;--f10:#d4a0f0;
+--text:#e0e4f0;--text-dim:#8891a8;--border:#252a3a;
+--radius:8px;--transition:0.3s ease;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg-base);color:var(--text);line-height:1.7;font-size:15px}
+code,pre,.mono{font-family:'JetBrains Mono',monospace}
+a{color:var(--api);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* 헤더 */
+.header{background:var(--bg-s1);border-bottom:1px solid var(--border);padding:32px 0;text-align:center;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px);background:rgba(16,19,30,.92)}
+.header h1{font-size:28px;font-weight:700;letter-spacing:-0.5px}
+.header h1 span{color:var(--api)}
+.header .meta{color:var(--text-dim);font-size:13px;margin-top:6px}
+
+/* 검색 */
+.search-wrap{max-width:480px;margin:16px auto 0;position:relative}
+.search-wrap input{width:100%;padding:10px 16px 10px 40px;border-radius:20px;border:1px solid var(--border);background:var(--bg-s2);color:var(--text);font-size:14px;outline:none}
+.search-wrap input:focus{border-color:var(--api)}
+.search-wrap::before{content:'🔍';position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px}
+
+/* 컨테이너 */
+.container{max-width:1200px;margin:0 auto;padding:0 24px 80px}
+
+/* 섹션 */
+.section{margin-top:48px}
+.section-title{font-size:22px;font-weight:700;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--border);display:flex;align-items:center;gap:10px}
+.section-title .dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* 전역 버튼 */
+.global-btns{display:flex;gap:8px;margin:16px 0;flex-wrap:wrap}
+.btn{padding:7px 16px;border-radius:6px;border:1px solid var(--border);background:var(--bg-s2);color:var(--text);cursor:pointer;font-size:13px;font-family:'Noto Sans KR',sans-serif;transition:var(--transition)}
+.btn:hover{border-color:var(--api);color:var(--api)}
+.btn.active{background:var(--api);color:var(--bg-base);border-color:var(--api)}
+
+/* TOC */
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:16px}
+.toc a{display:block;padding:8px 12px;border-radius:var(--radius);background:var(--bg-s2);border:1px solid var(--border);font-size:13px;transition:var(--transition)}
+.toc a:hover{border-color:var(--api);text-decoration:none;transform:translateY(-1px)}
+.toc a .tid{font-family:'JetBrains Mono',monospace;font-weight:600;margin-right:6px}
+
+/* 테이블 */
+.tbl-wrap{overflow-x:auto;margin:16px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:10px 14px;border:1px solid var(--border);text-align:left}
+th{background:var(--bg-s2);font-weight:600;white-space:nowrap}
+td{background:var(--bg-s1)}
+tr:hover td{background:var(--bg-s2)}
+
+/* 폴더 구조 */
+.folder-tree{background:var(--bg-s1);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.9;overflow-x:auto;white-space:pre;color:var(--text-dim)}
+.folder-tree .comment{color:#6a7394}
+.folder-tree .highlight{color:var(--api)}
+
+/* 파이프라인 */
+.pipeline{display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;margin:24px 0;padding:20px;background:var(--bg-s1);border:1px solid var(--border);border-radius:var(--radius)}
+.pipe-node{padding:10px 16px;border-radius:var(--radius);font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;cursor:pointer;transition:var(--transition);border:1px solid var(--border);white-space:nowrap;text-align:center}
+.pipe-node:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+.pipe-arrow{color:var(--text-dim);font-size:18px;margin:0 4px;flex-shrink:0}
+.pipe-node.client{background:#2a1f3d;border-color:var(--f2);color:var(--f2)}
+.pipe-node.filter{background:#1a2a2d;border-color:var(--c0);color:var(--c0)}
+.pipe-node.controller{background:#1f2a3d;border-color:var(--f1);color:var(--f1)}
+.pipe-node.service{background:#2d2a1a;border-color:var(--f3);color:var(--f3)}
+.pipe-node.repo{background:#1a2d1f;border-color:var(--f4);color:var(--f4)}
+.pipe-node.db{background:#2d1a1a;border-color:var(--f6);color:var(--f6)}
+.pipe-node.response{background:#1a2d2d;border-color:var(--api);color:var(--api)}
+
+.pipeline-table{margin-top:16px}
+
+/* 모듈 블록 */
+.feature-group{margin-top:32px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.feature-header{padding:14px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:16px;user-select:none;transition:var(--transition)}
+.feature-header:hover{filter:brightness(1.2)}
+.feature-header .arrow{transition:transform 0.3s;font-size:12px}
+.feature-header.open .arrow{transform:rotate(90deg)}
+.feature-header .fbtn{display:flex;gap:6px;align-items:center}
+.feature-header .fbtn .btn{font-size:11px;padding:4px 10px}
+.feature-body{max-height:0;overflow:hidden;transition:max-height 0.5s ease}
+.feature-body.open{max-height:999999px}
+
+.module-block{margin:12px 16px;background:var(--bg-s1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.module-header{padding:12px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;transition:var(--transition)}
+.module-header:hover{background:var(--bg-s2)}
+.module-header .mid{font-family:'JetBrains Mono',monospace;margin-right:10px;font-weight:700}
+.module-header .arrow{transition:transform 0.3s;font-size:10px}
+.module-header.open .arrow{transform:rotate(90deg)}
+.module-body{max-height:0;overflow:hidden;transition:max-height 0.4s ease;padding:0 16px}
+.module-body.open{max-height:99999px;padding:0 16px 16px}
+.module-desc{color:var(--text-dim);font-size:13px;margin-bottom:12px;padding:8px 12px;background:var(--bg-s2);border-radius:6px;border-left:3px solid var(--api)}
+
+/* IN/OUT 블록 */
+.io-block{margin:10px 0}
+.io-label{display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-bottom:6px}
+.io-label.in{background:rgba(78,205,196,.15);color:var(--in)}
+.io-label.out{background:rgba(247,164,76,.15);color:var(--out)}
+.io-label.api{background:rgba(86,212,224,.15);color:var(--api)}
+.io-label.logic{background:rgba(155,127,237,.15);color:var(--f2)}
+.io-label.constraint{background:rgba(239,104,104,.15);color:var(--f6)}
+.io-detail{font-size:12.5px;padding:8px 12px;background:var(--bg-base);border:1px solid var(--border);border-radius:6px;line-height:1.8}
+.io-detail code{background:rgba(86,212,224,.1);padding:1px 5px;border-radius:3px;color:var(--api);font-size:12px}
+.io-detail .field{color:var(--in)}
+.io-detail .type{color:var(--out)}
+
+/* 내부 로직 리스트 */
+.logic-list{list-style:none;counter-reset:logic;padding:0;margin:6px 0}
+.logic-list li{counter-increment:logic;padding:5px 0 5px 28px;position:relative;font-size:12.5px;border-left:2px solid var(--border);margin-left:8px}
+.logic-list li::before{content:counter(logic);position:absolute;left:-10px;top:5px;width:20px;height:20px;background:var(--bg-s2);border:1px solid var(--border);border-radius:50%;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--api);font-family:'JetBrains Mono',monospace}
+
+/* 의존성 매트릭스 */
+.dep-matrix{overflow-x:auto}
+.dep-matrix table{font-size:12px;text-align:center}
+.dep-matrix th{position:sticky;top:0;z-index:2}
+.dep-matrix td.dep{background:rgba(78,205,196,.12);cursor:pointer;transition:var(--transition)}
+.dep-matrix td.dep:hover{background:rgba(78,205,196,.35);box-shadow:inset 0 0 0 2px var(--in)}
+.dep-matrix td.dep::after{content:'●';color:var(--in)}
+.dep-matrix tr:hover td{background:var(--bg-s2)}
+.dep-matrix tr:hover td.dep{background:rgba(78,205,196,.25)}
+
+/* 체크리스트 */
+.checklist{list-style:none;padding:0}
+.checklist li{padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:6px;display:flex;align-items:center;gap:10px;font-size:13px;background:var(--bg-s1);transition:var(--transition);cursor:pointer}
+.checklist li:hover{border-color:var(--api)}
+.checklist li.done{opacity:.5;text-decoration:line-through}
+.checklist input[type=checkbox]{width:18px;height:18px;accent-color:var(--in);cursor:pointer}
+.checklist .phase-tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;white-space:nowrap}
+
+/* 반응형 */
+@media(max-width:768px){
+.container{padding:0 12px 60px}
+.header h1{font-size:20px}
+.toc{grid-template-columns:1fr}
+.pipeline{flex-direction:column;gap:4px}
+.pipe-arrow{transform:rotate(90deg)}
+table{font-size:11px}
+th,td{padding:6px 8px}
+.feature-header{font-size:14px;padding:10px 14px}
+.module-header{font-size:12.5px}
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg-base)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-dim)}
+
+.hidden{display:none!important}
+.inter-dep{margin:16px 0;padding:16px;background:var(--bg-s1);border:1px solid var(--border);border-radius:var(--radius)}
+.inter-dep .dep-item{padding:6px 0;font-size:13px;border-bottom:1px solid var(--border)}
+.inter-dep .dep-item:last-child{border:none}
+.inter-dep .dep-item code{color:var(--api)}
+.schema-block{margin:10px 0}
+.schema-block pre{background:var(--bg-base);border:1px solid var(--border);border-radius:6px;padding:14px;font-size:12px;overflow-x:auto;color:var(--text-dim);line-height:1.7}
+.schema-block pre .kw{color:var(--f2)}
+.schema-block pre .str{color:var(--f4)}
+.schema-block pre .typ{color:var(--out)}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="header">
+<h1><span>Design Your Life</span> - 백엔드 모듈 설계서</h1>
+<div class="meta">목표, 습관, 할 일을 한 곳에서 관리하는 올인원 생산성 웹앱 | 2026-03-10 | 총 46개 모듈</div>
+<div class="search-wrap">
+<input type="text" id="searchInput" placeholder="모듈 검색 (이름 또는 ID 입력)..." oninput="filterModules(this.value)">
+</div>
+</div>
+
+<div class="container">
+
+<!-- 전역 버튼 -->
+<div class="global-btns" style="margin-top:24px">
+<button class="btn" onclick="expandAll()">모두 펼치기</button>
+<button class="btn" onclick="collapseAll()">모두 접기</button>
+</div>
+
+<!-- 목차 -->
+<div class="section" id="toc-section">
+<div class="section-title"><span class="dot" style="background:var(--api)"></span>목차 (Table of Contents)</div>
+<div class="toc">
+<a href="#tech-stack"><span class="tid">00</span>기술 스택</a>
+<a href="#folder-structure"><span class="tid">01</span>폴더 구조</a>
+<a href="#pipeline"><span class="tid">02</span>메인 파이프라인</a>
+<a href="#c0-group"><span class="tid">C0</span>공통 모듈 (10개)</a>
+<a href="#f1-group"><span class="tid">F1</span>인증 (3개)</a>
+<a href="#f2-group"><span class="tid">F2</span>캘린더 (4개)</a>
+<a href="#f3-group"><span class="tid">F3</span>할일 (4개)</a>
+<a href="#f4-group"><span class="tid">F4</span>습관 (5개)</a>
+<a href="#f5-group"><span class="tid">F5</span>루틴 (3개)</a>
+<a href="#f6-group"><span class="tid">F6</span>목표 (5개)</a>
+<a href="#f7-group"><span class="tid">F7</span>타이머 (3개)</a>
+<a href="#f8-group"><span class="tid">F8</span>업적 (4개)</a>
+<a href="#f9-group"><span class="tid">F9</span>태그 (3개)</a>
+<a href="#f10-group"><span class="tid">F10</span>대시보드 (2개)</a>
+<a href="#dep-matrix"><span class="tid">03</span>의존성 매트릭스</a>
+<a href="#db-schema"><span class="tid">04</span>DB 스키마</a>
+<a href="#checklist"><span class="tid">05</span>구현 체크리스트</a>
+</div>
+</div>
+
+<!-- 기술 스택 -->
+<div class="section" id="tech-stack">
+<div class="section-title"><span class="dot" style="background:var(--f1)"></span>기술 스택</div>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>영역</th><th>기술</th><th>버전</th><th>역할</th></tr></thead>
+<tbody>
+<tr><td>Frontend</td><td>Flutter Web</td><td>3.29</td><td>UI/UX</td></tr>
+<tr><td>Backend</td><td>Spring Boot</td><td>3.4.x</td><td>REST API 서버</td></tr>
+<tr><td>Language</td><td>Java</td><td>21 LTS</td><td>서버 언어</td></tr>
+<tr><td>DB</td><td>MySQL</td><td>8.4 LTS</td><td>관계형 데이터베이스</td></tr>
+<tr><td>ORM</td><td>Spring Data JPA + Hibernate</td><td>6.6.x</td><td>객체-관계 매핑</td></tr>
+<tr><td>Migration</td><td>Flyway</td><td>10.x</td><td>DB 스키마 버전 관리</td></tr>
+<tr><td>인증</td><td>Spring Security + JWT + OAuth2</td><td>6.4.x</td><td>Google OAuth → JWT</td></tr>
+<tr><td>API 문서</td><td>SpringDoc OpenAPI</td><td>2.7.x</td><td>Swagger 자동 생성</td></tr>
+<tr><td>빌드</td><td>Gradle (Kotlin DSL)</td><td>8.12</td><td>빌드 도구</td></tr>
+<tr><td>배포</td><td>Docker + Docker Compose</td><td>latest</td><td>컨테이너화</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- 폴더 구조 -->
+<div class="section" id="folder-structure">
+<div class="section-title"><span class="dot" style="background:var(--f2)"></span>폴더 구조</div>
+<div class="folder-tree">backend/
+├── src/main/java/com/designyourlife/
+│   ├── <span class="highlight">DylApplication.java</span>                      <span class="comment"># 메인 진입점</span>
+│   ├── common/                                   <span class="comment"># C0 공통 모듈 (10개)</span>
+│   │   ├── config/
+│   │   │   ├── AppProperties.java               <span class="comment"># C0.1 EnvConfigLoader</span>
+│   │   │   ├── DatabaseConfig.java              <span class="comment"># C0.2 DatabaseConfig</span>
+│   │   │   ├── SecurityConfig.java              <span class="comment"># C0.3 SecurityConfig</span>
+│   │   │   ├── CorsConfig.java                  <span class="comment"># C0.3 (CORS 부분)</span>
+│   │   │   └── WebConfig.java                   <span class="comment"># C0.3 (웹 설정)</span>
+│   │   ├── security/
+│   │   │   ├── JwtTokenProvider.java            <span class="comment"># C0.4 JwtTokenProvider</span>
+│   │   │   ├── JwtAuthFilter.java               <span class="comment"># C0.5 JwtAuthFilter</span>
+│   │   │   └── OAuth2UserLoader.java            <span class="comment"># C0.6 OAuth2UserLoader</span>
+│   │   ├── exception/
+│   │   │   ├── ErrorCode.java                   <span class="comment"># C0.7 에러코드 enum</span>
+│   │   │   ├── ApiException.java                <span class="comment"># C0.7 ApiException</span>
+│   │   │   └── GlobalExceptionHandler.java      <span class="comment"># C0.8 GlobalExceptionHandler</span>
+│   │   ├── response/
+│   │   │   └── ApiResponse.java                 <span class="comment"># C0.9 ApiResponse</span>
+│   │   └── util/
+│   │       └── DateTimeUtil.java                <span class="comment"># C0.10 DateTimeUtil</span>
+│   ├── auth/                                     <span class="comment"># F1 인증 (3개)</span>
+│   │   ├── controller/AuthController.java
+│   │   ├── service/AuthService.java
+│   │   ├── repository/UserRepository.java
+│   │   ├── entity/User.java
+│   │   └── dto/
+│   ├── calendar/                                 <span class="comment"># F2 캘린더 (4개)</span>
+│   │   ├── controller/EventController.java
+│   │   ├── service/EventService.java
+│   │   ├── service/EventValidator.java
+│   │   ├── repository/EventRepository.java
+│   │   ├── entity/Event.java
+│   │   └── dto/
+│   ├── todo/                                     <span class="comment"># F3 할일 (4개)</span>
+│   │   ├── controller/TodoController.java
+│   │   ├── service/TodoService.java
+│   │   ├── service/TodoFilter.java
+│   │   ├── repository/TodoRepository.java
+│   │   ├── entity/Todo.java
+│   │   └── dto/
+│   ├── habit/                                    <span class="comment"># F4 습관 (5개)</span>
+│   │   ├── controller/HabitController.java
+│   │   ├── service/HabitService.java
+│   │   ├── service/StreakCalculator.java
+│   │   ├── repository/HabitRepository.java
+│   │   ├── repository/HabitLogRepository.java
+│   │   ├── entity/Habit.java
+│   │   ├── entity/HabitLog.java
+│   │   └── dto/
+│   ├── routine/                                  <span class="comment"># F5 루틴 (3개)</span>
+│   │   ├── controller/RoutineController.java
+│   │   ├── service/RoutineService.java
+│   │   ├── repository/RoutineRepository.java
+│   │   ├── entity/Routine.java
+│   │   └── dto/
+│   ├── goal/                                     <span class="comment"># F6 목표 (5개)</span>
+│   │   ├── controller/GoalController.java
+│   │   ├── service/GoalService.java
+│   │   ├── service/ProgressCalculator.java
+│   │   ├── repository/GoalRepository.java
+│   │   ├── repository/GoalTaskRepository.java
+│   │   ├── entity/Goal.java
+│   │   ├── entity/GoalTask.java
+│   │   └── dto/
+│   ├── timer/                                    <span class="comment"># F7 타이머 (3개)</span>
+│   │   ├── controller/TimerController.java
+│   │   ├── service/TimerService.java
+│   │   ├── repository/TimerLogRepository.java
+│   │   ├── entity/TimerLog.java
+│   │   └── dto/
+│   ├── achievement/                              <span class="comment"># F8 업적 (4개)</span>
+│   │   ├── controller/AchievementController.java
+│   │   ├── service/AchievementService.java
+│   │   ├── service/AchievementEvaluator.java
+│   │   ├── repository/AchievementRepository.java
+│   │   ├── entity/Achievement.java
+│   │   └── dto/
+│   ├── tag/                                      <span class="comment"># F9 태그 (3개)</span>
+│   │   ├── controller/TagController.java
+│   │   ├── service/TagService.java
+│   │   ├── repository/TagRepository.java
+│   │   ├── entity/Tag.java
+│   │   └── dto/
+│   └── dashboard/                                <span class="comment"># F10 대시보드 (2개)</span>
+│       ├── controller/DashboardController.java
+│       ├── service/DashboardAggregator.java
+│       └── dto/
+├── src/main/resources/
+│   ├── application.yml
+│   ├── application-dev.yml
+│   ├── application-prod.yml
+│   └── db/migration/
+│       ├── V1__create_users.sql ~ V10__create_todo_tags.sql
+├── build.gradle.kts
+├── settings.gradle.kts
+├── Dockerfile
+└── docker-compose.yml</div>
+</div>
+
+<!-- 메인 파이프라인 -->
+<div class="section" id="pipeline">
+<div class="section-title"><span class="dot" style="background:var(--f3)"></span>메인 파이프라인 (REST API Request Flow)</div>
+<div class="pipeline">
+<div class="pipe-node client">Client Request</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node filter" onclick="scrollToModule('c0-5')">C0.5 JwtAuthFilter</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node controller">Controller</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node service">Service</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node repo">Repository</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node db">MySQL</div>
+</div>
+<div class="pipeline" style="margin-top:8px">
+<div class="pipe-node db">Entity</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node service">Service (DTO 변환)</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node response" onclick="scrollToModule('c0-9')">C0.9 ApiResponse&lt;T&gt;</div>
+<div class="pipe-arrow">→</div>
+<div class="pipe-node client">Client Response</div>
+</div>
+
+<div class="tbl-wrap pipeline-table">
+<table>
+<thead><tr><th>단계</th><th>IN</th><th>OUT</th><th>설명</th></tr></thead>
+<tbody>
+<tr><td>Client → C0.5</td><td><code>HTTP Request (Authorization: Bearer {jwt})</code></td><td><code>SecurityContext (userId, roles)</code></td><td>JWT 토큰 검증 및 인증 컨텍스트 설정</td></tr>
+<tr><td>C0.5 → Controller</td><td><code>SecurityContext + RequestBody/PathVariable</code></td><td><code>Method call to Service</code></td><td>인증된 요청을 서비스 계층으로 전달</td></tr>
+<tr><td>Controller → Service</td><td><code>DTO/파라미터 + userId</code></td><td><code>Business logic result</code></td><td>비즈니스 로직 실행</td></tr>
+<tr><td>Service → Repository</td><td><code>Entity/Query 파라미터</code></td><td><code>Entity | List&lt;Entity&gt;</code></td><td>DB 조회/저장</td></tr>
+<tr><td>Repository → MySQL</td><td><code>JPA Query (JPQL/Native)</code></td><td><code>ResultSet → Entity 매핑</code></td><td>실제 DB 연산</td></tr>
+<tr><td>Service → Controller</td><td><code>Domain result (DTO)</code></td><td><code>ApiResponse&lt;T&gt;</code></td><td>응답 래핑</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<!-- ==================== C0 공통 모듈 ==================== -->
+<div class="feature-group" id="c0-group" data-feature="c0">
+<div class="feature-header" style="background:rgba(86,212,224,.1);border-left:4px solid var(--c0)" onclick="toggleFeature(this)">
+<span><span style="color:var(--c0)">C0</span> 공통 모듈 (10개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('c0')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('c0')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="c0">
+
+<!-- C0.1 -->
+<div class="module-block" id="c0-1" data-module="c0.1 envconfigloader appproperties">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.1</span>EnvConfigLoader (AppProperties)</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">application.yml의 커스텀 설정을 타입 안전하게 바인딩하는 설정 클래스</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>application.yml</code>, <code>application-{profile}.yml</code> — 파일 시스템에서 로드되는 설정 파일</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>AppProperties</code> {<br>
+&nbsp;&nbsp;<span class="field">jwtSecret</span>: <span class="type">String</span> — JWT 서명 비밀 키<br>
+&nbsp;&nbsp;<span class="field">jwtAccessExpiry</span>: <span class="type">long</span> — 액세스 토큰 만료 시간 (ms)<br>
+&nbsp;&nbsp;<span class="field">jwtRefreshExpiry</span>: <span class="type">long</span> — 리프레시 토큰 만료 시간 (ms)<br>
+&nbsp;&nbsp;<span class="field">googleClientId</span>: <span class="type">String</span> — Google OAuth2 클라이언트 ID<br>
+&nbsp;&nbsp;<span class="field">allowedOrigins</span>: <span class="type">List&lt;String&gt;</span> — CORS 허용 도메인 목록<br>
+}
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li><code>@ConfigurationProperties(prefix = "app")</code>로 "app." 접두사 설정을 바인딩</li>
+<li><code>@Validated</code>로 필수값 누락 시 애플리케이션 시작 실패 처리</li>
+<li>프로파일(dev/prod)별 설정 오버라이드 적용</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">jwtSecret은 최소 256비트(32자) 이상 필수. 프로덕션 환경에서는 반드시 환경변수로 주입.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.2 -->
+<div class="module-block" id="c0-2" data-module="c0.2 databaseconfig">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.2</span>DatabaseConfig</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">MySQL DataSource + JPA/Hibernate 설정</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.1</code>의 DB URL, username, password — <code>application.yml</code>의 <code>spring.datasource.*</code> 설정</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>DataSource</code> — HikariCP 기반 커넥션 풀<br>
+<code>EntityManagerFactory</code> — JPA 엔티티 매니저 팩토리<br>
+<code>PlatformTransactionManager</code> — 트랜잭션 매니저
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>HikariCP 커넥션 풀 생성 (최대 연결 수: 10개)</li>
+<li>Hibernate ddl-auto=validate 설정 (스키마 검증만, 변경은 Flyway 담당)</li>
+<li>open-in-view=false 설정 (지연 로딩 문제 방지)</li>
+<li>MySQL 8.4 방언(dialect) 자동 감지</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">ddl-auto는 반드시 <code>validate</code>. 스키마 변경은 Flyway 마이그레이션 파일로만 수행.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.3 -->
+<div class="module-block" id="c0-3" data-module="c0.3 securityconfig cors">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.3</span>SecurityConfig</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">Spring Security 필터 체인 설정 (CORS, CSRF, JWT 필터 등록)</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.5 JwtAuthFilter</code> — Spring Bean으로 주입되는 JWT 인증 필터</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>SecurityFilterChain</code> — Spring Security 필터 체인 빈</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>CSRF 비활성화 (stateless REST API이므로 불필요)</li>
+<li>세션 관리 정책: <code>STATELESS</code> (JWT 기반 인증)</li>
+<li>허용 경로 설정: <code>/api/auth/**</code> — 인증 없이 접근 가능</li>
+<li>나머지 모든 경로: 인증 필수 (<code>authenticated()</code>)</li>
+<li>JwtAuthFilter를 <code>UsernamePasswordAuthenticationFilter</code> 앞에 등록</li>
+<li>CORS 설정: <code>allowedOrigins</code>에서 Flutter 웹앱 도메인 허용</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">프로덕션에서 <code>allowedOrigins</code>를 정확히 지정. 와일드카드(<code>*</code>) 사용 금지.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.4 -->
+<div class="module-block" id="c0-4" data-module="c0.4 jwttokenprovider jwt token">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.4</span>JwtTokenProvider</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JWT 액세스/리프레시 토큰 생성 및 검증</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">
+<code>userId</code>: <span class="type">Long</span> — 사용자 고유 ID<br>
+<code>email</code>: <span class="type">String</span> — 사용자 이메일
+</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail">
+<code>C0.1</code>의 <span class="field">jwtSecret</span>: <span class="type">String</span>,
+<span class="field">jwtAccessExpiry</span>: <span class="type">long</span>,
+<span class="field">jwtRefreshExpiry</span>: <span class="type">long</span>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>TokenPair</code> {<br>
+&nbsp;&nbsp;<span class="field">accessToken</span>: <span class="type">String</span> — 30분 유효 액세스 토큰<br>
+&nbsp;&nbsp;<span class="field">refreshToken</span>: <span class="type">String</span> — 7일 유효 리프레시 토큰<br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>generateTokenPair(userId, email)</code> → <span class="type">TokenPair</span><br>
+&nbsp;&nbsp;<code>validateToken(token)</code> → <span class="type">boolean</span><br>
+&nbsp;&nbsp;<code>getUserIdFromToken(token)</code> → <span class="type">Long</span><br>
+&nbsp;&nbsp;<code>getEmailFromToken(token)</code> → <span class="type">String</span>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>HMAC-SHA256 알고리즘으로 토큰 서명</li>
+<li>Claims에 <code>userId</code> + <code>email</code> 포함</li>
+<li>accessToken 만료: 30분, refreshToken 만료: 7일</li>
+<li><code>validateToken</code> — 서명 검증 + 만료 확인</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">토큰 만료 시 <code>validateToken</code>이 <code>false</code> 반환. 별도 예외 미발생.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.5 -->
+<div class="module-block" id="c0-5" data-module="c0.5 jwtauthfilter auth filter">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.5</span>JwtAuthFilter</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">HTTP 요청의 Authorization 헤더에서 JWT를 추출하여 SecurityContext 설정</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>HttpServletRequest</code> — <code>Authorization: Bearer {token}</code> 헤더 포함</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.4 JwtTokenProvider</code> — 토큰 검증 및 정보 추출 도구</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>SecurityContext</code>에 <code>Authentication</code> 객체 설정 — <span class="field">userId</span>: <span class="type">Long</span>, <span class="field">authorities</span>: <span class="type">Collection</span></div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>Authorization 헤더에서 "Bearer " 접두사 제거 → 토큰 추출</li>
+<li><code>C0.4.validateToken(token)</code> 호출하여 유효성 확인</li>
+<li>유효하면 <code>userId</code>, <code>email</code> 추출 → <code>UsernamePasswordAuthenticationToken</code> 생성</li>
+<li><code>SecurityContextHolder</code>에 인증 객체 설정</li>
+<li>토큰이 없거나 유효하지 않으면 → 필터 통과 (SecurityConfig에서 접근 거부 처리)</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail"><code>OncePerRequestFilter</code> 상속. <code>/api/auth/**</code> 경로는 필터 스킵.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.6 -->
+<div class="module-block" id="c0-6" data-module="c0.6 oauth2userloader google oauth">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.6</span>OAuth2UserLoader</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">Google OAuth2 ID 토큰을 검증하고 사용자 정보 추출</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>idToken</code>: <span class="type">String</span> — Google에서 발급한 ID 토큰</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.1</code>의 <span class="field">googleClientId</span>: <span class="type">String</span></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>GoogleUserInfo</code> {<br>
+&nbsp;&nbsp;<span class="field">googleId</span>: <span class="type">String</span> — Google 고유 사용자 ID (sub 클레임)<br>
+&nbsp;&nbsp;<span class="field">email</span>: <span class="type">String</span> — 사용자 이메일<br>
+&nbsp;&nbsp;<span class="field">name</span>: <span class="type">String</span> — 사용자 표시 이름<br>
+&nbsp;&nbsp;<span class="field">pictureUrl</span>: <span class="type">String</span> — 프로필 사진 URL<br>
+}
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>Google의 tokeninfo 엔드포인트 또는 google-auth-library로 ID 토큰 검증</li>
+<li><code>aud</code>(audience)가 <code>googleClientId</code>와 일치하는지 확인</li>
+<li>토큰에서 <code>sub</code>(googleId), <code>email</code>, <code>name</code>, <code>picture</code> 추출</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">만료된 토큰이나 <code>aud</code> 불일치 시 <code>ApiException(INVALID_TOKEN)</code> 발생.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.7 -->
+<div class="module-block" id="c0-7" data-module="c0.7 apiexception errorcode exception">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.7</span>ApiException + ErrorCode</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">비즈니스 에러를 표현하는 커스텀 예외 및 에러코드 정의</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">
+<code>errorCode</code>: <span class="type">ErrorCode</span> — 에러코드 enum 값<br>
+<code>message</code>: <span class="type">String</span> (선택) — 커스텀 에러 메시지
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>ApiException</code> {<br>
+&nbsp;&nbsp;<span class="field">errorCode</span>: <span class="type">ErrorCode</span> — 에러코드<br>
+&nbsp;&nbsp;<span class="field">message</span>: <span class="type">String</span> — 에러 메시지<br>
+&nbsp;&nbsp;<span class="field">httpStatus</span>: <span class="type">HttpStatus</span> — HTTP 상태 코드<br>
+}<br><br>
+<code>ErrorCode</code> enum:<br>
+&nbsp;&nbsp;<code>AUTH_FAILED</code>(401, "인증에 실패했습니다")<br>
+&nbsp;&nbsp;<code>TOKEN_EXPIRED</code>(401, "토큰이 만료되었습니다")<br>
+&nbsp;&nbsp;<code>INVALID_TOKEN</code>(401, "유효하지 않은 토큰입니다")<br>
+&nbsp;&nbsp;<code>FORBIDDEN</code>(403, "접근 권한이 없습니다")<br>
+&nbsp;&nbsp;<code>NOT_FOUND</code>(404, "리소스를 찾을 수 없습니다")<br>
+&nbsp;&nbsp;<code>DUPLICATE</code>(409, "이미 존재하는 리소스입니다")<br>
+&nbsp;&nbsp;<code>VALIDATION_FAILED</code>(422, "입력값이 유효하지 않습니다")<br>
+&nbsp;&nbsp;<code>INTERNAL_ERROR</code>(500, "서버 내부 오류가 발생했습니다")<br>
+&nbsp;&nbsp;<code>TIME_LOCKED</code>(422, "시간 잠금: 과거 날짜의 습관은 수정할 수 없습니다")
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li><code>RuntimeException</code>을 상속하여 비검사 예외로 정의</li>
+<li><code>ErrorCode</code> enum에 HTTP 상태 코드와 기본 메시지를 정의</li>
+<li>커스텀 메시지가 없으면 <code>ErrorCode</code>의 기본 메시지 사용</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- C0.8 -->
+<div class="module-block" id="c0-8" data-module="c0.8 globalexceptionhandler exception handler">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.8</span>GlobalExceptionHandler</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">@RestControllerAdvice로 전역 예외를 ApiResponse 형태로 변환</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">
+<code>Exception</code> — 컨트롤러에서 발생한 예외<br>
+&nbsp;&nbsp;• <code>ApiException</code> — 비즈니스 예외<br>
+&nbsp;&nbsp;• <code>MethodArgumentNotValidException</code> — @Valid 검증 실패<br>
+&nbsp;&nbsp;• <code>Exception</code> — 기타 예외
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>ResponseEntity&lt;ApiResponse&lt;Void&gt;&gt;</code> — 에러 응답 래퍼</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li><code>ApiException</code> → <code>errorCode</code>의 httpStatus + message로 응답 생성</li>
+<li><code>MethodArgumentNotValidException</code> → 422 + 필드별 에러 메시지 목록 반환</li>
+<li>기타 <code>Exception</code> → 500 + "서버 내부 오류" 응답 생성</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">스택 트레이스는 로그에만 출력. 클라이언트 응답에 스택 트레이스 포함 금지.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.9 -->
+<div class="module-block" id="c0-9" data-module="c0.9 apiresponse response wrapper">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.9</span>ApiResponse&lt;T&gt;</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">모든 API 응답의 통일된 래퍼 클래스</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">
+<code>success</code>: <span class="type">boolean</span> — 성공 여부<br>
+<code>data</code>: <span class="type">T</span> (nullable) — 응답 데이터<br>
+<code>message</code>: <span class="type">String</span> (nullable) — 메시지
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>ApiResponse&lt;T&gt;</code> {<br>
+&nbsp;&nbsp;<span class="field">success</span>: <span class="type">boolean</span> — 요청 성공 여부<br>
+&nbsp;&nbsp;<span class="field">data</span>: <span class="type">T</span> — 응답 데이터 (실패 시 null)<br>
+&nbsp;&nbsp;<span class="field">message</span>: <span class="type">String</span> — 메시지 (에러 시 에러 메시지)<br>
+&nbsp;&nbsp;<span class="field">timestamp</span>: <span class="type">LocalDateTime</span> — 응답 생성 시각<br>
+}<br><br>
+정적 팩토리 메서드:<br>
+&nbsp;&nbsp;<code>ApiResponse.success(data)</code> → { success: true, data, message: null }<br>
+&nbsp;&nbsp;<code>ApiResponse.success(data, message)</code> → { success: true, data, message }<br>
+&nbsp;&nbsp;<code>ApiResponse.error(message)</code> → { success: false, data: null, message }
+</div>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">모든 Controller는 반드시 <code>ApiResponse&lt;T&gt;</code>로 래핑하여 반환해야 함.</div>
+</div>
+</div>
+</div>
+
+<!-- C0.10 -->
+<div class="module-block" id="c0-10" data-module="c0.10 datetimeutil datetime util">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--c0)">C0.10</span>DateTimeUtil</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">날짜/시간 변환 및 포맷 유틸리티</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">다양한 날짜/시간 값 — <code>LocalDate</code>, <code>LocalDateTime</code>, <code>String</code>, <code>int</code>(year, month)</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+메서드 및 반환 타입:<br>
+&nbsp;&nbsp;<code>toStartOfDay(date: LocalDate)</code> → <span class="type">LocalDateTime</span> (00:00:00)<br>
+&nbsp;&nbsp;<code>toEndOfDay(date: LocalDate)</code> → <span class="type">LocalDateTime</span> (23:59:59)<br>
+&nbsp;&nbsp;<code>getWeekRange(date: LocalDate)</code> → <span class="type">Pair&lt;LocalDate, LocalDate&gt;</span> (월~일)<br>
+&nbsp;&nbsp;<code>getMonthRange(year: int, month: int)</code> → <span class="type">Pair&lt;LocalDate, LocalDate&gt;</span><br>
+&nbsp;&nbsp;<code>isToday(date: LocalDate)</code> → <span class="type">boolean</span><br>
+&nbsp;&nbsp;<code>isPast(date: LocalDate)</code> → <span class="type">boolean</span>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail">모든 시간은 <code>Asia/Seoul</code> 타임존 기준으로 처리.</div>
+</div>
+</div>
+</div>
+
+</div><!-- /feature-body -->
+</div><!-- /C0 -->
+
+<!-- ==================== F1 인증 ==================== -->
+<div class="feature-group" id="f1-group" data-feature="f1">
+<div class="feature-header" style="background:rgba(91,141,239,.1);border-left:4px solid var(--f1)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f1)">F1</span> 인증 (3개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f1')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f1')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f1">
+
+<!-- F1.1 -->
+<div class="module-block" id="f1-1" data-module="f1.1 userrepository user">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f1)">F1.1</span>UserRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 사용자 엔티티 CRUD + 조회 쿼리</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">JPA 메서드 호출 — <code>save(User)</code>, <code>findById(Long)</code>, <code>findByGoogleId(String)</code>, <code>findByEmail(String)</code></div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.2 DataSource</code> — Spring이 자동 주입하는 데이터소스</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>User</code> | <code>Optional&lt;User&gt;</code> | <code>void</code><br><br>
+User Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK, AUTO_INCREMENT)<br>
+&nbsp;&nbsp;<span class="field">googleId</span>: <span class="type">String</span> (UNIQUE) — Google 고유 ID<br>
+&nbsp;&nbsp;<span class="field">email</span>: <span class="type">String</span> (UNIQUE) — 이메일<br>
+&nbsp;&nbsp;<span class="field">displayName</span>: <span class="type">String</span> — 표시 이름<br>
+&nbsp;&nbsp;<span class="field">photoUrl</span>: <span class="type">String</span> — 프로필 사진 URL<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span><br>
+&nbsp;&nbsp;<span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByGoogleId(googleId: String)</code> → <span class="type">Optional&lt;User&gt;</span><br>
+&nbsp;&nbsp;<code>findByEmail(email: String)</code> → <span class="type">Optional&lt;User&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F1.2 -->
+<div class="module-block" id="f1-2" data-module="f1.2 authservice auth service login">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f1)">F1.2</span>AuthService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">Google OAuth 토큰 검증 후 사용자 조회/생성 및 JWT 발급</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>idToken</code>: <span class="type">String</span> — Google ID Token</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail">
+<code>C0.4 JwtTokenProvider</code> — JWT 토큰 생성/검증<br>
+<code>C0.6 OAuth2UserLoader</code> — Google 토큰 검증<br>
+<code>F1.1 UserRepository</code> — 사용자 DB 접근
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>AuthResponse</code> {<br>
+&nbsp;&nbsp;<span class="field">accessToken</span>: <span class="type">String</span> — JWT 액세스 토큰<br>
+&nbsp;&nbsp;<span class="field">refreshToken</span>: <span class="type">String</span> — JWT 리프레시 토큰<br>
+&nbsp;&nbsp;<span class="field">user</span>: <span class="type">UserDto</span> {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>,
+<span class="field">email</span>: <span class="type">String</span>,
+<span class="field">displayName</span>: <span class="type">String</span>,
+<span class="field">photoUrl</span>: <span class="type">String</span><br>
+&nbsp;&nbsp;}<br>
+}<br><br>
+추가 메서드:<br>
+&nbsp;&nbsp;<code>refreshToken(refreshToken: String)</code> → <span class="type">AuthResponse</span><br>
+&nbsp;&nbsp;<code>getCurrentUser(userId: Long)</code> → <span class="type">UserDto</span><br>
+&nbsp;&nbsp;<code>deleteAccount(userId: Long)</code> → <span class="type">void</span>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li><code>C0.6.verify(idToken)</code> → <code>GoogleUserInfo</code> 획득</li>
+<li><code>F1.1.findByGoogleId(googleUserInfo.googleId)</code> → 기존 사용자 조회</li>
+<li>미존재 시 → 새 <code>User</code> 엔티티 생성 + <code>F1.1.save()</code></li>
+<li><code>C0.4.generateTokenPair(user.id, user.email)</code> → <code>TokenPair</code> 생성</li>
+<li><code>AuthResponse</code> 조립 후 반환</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail"><code>deleteAccount</code>는 모든 연관 데이터를 FK CASCADE 또는 수동 삭제로 처리.</div>
+</div>
+</div>
+</div>
+
+<!-- F1.3 -->
+<div class="module-block" id="f1-3" data-module="f1.3 authcontroller auth controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f1)">F1.3</span>AuthController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">인증 관련 REST API 엔드포인트</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">HTTP 요청 (RequestBody / PathVariable / JWT SecurityContext)</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F1.2 AuthService</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>ResponseEntity&lt;ApiResponse&lt;T&gt;&gt;</code></div>
+</div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>POST /api/auth/google</code> — { idToken: String } → <span class="type">ApiResponse&lt;AuthResponse&gt;</span><br>
+<code>POST /api/auth/refresh</code> — { refreshToken: String } → <span class="type">ApiResponse&lt;AuthResponse&gt;</span><br>
+<code>GET /api/auth/me</code> — (JWT required) → <span class="type">ApiResponse&lt;UserDto&gt;</span><br>
+<code>DELETE /api/auth/account</code> — (JWT required) → <span class="type">ApiResponse&lt;Void&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F2 캘린더 ==================== -->
+<div class="feature-group" id="f2-group" data-feature="f2">
+<div class="feature-header" style="background:rgba(155,127,237,.1);border-left:4px solid var(--f2)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f2)">F2</span> 캘린더 (4개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f2')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f2')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f2">
+
+<!-- F2.1 -->
+<div class="module-block" id="f2-1" data-module="f2.1 eventrepository event repository calendar">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f2)">F2.1</span>EventRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 이벤트 CRUD + 기간/타입별 조회 쿼리</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">JPA 메서드 호출 — <code>save</code>, <code>findById</code>, 커스텀 쿼리</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.2 DataSource</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>Event</code> | <code>List&lt;Event&gt;</code> | <code>Optional&lt;Event&gt;</code> | <code>void</code><br><br>
+Event Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK→users),<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">eventType</span>: <span class="type">EventType</span>(NORMAL|RANGE|RECURRING|TODO),<br>
+&nbsp;&nbsp;<span class="field">startDate</span>: <span class="type">LocalDateTime</span>, <span class="field">endDate</span>: <span class="type">LocalDateTime</span>,<br>
+&nbsp;&nbsp;<span class="field">allDay</span>: <span class="type">boolean</span>, <span class="field">color</span>: <span class="type">String</span>(#RRGGBB),<br>
+&nbsp;&nbsp;<span class="field">location</span>: <span class="type">String</span>, <span class="field">recurrenceRule</span>: <span class="type">String</span>(iCal RRULE),<br>
+&nbsp;&nbsp;<span class="field">rangeTag</span>: <span class="type">RangeTag</span>(TRAVEL|EXAM|VACATION|PROJECT|OTHER),<br>
+&nbsp;&nbsp;<span class="field">memo</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span>, <span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdAndStartDateBetween(userId, start, end)</code> → <span class="type">List&lt;Event&gt;</span><br>
+&nbsp;&nbsp;<code>findByUserIdAndEventType(userId, type)</code> → <span class="type">List&lt;Event&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndUserId(id, userId)</code> → <span class="type">Optional&lt;Event&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F2.2 -->
+<div class="module-block" id="f2-2" data-module="f2.2 eventvalidator event validator">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f2)">F2.2</span>EventValidator</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">이벤트 생성/수정 요청의 비즈니스 유효성 검증</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>eventRequest</code>: <span class="type">EventCreateRequest | EventUpdateRequest</span></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>void</code> (유효) | <code>ApiException</code> throw (무효)</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li><code>title</code> 비어있지 않은지 확인</li>
+<li><code>startDate &lt;= endDate</code> 확인</li>
+<li>RANGE 타입일 때 <code>rangeTag</code> 필수 확인</li>
+<li>RECURRING 타입일 때 <code>recurrenceRule</code> 필수 + RRULE 형식 검증</li>
+<li><code>color</code>가 <code>#RRGGBB</code> 형식인지 정규식 검증</li>
+</ol>
+</div>
+<div class="io-block">
+<div class="io-label constraint">제약사항</div>
+<div class="io-detail"><code>@Valid</code> 어노테이션 기반 기본 검증과 별개로 비즈니스 규칙 검증 수행.</div>
+</div>
+</div>
+</div>
+
+<!-- F2.3 -->
+<div class="module-block" id="f2-3" data-module="f2.3 eventservice event service calendar">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f2)">F2.3</span>EventService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">이벤트 비즈니스 로직 (CRUD + 반복 이벤트 인스턴스 생성)</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">사용자 요청 DTO + <code>userId</code>: <span class="type">Long</span></div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail">
+<code>F2.1 EventRepository</code> — 이벤트 DB 접근<br>
+<code>F2.2 EventValidator</code> — 비즈니스 검증
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>EventDto</code> | <code>List&lt;EventDto&gt;</code> | <code>void</code><br><br>
+EventCreateRequest {<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">eventType</span>: <span class="type">EventType</span>, <span class="field">startDate</span>: <span class="type">LocalDateTime</span>,<br>
+&nbsp;&nbsp;<span class="field">endDate</span>: <span class="type">LocalDateTime</span>, <span class="field">allDay</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">location</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">recurrenceRule</span>: <span class="type">String</span>, <span class="field">rangeTag</span>: <span class="type">RangeTag</span>,<br>
+&nbsp;&nbsp;<span class="field">memo</span>: <span class="type">String</span><br>
+}<br><br>
+EventDto {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>, <span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">eventType</span>: <span class="type">EventType</span>, <span class="field">startDate</span>: <span class="type">LocalDateTime</span>,<br>
+&nbsp;&nbsp;<span class="field">endDate</span>: <span class="type">LocalDateTime</span>, <span class="field">allDay</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">location</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">recurrenceRule</span>: <span class="type">String</span>, <span class="field">rangeTag</span>: <span class="type">RangeTag</span>,<br>
+&nbsp;&nbsp;<span class="field">memo</span>: <span class="type">String</span>, <span class="field">dDay</span>: <span class="type">int</span> (자동 계산),<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getEventsForMonth(userId, year, month)</code> → <span class="type">List&lt;EventDto&gt;</span><br>
+&nbsp;&nbsp;<code>getEvent(userId, eventId)</code> → <span class="type">EventDto</span><br>
+&nbsp;&nbsp;<code>createEvent(userId, request)</code> → <span class="type">EventDto</span><br>
+&nbsp;&nbsp;<code>updateEvent(userId, eventId, request)</code> → <span class="type">EventDto</span><br>
+&nbsp;&nbsp;<code>deleteEvent(userId, eventId)</code> → <span class="type">void</span>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직 (getEventsForMonth)</div>
+<ol class="logic-list">
+<li>C0.10으로 해당 월 범위(start, end) 계산</li>
+<li>F2.1에서 해당 월 범위 이벤트 조회</li>
+<li>RECURRING 이벤트의 경우 <code>recurrenceRule</code> 파싱 → 해당 월의 인스턴스 생성</li>
+<li>활성 루틴(F5) 데이터도 이벤트로 변환하여 포함 (선택적)</li>
+<li>Entity → EventDto 변환 (dDay 자동 계산 포함)</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F2.4 -->
+<div class="module-block" id="f2-4" data-module="f2.4 eventcontroller event controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f2)">F2.4</span>EventController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">캘린더 이벤트 REST API 엔드포인트</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F2.3 EventService</code></div>
+</div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>POST /api/events</code> → <span class="type">ApiResponse&lt;EventDto&gt;</span><br>
+<code>GET /api/events?year={}&amp;month={}</code> → <span class="type">ApiResponse&lt;List&lt;EventDto&gt;&gt;</span><br>
+<code>GET /api/events/{id}</code> → <span class="type">ApiResponse&lt;EventDto&gt;</span><br>
+<code>PUT /api/events/{id}</code> → <span class="type">ApiResponse&lt;EventDto&gt;</span><br>
+<code>DELETE /api/events/{id}</code> → <span class="type">ApiResponse&lt;Void&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F3 할일 ==================== -->
+<div class="feature-group" id="f3-group" data-feature="f3">
+<div class="feature-header" style="background:rgba(247,164,76,.1);border-left:4px solid var(--f3)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f3)">F3</span> 할일 (4개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f3')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f3')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f3">
+
+<!-- F3.1 -->
+<div class="module-block" id="f3-1" data-module="f3.1 todorepository todo repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f3)">F3.1</span>TodoRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">할일 CRUD + 날짜별/주간 조회</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">JPA 메서드 호출</div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>C0.2 DataSource</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+Todo Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">completed</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">scheduledDate</span>: <span class="type">LocalDate</span>,<br>
+&nbsp;&nbsp;<span class="field">startTime</span>: <span class="type">LocalTime</span> (nullable), <span class="field">endTime</span>: <span class="type">LocalTime</span> (nullable),<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">memo</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">displayOrder</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span>, <span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+&nbsp;&nbsp;ManyToMany with <code>Tag</code> via <code>todo_tags</code> join table<br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdAndScheduledDateOrderByDisplayOrder(userId, date)</code> → <span class="type">List&lt;Todo&gt;</span><br>
+&nbsp;&nbsp;<code>findByUserIdAndScheduledDateBetweenOrderByDisplayOrder(userId, start, end)</code> → <span class="type">List&lt;Todo&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndUserId(id, userId)</code> → <span class="type">Optional&lt;Todo&gt;</span><br>
+&nbsp;&nbsp;<code>countByUserIdAndScheduledDateAndCompleted(userId, date, completed)</code> → <span class="type">int</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F3.2 -->
+<div class="module-block" id="f3-2" data-module="f3.2 todofilter todo filter">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f3)">F3.2</span>TodoFilter</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">할일 목록 필터링 및 정렬 로직</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail">
+<code>todos</code>: <span class="type">List&lt;Todo&gt;</span> — 원본 할일 목록<br>
+<code>filterCriteria</code>: <span class="type">TodoFilterCriteria</span> {<br>
+&nbsp;&nbsp;<span class="field">showCompleted</span>: <span class="type">boolean</span>,
+<span class="field">tagIds</span>: <span class="type">List&lt;Long&gt;</span>,
+<span class="field">sortBy</span>: <span class="type">SortBy</span>(TIME|ORDER|CREATED)<br>
+}
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>List&lt;Todo&gt;</code> — 필터링/정렬 적용된 할일 목록</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>완료 필터: <code>showCompleted=false</code>이면 완료된 항목 제거</li>
+<li>태그 필터: <code>tagIds</code>가 비어있지 않으면 해당 태그 포함 항목만 남김</li>
+<li>정렬 적용: TIME(시간순) / ORDER(표시순) / CREATED(생성순)</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F3.3 -->
+<div class="module-block" id="f3-3" data-module="f3.3 todoservice todo service">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f3)">F3.3</span>TodoService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">할일 CRUD + 완료 토글 + 순서 변경</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail">
+<code>F3.1 TodoRepository</code>, <code>F3.2 TodoFilter</code>, <code>F9.1 TagRepository</code>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+TodoCreateRequest {<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">scheduledDate</span>: <span class="type">LocalDate</span>,<br>
+&nbsp;&nbsp;<span class="field">startTime</span>: <span class="type">LocalTime</span>, <span class="field">endTime</span>: <span class="type">LocalTime</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">memo</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">tagIds</span>: <span class="type">List&lt;Long&gt;</span><br>
+}<br><br>
+TodoDto {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>, <span class="field">title</span>: <span class="type">String</span>, <span class="field">completed</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">scheduledDate</span>: <span class="type">LocalDate</span>, <span class="field">startTime</span>: <span class="type">LocalTime</span>,<br>
+&nbsp;&nbsp;<span class="field">endTime</span>: <span class="type">LocalTime</span>, <span class="field">color</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">memo</span>: <span class="type">String</span>, <span class="field">displayOrder</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">tags</span>: <span class="type">List&lt;TagDto&gt;</span>, <span class="field">createdAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getTodosByDate(userId, date)</code> → <span class="type">List&lt;TodoDto&gt;</span><br>
+&nbsp;&nbsp;<code>getTodosByWeek(userId, startDate)</code> → <span class="type">Map&lt;LocalDate, List&lt;TodoDto&gt;&gt;</span><br>
+&nbsp;&nbsp;<code>createTodo(userId, request)</code> → <span class="type">TodoDto</span><br>
+&nbsp;&nbsp;<code>updateTodo(userId, todoId, request)</code> → <span class="type">TodoDto</span><br>
+&nbsp;&nbsp;<code>toggleTodo(userId, todoId)</code> → <span class="type">TodoDto</span> (completed 반전)<br>
+&nbsp;&nbsp;<code>reorderTodos(userId, todoOrders)</code> → <span class="type">void</span><br>
+&nbsp;&nbsp;<code>deleteTodo(userId, todoId)</code> → <span class="type">void</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F3.4 -->
+<div class="module-block" id="f3-4" data-module="f3.4 todocontroller todo controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f3)">F3.4</span>TodoController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">할일 REST API 엔드포인트</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F3.3 TodoService</code></div>
+</div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/todos?date={yyyy-MM-dd}</code> → <span class="type">ApiResponse&lt;List&lt;TodoDto&gt;&gt;</span><br>
+<code>GET /api/todos/week?startDate={}</code> → <span class="type">ApiResponse&lt;Map&lt;String, List&lt;TodoDto&gt;&gt;&gt;</span><br>
+<code>GET /api/todos/stats?date={}</code> → <span class="type">ApiResponse&lt;TodoStatsDto&gt;</span> { total, completed, rate }<br>
+<code>POST /api/todos</code> → <span class="type">ApiResponse&lt;TodoDto&gt;</span><br>
+<code>PUT /api/todos/{id}</code> → <span class="type">ApiResponse&lt;TodoDto&gt;</span><br>
+<code>PATCH /api/todos/{id}/toggle</code> → <span class="type">ApiResponse&lt;TodoDto&gt;</span><br>
+<code>PUT /api/todos/reorder</code> → <span class="type">ApiResponse&lt;Void&gt;</span><br>
+<code>DELETE /api/todos/{id}</code> → <span class="type">ApiResponse&lt;Void&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F4 습관 ==================== -->
+<div class="feature-group" id="f4-group" data-feature="f4">
+<div class="feature-header" style="background:rgba(78,205,196,.1);border-left:4px solid var(--f4)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f4)">F4</span> 습관 (5개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f4')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f4')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f4">
+
+<!-- F4.1 -->
+<div class="module-block" id="f4-1" data-module="f4.1 habitrepository habit repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f4)">F4.1</span>HabitRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 습관 엔티티 CRUD</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+Habit Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">name</span>: <span class="type">String</span>, <span class="field">icon</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">active</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span>, <span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdAndActiveTrue(userId)</code> → <span class="type">List&lt;Habit&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndUserId(id, userId)</code> → <span class="type">Optional&lt;Habit&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F4.2 -->
+<div class="module-block" id="f4-2" data-module="f4.2 habitlogrepository habitlog repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f4)">F4.2</span>HabitLogRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">습관 체크 기록 CRUD + 기간별 조회</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+HabitLog Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">habitId</span>: <span class="type">Long</span> (FK→habits),<br>
+&nbsp;&nbsp;<span class="field">userId</span>: <span class="type">Long</span> (FK→users),<br>
+&nbsp;&nbsp;<span class="field">logDate</span>: <span class="type">LocalDate</span>, <span class="field">completed</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">completedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdAndLogDateBetween(userId, startDate, endDate)</code> → <span class="type">List&lt;HabitLog&gt;</span><br>
+&nbsp;&nbsp;<code>findByHabitIdAndLogDate(habitId, logDate)</code> → <span class="type">Optional&lt;HabitLog&gt;</span><br>
+&nbsp;&nbsp;<code>findByUserIdAndLogDate(userId, logDate)</code> → <span class="type">List&lt;HabitLog&gt;</span><br>
+&nbsp;&nbsp;<code>countByHabitIdAndCompletedTrueAndLogDateBetween(habitId, start, end)</code> → <span class="type">int</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F4.3 -->
+<div class="module-block" id="f4-3" data-module="f4.3 streakcalculator streak calculator habit">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f4)">F4.3</span>StreakCalculator</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">습관의 연속 달성 일수 계산</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>habitId</code>: <span class="type">Long</span>, <code>userId</code>: <span class="type">Long</span></div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F4.2 HabitLogRepository</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+<code>StreakResult</code> {<br>
+&nbsp;&nbsp;<span class="field">currentStreak</span>: <span class="type">int</span> — 현재 연속 달성 일수<br>
+&nbsp;&nbsp;<span class="field">longestStreak</span>: <span class="type">int</span> — 최장 연속 달성 일수<br>
+}
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>오늘부터 역순으로 HabitLog 조회</li>
+<li>연속된 <code>completed=true</code> 일수 카운트 → <code>currentStreak</code></li>
+<li>전체 기록에서 가장 긴 연속 기록 → <code>longestStreak</code></li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F4.4 -->
+<div class="module-block" id="f4-4" data-module="f4.4 habitservice habit service check">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f4)">F4.4</span>HabitService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">습관 CRUD + 체크/언체크 + 시간 잠금 검증</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F4.1 HabitRepository</code>, <code>F4.2 HabitLogRepository</code>, <code>F4.3 StreakCalculator</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+HabitDto {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>, <span class="field">name</span>: <span class="type">String</span>, <span class="field">icon</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">active</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">currentStreak</span>: <span class="type">int</span>, <span class="field">longestStreak</span>: <span class="type">int</span><br>
+}<br><br>
+HabitLogDto { <span class="field">id</span>, <span class="field">habitId</span>, <span class="field">logDate</span>, <span class="field">completed</span>, <span class="field">completedAt</span> }<br><br>
+HabitTodayDto {<br>
+&nbsp;&nbsp;<span class="field">totalHabits</span>: <span class="type">int</span>, <span class="field">completedCount</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">rate</span>: <span class="type">double</span>, <span class="field">habits</span>: <span class="type">List&lt;HabitWithStatusDto&gt;</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getHabits(userId)</code> → <span class="type">List&lt;HabitDto&gt;</span><br>
+&nbsp;&nbsp;<code>getHabitLogs(userId, year, month)</code> → <span class="type">List&lt;HabitLogDto&gt;</span><br>
+&nbsp;&nbsp;<code>getTodayStatus(userId)</code> → <span class="type">HabitTodayDto</span><br>
+&nbsp;&nbsp;<code>createHabit(userId, request)</code> → <span class="type">HabitDto</span><br>
+&nbsp;&nbsp;<code>updateHabit(userId, habitId, request)</code> → <span class="type">HabitDto</span><br>
+&nbsp;&nbsp;<code>checkHabit(userId, habitId)</code> → <span class="type">HabitLogDto</span><br>
+&nbsp;&nbsp;<code>uncheckHabit(userId, habitId, date)</code> → <span class="type">void</span><br>
+&nbsp;&nbsp;<code>deleteHabit(userId, habitId)</code> → <span class="type">void</span>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직 (checkHabit)</div>
+<ol class="logic-list">
+<li>시간 잠금 검증: <code>date</code>가 오늘인지 C0.10으로 확인 (과거 날짜 수정 불가 → TIME_LOCKED 에러)</li>
+<li>중복 체크 방지: 이미 체크된 기록이 있으면 무시</li>
+<li>HabitLog 생성 (logDate=today, completed=true, completedAt=now)</li>
+<li>F4.3.calculate(habitId) → 스트릭 정보 첨부</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F4.5 -->
+<div class="module-block" id="f4-5" data-module="f4.5 habitcontroller habit controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f4)">F4.5</span>HabitController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">습관 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F4.4 HabitService</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/habits</code> → <span class="type">ApiResponse&lt;List&lt;HabitDto&gt;&gt;</span><br>
+<code>GET /api/habits/today</code> → <span class="type">ApiResponse&lt;HabitTodayDto&gt;</span><br>
+<code>GET /api/habits/logs?year={}&amp;month={}</code> → <span class="type">ApiResponse&lt;List&lt;HabitLogDto&gt;&gt;</span><br>
+<code>POST /api/habits</code> → <span class="type">ApiResponse&lt;HabitDto&gt;</span><br>
+<code>PUT /api/habits/{id}</code> → <span class="type">ApiResponse&lt;HabitDto&gt;</span><br>
+<code>DELETE /api/habits/{id}</code> → <span class="type">ApiResponse&lt;Void&gt;</span><br>
+<code>POST /api/habits/{id}/check</code> → <span class="type">ApiResponse&lt;HabitLogDto&gt;</span><br>
+<code>DELETE /api/habits/{id}/check?date={}</code> → <span class="type">ApiResponse&lt;Void&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F5 루틴 ==================== -->
+<div class="feature-group" id="f5-group" data-feature="f5">
+<div class="feature-header" style="background:rgba(232,127,196,.1);border-left:4px solid var(--f5)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f5)">F5</span> 루틴 (3개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f5')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f5')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f5">
+
+<!-- F5.1 -->
+<div class="module-block" id="f5-1" data-module="f5.1 routinerepository routine repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f5)">F5.1</span>RoutineRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 루틴 엔티티 CRUD</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+Routine Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">name</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">daysOfWeek</span>: <span class="type">String</span> (쉼표 구분 "MON,TUE,WED"),<br>
+&nbsp;&nbsp;<span class="field">startTime</span>: <span class="type">LocalTime</span>, <span class="field">endTime</span>: <span class="type">LocalTime</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">active</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span>, <span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdOrderByStartTime(userId)</code> → <span class="type">List&lt;Routine&gt;</span><br>
+&nbsp;&nbsp;<code>findByUserIdAndActiveTrue(userId)</code> → <span class="type">List&lt;Routine&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndUserId(id, userId)</code> → <span class="type">Optional&lt;Routine&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F5.2 -->
+<div class="module-block" id="f5-2" data-module="f5.2 routineservice routine service">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f5)">F5.2</span>RoutineService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">루틴 CRUD + 활성/비활성 토글 + 캘린더 연동 데이터 제공</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F5.1 RoutineRepository</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+RoutineCreateRequest { <span class="field">name</span>, <span class="field">daysOfWeek</span>: <span class="type">List&lt;String&gt;</span>, <span class="field">startTime</span>, <span class="field">endTime</span>, <span class="field">color</span> }<br><br>
+RoutineDto {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>, <span class="field">name</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">daysOfWeek</span>: <span class="type">List&lt;String&gt;</span>,<br>
+&nbsp;&nbsp;<span class="field">startTime</span>: <span class="type">LocalTime</span>, <span class="field">endTime</span>: <span class="type">LocalTime</span>,<br>
+&nbsp;&nbsp;<span class="field">color</span>: <span class="type">String</span>, <span class="field">active</span>: <span class="type">boolean</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getRoutines(userId)</code> → <span class="type">List&lt;RoutineDto&gt;</span><br>
+&nbsp;&nbsp;<code>getActiveRoutinesForDay(userId, dayOfWeek)</code> → <span class="type">List&lt;RoutineDto&gt;</span><br>
+&nbsp;&nbsp;<code>createRoutine(userId, request)</code> → <span class="type">RoutineDto</span><br>
+&nbsp;&nbsp;<code>updateRoutine(userId, routineId, request)</code> → <span class="type">RoutineDto</span><br>
+&nbsp;&nbsp;<code>toggleRoutine(userId, routineId)</code> → <span class="type">RoutineDto</span><br>
+&nbsp;&nbsp;<code>deleteRoutine(userId, routineId)</code> → <span class="type">void</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F5.3 -->
+<div class="module-block" id="f5-3" data-module="f5.3 routinecontroller routine controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f5)">F5.3</span>RoutineController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">루틴 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F5.2 RoutineService</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/routines</code> → <span class="type">ApiResponse&lt;List&lt;RoutineDto&gt;&gt;</span><br>
+<code>POST /api/routines</code> → <span class="type">ApiResponse&lt;RoutineDto&gt;</span><br>
+<code>PUT /api/routines/{id}</code> → <span class="type">ApiResponse&lt;RoutineDto&gt;</span><br>
+<code>PATCH /api/routines/{id}/toggle</code> → <span class="type">ApiResponse&lt;RoutineDto&gt;</span><br>
+<code>DELETE /api/routines/{id}</code> → <span class="type">ApiResponse&lt;Void&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F6 목표 ==================== -->
+<div class="feature-group" id="f6-group" data-feature="f6">
+<div class="feature-header" style="background:rgba(239,104,104,.1);border-left:4px solid var(--f6)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f6)">F6</span> 목표 (5개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f6')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f6')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f6">
+
+<!-- F6.1 -->
+<div class="module-block" id="f6-1" data-module="f6.1 goalrepository goal repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f6)">F6.1</span>GoalRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 목표 엔티티 CRUD + 계층/기간별 조회</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+Goal Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">period</span>: <span class="type">GoalPeriod</span>(YEARLY|MONTHLY),<br>
+&nbsp;&nbsp;<span class="field">year</span>: <span class="type">int</span>, <span class="field">month</span>: <span class="type">Integer</span> (nullable),<br>
+&nbsp;&nbsp;<span class="field">progress</span>: <span class="type">int</span> (0-100), <span class="field">completed</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">parentGoalId</span>: <span class="type">Long</span> (FK→goals, nullable, 자기참조),<br>
+&nbsp;&nbsp;<span class="field">displayOrder</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span>, <span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdAndPeriodAndYear(userId, period, year)</code> → <span class="type">List&lt;Goal&gt;</span><br>
+&nbsp;&nbsp;<code>findByUserIdAndPeriodAndYearAndMonth(userId, period, year, month)</code> → <span class="type">List&lt;Goal&gt;</span><br>
+&nbsp;&nbsp;<code>findByParentGoalId(parentGoalId)</code> → <span class="type">List&lt;Goal&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndUserId(id, userId)</code> → <span class="type">Optional&lt;Goal&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F6.2 -->
+<div class="module-block" id="f6-2" data-module="f6.2 goaltaskrepository goaltask repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f6)">F6.2</span>GoalTaskRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">목표 하위 태스크 CRUD</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+GoalTask Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">goalId</span>: <span class="type">Long</span> (FK→goals),<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">completed</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">displayOrder</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span>, <span class="field">updatedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByGoalIdOrderByDisplayOrder(goalId)</code> → <span class="type">List&lt;GoalTask&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndGoalId(taskId, goalId)</code> → <span class="type">Optional&lt;GoalTask&gt;</span><br>
+&nbsp;&nbsp;<code>countByGoalId(goalId)</code> → <span class="type">int</span><br>
+&nbsp;&nbsp;<code>countByGoalIdAndCompletedTrue(goalId)</code> → <span class="type">int</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F6.3 -->
+<div class="module-block" id="f6-3" data-module="f6.3 progresscalculator progress calculator goal">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f6)">F6.3</span>ProgressCalculator</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">목표의 진행률을 하위 할일 완료율로 자동 계산</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>goalId</code>: <span class="type">Long</span></div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F6.2 GoalTaskRepository</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><span class="type">int</span> (0~100, 진행률 퍼센트)</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>해당 goal의 전체 task 수 조회: <code>countByGoalId(goalId)</code></li>
+<li>completed=true인 task 수 조회: <code>countByGoalIdAndCompletedTrue(goalId)</code></li>
+<li><code>(completedCount / totalCount) * 100</code> 반환</li>
+<li>task가 없으면 0 반환</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F6.4 -->
+<div class="module-block" id="f6-4" data-module="f6.4 goalservice goal service mandalart">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f6)">F6.4</span>GoalService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">목표 CRUD + 하위목표 관리 + 진행률 자동갱신 + 만다라트 매핑</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail"><code>F6.1 GoalRepository</code>, <code>F6.2 GoalTaskRepository</code>, <code>F6.3 ProgressCalculator</code></div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+GoalCreateRequest { <span class="field">title</span>, <span class="field">description</span>, <span class="field">period</span>: <span class="type">GoalPeriod</span>, <span class="field">year</span>, <span class="field">month</span>, <span class="field">parentGoalId</span> (nullable) }<br><br>
+GoalDto {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>, <span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">period</span>: <span class="type">GoalPeriod</span>, <span class="field">year</span>: <span class="type">int</span>, <span class="field">month</span>: <span class="type">Integer</span>,<br>
+&nbsp;&nbsp;<span class="field">progress</span>: <span class="type">int</span>, <span class="field">completed</span>: <span class="type">boolean</span>,<br>
+&nbsp;&nbsp;<span class="field">parentGoalId</span>: <span class="type">Long</span>,<br>
+&nbsp;&nbsp;<span class="field">subGoals</span>: <span class="type">List&lt;GoalDto&gt;</span>, <span class="field">tasks</span>: <span class="type">List&lt;GoalTaskDto&gt;</span>,<br>
+&nbsp;&nbsp;<span class="field">displayOrder</span>: <span class="type">int</span><br>
+}<br><br>
+MandalartDto {<br>
+&nbsp;&nbsp;<span class="field">centerGoal</span>: <span class="type">GoalDto</span>,<br>
+&nbsp;&nbsp;<span class="field">sectors</span>: <span class="type">List&lt;MandalartSectorDto&gt;</span> { goal: GoalDto, tasks: List&lt;GoalTaskDto&gt; }<br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getGoals(userId, year, period)</code> → <span class="type">List&lt;GoalDto&gt;</span><br>
+&nbsp;&nbsp;<code>createGoal(userId, request)</code> → <span class="type">GoalDto</span><br>
+&nbsp;&nbsp;<code>updateGoal(userId, goalId, request)</code> → <span class="type">GoalDto</span><br>
+&nbsp;&nbsp;<code>deleteGoal(userId, goalId)</code> → <span class="type">void</span> (하위목표+태스크 CASCADE 삭제)<br>
+&nbsp;&nbsp;<code>addTask(userId, goalId, request)</code> → <span class="type">GoalTaskDto</span><br>
+&nbsp;&nbsp;<code>toggleTask(userId, taskId)</code> → <span class="type">GoalTaskDto</span> (완료 토글 + 진행률 재계산)<br>
+&nbsp;&nbsp;<code>getMandalart(userId, year)</code> → <span class="type">MandalartDto</span> (9x9 그리드)
+</div>
+</div>
+</div>
+</div>
+
+<!-- F6.5 -->
+<div class="module-block" id="f6-5" data-module="f6.5 goalcontroller goal controller api mandalart">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f6)">F6.5</span>GoalController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">목표 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F6.4 GoalService</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/goals?year={}&amp;period={}</code> → <span class="type">ApiResponse&lt;List&lt;GoalDto&gt;&gt;</span><br>
+<code>POST /api/goals</code> → <span class="type">ApiResponse&lt;GoalDto&gt;</span><br>
+<code>PUT /api/goals/{id}</code> → <span class="type">ApiResponse&lt;GoalDto&gt;</span><br>
+<code>DELETE /api/goals/{id}</code> → <span class="type">ApiResponse&lt;Void&gt;</span><br>
+<code>POST /api/goals/{id}/tasks</code> → <span class="type">ApiResponse&lt;GoalTaskDto&gt;</span><br>
+<code>PATCH /api/goals/tasks/{taskId}/toggle</code> → <span class="type">ApiResponse&lt;GoalTaskDto&gt;</span><br>
+<code>DELETE /api/goals/tasks/{taskId}</code> → <span class="type">ApiResponse&lt;Void&gt;</span><br>
+<code>GET /api/goals/mandalart?year={}</code> → <span class="type">ApiResponse&lt;MandalartDto&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F7 타이머 ==================== -->
+<div class="feature-group" id="f7-group" data-feature="f7">
+<div class="feature-header" style="background:rgba(239,208,96,.1);border-left:4px solid var(--f7)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f7)">F7</span> 타이머 (3개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f7')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f7')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f7">
+
+<!-- F7.1 -->
+<div class="module-block" id="f7-1" data-module="f7.1 timerlogrepository timer log repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f7)">F7.1</span>TimerLogRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">타이머 세션 기록 CRUD + 통계 쿼리</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+TimerLog Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">durationMinutes</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">sessionType</span>: <span class="type">SessionType</span>(FOCUS|BREAK),<br>
+&nbsp;&nbsp;<span class="field">startedAt</span>: <span class="type">LocalDateTime</span>, <span class="field">endedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdAndStartedAtBetween(userId, start, end)</code> → <span class="type">List&lt;TimerLog&gt;</span><br>
+&nbsp;&nbsp;<code>sumDurationByUserIdAndSessionTypeAndStartedAtBetween(userId, type, start, end)</code> → <span class="type">int</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F7.2 -->
+<div class="module-block" id="f7-2" data-module="f7.2 timerservice timer service pomodoro">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f7)">F7.2</span>TimerService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">타이머 세션 기록 + 통계 제공</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F7.1 TimerLogRepository</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+TimerLogCreateRequest { <span class="field">durationMinutes</span>: <span class="type">int</span>, <span class="field">sessionType</span>: <span class="type">SessionType</span>, <span class="field">startedAt</span>: <span class="type">LocalDateTime</span>, <span class="field">endedAt</span>: <span class="type">LocalDateTime</span> }<br><br>
+TimerLogDto { <span class="field">id</span>, <span class="field">durationMinutes</span>, <span class="field">sessionType</span>, <span class="field">startedAt</span>, <span class="field">endedAt</span> }<br><br>
+TimerStatsDto {<br>
+&nbsp;&nbsp;<span class="field">totalFocusMinutes</span>: <span class="type">int</span>, <span class="field">totalBreakMinutes</span>: <span class="type">int</span>,<br>
+&nbsp;&nbsp;<span class="field">sessionCount</span>: <span class="type">int</span>, <span class="field">avgFocusMinutes</span>: <span class="type">int</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>logSession(userId, request)</code> → <span class="type">TimerLogDto</span><br>
+&nbsp;&nbsp;<code>getDayLogs(userId, date)</code> → <span class="type">List&lt;TimerLogDto&gt;</span><br>
+&nbsp;&nbsp;<code>getStats(userId, period: StatsPeriod)</code> → <span class="type">TimerStatsDto</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F7.3 -->
+<div class="module-block" id="f7-3" data-module="f7.3 timercontroller timer controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f7)">F7.3</span>TimerController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">타이머 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F7.2 TimerService</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>POST /api/timer/logs</code> → <span class="type">ApiResponse&lt;TimerLogDto&gt;</span><br>
+<code>GET /api/timer/logs?date={}</code> → <span class="type">ApiResponse&lt;List&lt;TimerLogDto&gt;&gt;</span><br>
+<code>GET /api/timer/stats?period={DAY|WEEK|MONTH}</code> → <span class="type">ApiResponse&lt;TimerStatsDto&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F8 업적 ==================== -->
+<div class="feature-group" id="f8-group" data-feature="f8">
+<div class="feature-header" style="background:rgba(143,212,96,.1);border-left:4px solid var(--f8)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f8)">F8</span> 업적 (4개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f8')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f8')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f8">
+
+<!-- F8.1 -->
+<div class="module-block" id="f8-1" data-module="f8.1 achievementrepository achievement repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f8)">F8.1</span>AchievementRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 업적 엔티티 CRUD</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+Achievement Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">achievementType</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">achievedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserId(userId)</code> → <span class="type">List&lt;Achievement&gt;</span><br>
+&nbsp;&nbsp;<code>findByUserIdAndAchievementType(userId, type)</code> → <span class="type">Optional&lt;Achievement&gt;</span><br>
+&nbsp;&nbsp;<code>existsByUserIdAndAchievementType(userId, type)</code> → <span class="type">boolean</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F8.2 -->
+<div class="module-block" id="f8-2" data-module="f8.2 achievementevaluator achievement evaluator">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f8)">F8.2</span>AchievementEvaluator</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">업적 달성 조건을 평가하고 새로 달성된 업적 목록 반환</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>userId</code>: <span class="type">Long</span></div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail">
+<code>F3.1 TodoRepository</code> — 할일 완료 수 조회<br>
+<code>F4.1 HabitRepository</code> / <code>F4.2 HabitLogRepository</code> — 습관 스트릭 조회<br>
+<code>F8.1 AchievementRepository</code> — 기존 업적 조회
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail"><code>List&lt;Achievement&gt;</code> — 새로 달성된 업적들</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>미달성 업적 타입 목록 조회</li>
+<li>각 타입별 조건 평가:
+  <br>&nbsp;&nbsp;FIRST_TODO: 첫 할일 완료
+  <br>&nbsp;&nbsp;TODO_10/50/100: 할일 N개 완료
+  <br>&nbsp;&nbsp;STREAK_7/30: 습관 N일 연속
+  <br>&nbsp;&nbsp;HABIT_MASTER: 전체 습관 30일 달성
+  <br>&nbsp;&nbsp;GOAL_COMPLETE: 첫 목표 달성
+  <br>&nbsp;&nbsp;TIMER_100: 포모도로 100세션
+</li>
+<li>달성된 업적 Achievement 엔티티 생성 + 저장</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F8.3 -->
+<div class="module-block" id="f8-3" data-module="f8.3 achievementservice achievement service">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f8)">F8.3</span>AchievementService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">업적 목록 조회 + 평가 트리거</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F8.1 AchievementRepository</code>, <code>F8.2 AchievementEvaluator</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+AchievementDto {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span>, <span class="field">type</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">title</span>: <span class="type">String</span>, <span class="field">description</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">achievedAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getAchievements(userId)</code> → <span class="type">List&lt;AchievementDto&gt;</span><br>
+&nbsp;&nbsp;<code>evaluate(userId)</code> → <span class="type">List&lt;AchievementDto&gt;</span> (F8.2 호출 → 새 업적 반환)
+</div>
+</div>
+</div>
+</div>
+
+<!-- F8.4 -->
+<div class="module-block" id="f8-4" data-module="f8.4 achievementcontroller achievement controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f8)">F8.4</span>AchievementController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">업적 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F8.3 AchievementService</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/achievements</code> → <span class="type">ApiResponse&lt;List&lt;AchievementDto&gt;&gt;</span><br>
+<code>POST /api/achievements/evaluate</code> → <span class="type">ApiResponse&lt;List&lt;AchievementDto&gt;&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F9 태그 ==================== -->
+<div class="feature-group" id="f9-group" data-feature="f9">
+<div class="feature-header" style="background:rgba(91,141,239,.1);border-left:4px solid var(--f9)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f9)">F9</span> 태그 (3개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f9')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f9')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f9">
+
+<!-- F9.1 -->
+<div class="module-block" id="f9-1" data-module="f9.1 tagrepository tag repository">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f9)">F9.1</span>TagRepository</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">JPA 기반 태그 엔티티 CRUD</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>C0.2 DataSource</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+Tag Entity {<br>
+&nbsp;&nbsp;<span class="field">id</span>: <span class="type">Long</span> (PK), <span class="field">userId</span>: <span class="type">Long</span> (FK),<br>
+&nbsp;&nbsp;<span class="field">name</span>: <span class="type">String</span>, <span class="field">color</span>: <span class="type">String</span>,<br>
+&nbsp;&nbsp;<span class="field">createdAt</span>: <span class="type">LocalDateTime</span><br>
+}<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>findByUserIdOrderByName(userId)</code> → <span class="type">List&lt;Tag&gt;</span><br>
+&nbsp;&nbsp;<code>findByIdAndUserId(id, userId)</code> → <span class="type">Optional&lt;Tag&gt;</span><br>
+&nbsp;&nbsp;<code>findAllByIdInAndUserId(ids, userId)</code> → <span class="type">List&lt;Tag&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- F9.2 -->
+<div class="module-block" id="f9-2" data-module="f9.2 tagservice tag service">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f9)">F9.2</span>TagService</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">태그 CRUD (할일에서 참조)</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F9.1 TagRepository</code></div></div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+TagCreateRequest { <span class="field">name</span>: <span class="type">String</span>, <span class="field">color</span>: <span class="type">String</span> }<br>
+TagDto { <span class="field">id</span>: <span class="type">Long</span>, <span class="field">name</span>: <span class="type">String</span>, <span class="field">color</span>: <span class="type">String</span> }<br><br>
+메서드:<br>
+&nbsp;&nbsp;<code>getTags(userId)</code> → <span class="type">List&lt;TagDto&gt;</span><br>
+&nbsp;&nbsp;<code>createTag(userId, request)</code> → <span class="type">TagDto</span><br>
+&nbsp;&nbsp;<code>updateTag(userId, tagId, request)</code> → <span class="type">TagDto</span><br>
+&nbsp;&nbsp;<code>deleteTag(userId, tagId)</code> → <span class="type">void</span> (todo_tags 연결도 삭제)
+</div>
+</div>
+</div>
+</div>
+
+<!-- F9.3 -->
+<div class="module-block" id="f9-3" data-module="f9.3 tagcontroller tag controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f9)">F9.3</span>TagController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">태그 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F9.2 TagService</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/tags</code> → <span class="type">ApiResponse&lt;List&lt;TagDto&gt;&gt;</span><br>
+<code>POST /api/tags</code> → <span class="type">ApiResponse&lt;TagDto&gt;</span><br>
+<code>PUT /api/tags/{id}</code> → <span class="type">ApiResponse&lt;TagDto&gt;</span><br>
+<code>DELETE /api/tags/{id}</code> → <span class="type">ApiResponse&lt;Void&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== F10 대시보드 ==================== -->
+<div class="feature-group" id="f10-group" data-feature="f10">
+<div class="feature-header" style="background:rgba(212,160,240,.1);border-left:4px solid var(--f10)" onclick="toggleFeature(this)">
+<span><span style="color:var(--f10)">F10</span> 대시보드 (2개)</span>
+<div class="fbtn">
+<button class="btn" onclick="event.stopPropagation();expandFeature('f10')">모두 펼치기</button>
+<button class="btn" onclick="event.stopPropagation();collapseFeature('f10')">모두 접기</button>
+<span class="arrow">▶</span>
+</div>
+</div>
+<div class="feature-body" data-feature-body="f10">
+
+<!-- F10.1 -->
+<div class="module-block" id="f10-1" data-module="f10.1 dashboardaggregator dashboard aggregator">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f10)">F10.1</span>DashboardAggregator</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">각 Feature 서비스에서 오늘/주간 요약 데이터를 집계</div>
+<div class="io-block">
+<div class="io-label in">IN (메인)</div>
+<div class="io-detail"><code>userId</code>: <span class="type">Long</span>, <code>date</code>: <span class="type">LocalDate</span></div>
+</div>
+<div class="io-block">
+<div class="io-label in">IN (보조)</div>
+<div class="io-detail">
+<code>F3.3 TodoService</code>, <code>F4.4 HabitService</code>, <code>F2.3 EventService</code>,<br>
+<code>F6.4 GoalService</code>, <code>F7.2 TimerService</code>, <code>F8.3 AchievementService</code>
+</div>
+</div>
+<div class="io-block">
+<div class="io-label out">OUT</div>
+<div class="io-detail">
+DashboardTodayDto {<br>
+&nbsp;&nbsp;<span class="field">todoSummary</span>: { <span class="field">total</span>: <span class="type">int</span>, <span class="field">completed</span>: <span class="type">int</span>, <span class="field">rate</span>: <span class="type">double</span>, <span class="field">preview</span>: <span class="type">List&lt;TodoDto&gt;</span> (최대 5개) }<br>
+&nbsp;&nbsp;<span class="field">habitSummary</span>: { <span class="field">total</span>: <span class="type">int</span>, <span class="field">completed</span>: <span class="type">int</span>, <span class="field">rate</span>: <span class="type">double</span>, <span class="field">preview</span>: <span class="type">List&lt;HabitWithStatusDto&gt;</span> }<br>
+&nbsp;&nbsp;<span class="field">upcomingEvents</span>: <span class="type">List&lt;EventDto&gt;</span> (오늘 + 향후 3일)<br>
+&nbsp;&nbsp;<span class="field">ddayEvents</span>: <span class="type">List&lt;DdayDto&gt;</span> { title, dDay: int, color }<br>
+&nbsp;&nbsp;<span class="field">timerSummary</span>: { <span class="field">todayFocusMinutes</span>: <span class="type">int</span>, <span class="field">weekFocusMinutes</span>: <span class="type">int</span> }<br>
+&nbsp;&nbsp;<span class="field">recentAchievements</span>: <span class="type">List&lt;AchievementDto&gt;</span> (최근 3개)<br>
+&nbsp;&nbsp;<span class="field">goalProgress</span>: { <span class="field">totalGoals</span>: <span class="type">int</span>, <span class="field">avgProgress</span>: <span class="type">double</span> }<br>
+}
+</div>
+</div>
+<div class="io-block">
+<div class="io-label logic">내부 로직</div>
+<ol class="logic-list">
+<li>F3.3에서 오늘 할일 요약 조회</li>
+<li>F4.4에서 오늘 습관 현황 조회</li>
+<li>F2.3에서 오늘~3일 후 이벤트 조회</li>
+<li>F6.4에서 현재 연도 목표 진행률 집계</li>
+<li>F7.2에서 오늘/주간 집중 시간 조회</li>
+<li>F8.3에서 최근 업적 3개 조회</li>
+<li>각 서비스 호출을 병렬로 실행 후 결과 조합</li>
+</ol>
+</div>
+</div>
+</div>
+
+<!-- F10.2 -->
+<div class="module-block" id="f10-2" data-module="f10.2 dashboardcontroller dashboard controller api">
+<div class="module-header" onclick="toggleModule(this)">
+<span><span class="mid" style="color:var(--f10)">F10.2</span>DashboardController</span>
+<span class="arrow">▶</span>
+</div>
+<div class="module-body">
+<div class="module-desc">대시보드 REST API 엔드포인트</div>
+<div class="io-block"><div class="io-label in">IN (보조)</div><div class="io-detail"><code>F10.1 DashboardAggregator</code></div></div>
+<div class="io-block">
+<div class="io-label api">API 엔드포인트</div>
+<div class="io-detail">
+<code>GET /api/dashboard/today</code> → <span class="type">ApiResponse&lt;DashboardTodayDto&gt;</span><br>
+<code>GET /api/dashboard/week</code> → <span class="type">ApiResponse&lt;DashboardWeekDto&gt;</span>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+
+<!-- ==================== 의존성 매트릭스 ==================== -->
+<div class="section" id="dep-matrix">
+<div class="section-title"><span class="dot" style="background:var(--in)"></span>의존성 매트릭스 (C0 참조)</div>
+<div class="dep-matrix tbl-wrap">
+<table>
+<thead>
+<tr><th>Module</th><th>C0.1</th><th>C0.2</th><th>C0.3</th><th>C0.4</th><th>C0.5</th><th>C0.6</th><th>C0.7</th><th>C0.8</th><th>C0.9</th><th>C0.10</th></tr>
+</thead>
+<tbody>
+<tr><td>F1.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F1.2</td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td class="dep"></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F1.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F2.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td></tr>
+<tr><td>F2.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td></td><td class="dep"></td></tr>
+<tr><td>F2.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td class="dep"></td></tr>
+<tr><td>F2.4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F3.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F3.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F3.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td class="dep"></td></tr>
+<tr><td>F3.4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F4.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F4.2</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F4.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td></tr>
+<tr><td>F4.4</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td class="dep"></td></tr>
+<tr><td>F4.5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F5.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F5.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F5.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F6.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F6.2</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F6.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F6.4</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F6.5</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F7.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F7.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td class="dep"></td></tr>
+<tr><td>F7.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F8.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F8.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td></tr>
+<tr><td>F8.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F8.4</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F9.1</td><td></td><td class="dep"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+<tr><td>F9.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F9.3</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+<tr><td>F10.1</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td class="dep"></td></tr>
+<tr><td>F10.2</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="dep"></td><td></td></tr>
+</tbody>
+</table>
+</div>
+
+<div style="margin-top:24px">
+<div class="section-title" style="font-size:18px"><span class="dot" style="background:var(--f5)"></span>Feature 간 의존성</div>
+<div class="inter-dep">
+<div class="dep-item"><code>F2.3 EventService</code> ← <code>F5.2 RoutineService</code> — 캘린더에 루틴 표시</div>
+<div class="dep-item"><code>F3.3 TodoService</code> ← <code>F9.2 TagService</code> — 할일에 태그 연결</div>
+<div class="dep-item"><code>F8.2 AchievementEvaluator</code> ← <code>F3.1 TodoRepository</code>, <code>F4.1 HabitRepository</code>, <code>F4.2 HabitLogRepository</code> — 업적 평가 데이터 소스</div>
+<div class="dep-item"><code>F10.1 DashboardAggregator</code> ← <code>F2.3</code>, <code>F3.3</code>, <code>F4.4</code>, <code>F6.4</code>, <code>F7.2</code>, <code>F8.3</code> — 전체 기능 집계</div>
+</div>
+</div>
+</div>
+
+<!-- ==================== DB 스키마 ==================== -->
+<div class="section" id="db-schema">
+<div class="section-title"><span class="dot" style="background:var(--f6)"></span>DB 스키마 (Flyway Migrations)</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f1);margin-bottom:8px">V1__create_users.sql</h4>
+<pre>CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    google_id VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    display_name VARCHAR(100),
+    photo_url VARCHAR(500),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_users_google_id (google_id),
+    INDEX idx_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f2);margin-bottom:8px">V2__create_events.sql</h4>
+<pre>CREATE TABLE events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    event_type ENUM('NORMAL','RANGE','RECURRING','TODO') NOT NULL DEFAULT 'NORMAL',
+    start_date DATETIME NOT NULL,
+    end_date DATETIME,
+    all_day BOOLEAN NOT NULL DEFAULT FALSE,
+    color VARCHAR(7) DEFAULT '#5B8DEF',
+    location VARCHAR(300),
+    recurrence_rule VARCHAR(200),
+    range_tag ENUM('TRAVEL','EXAM','VACATION','PROJECT','OTHER'),
+    memo TEXT,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_events_user_date (user_id, start_date),
+    INDEX idx_events_user_type (user_id, event_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f3);margin-bottom:8px">V3__create_todos.sql</h4>
+<pre>CREATE TABLE todos (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    scheduled_date DATE NOT NULL,
+    start_time TIME,
+    end_time TIME,
+    color VARCHAR(7) DEFAULT '#5B8DEF',
+    memo TEXT,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_todos_user_date (user_id, scheduled_date),
+    INDEX idx_todos_user_date_order (user_id, scheduled_date, display_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f4);margin-bottom:8px">V4__create_habits.sql</h4>
+<pre>CREATE TABLE habits (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    icon VARCHAR(50),
+    color VARCHAR(7) DEFAULT '#4ECDC4',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_habits_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE habit_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    habit_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    log_date DATE NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    completed_at DATETIME,
+    FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_habit_log_date (habit_id, log_date),
+    INDEX idx_habit_logs_user_date (user_id, log_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f5);margin-bottom:8px">V5__create_routines.sql</h4>
+<pre>CREATE TABLE routines (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    days_of_week VARCHAR(50) NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    color VARCHAR(7) DEFAULT '#E87FC4',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_routines_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f6);margin-bottom:8px">V6__create_goals.sql</h4>
+<pre>CREATE TABLE goals (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    period ENUM('YEARLY','MONTHLY') NOT NULL,
+    year INT NOT NULL,
+    month INT,
+    progress INT NOT NULL DEFAULT 0,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    parent_goal_id BIGINT,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+    INDEX idx_goals_user_period (user_id, period, year),
+    INDEX idx_goals_parent (parent_goal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE goal_tasks (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    goal_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT FALSE,
+    display_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE,
+    INDEX idx_goal_tasks_goal (goal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f7);margin-bottom:8px">V7__create_timer_logs.sql</h4>
+<pre>CREATE TABLE timer_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    duration_minutes INT NOT NULL,
+    session_type ENUM('FOCUS','BREAK') NOT NULL,
+    started_at DATETIME NOT NULL,
+    ended_at DATETIME NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_timer_logs_user_date (user_id, started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f8);margin-bottom:8px">V8__create_achievements.sql</h4>
+<pre>CREATE TABLE achievements (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    achievement_type VARCHAR(50) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    achieved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_achievement (user_id, achievement_type),
+    INDEX idx_achievements_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+
+<div class="schema-block">
+<h4 style="color:var(--f9);margin-bottom:8px">V9__create_tags.sql + V10__create_todo_tags.sql</h4>
+<pre>CREATE TABLE tags (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    color VARCHAR(7) DEFAULT '#5B8DEF',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_user_tag_name (user_id, name),
+    INDEX idx_tags_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE todo_tags (
+    todo_id BIGINT NOT NULL,
+    tag_id BIGINT NOT NULL,
+    PRIMARY KEY (todo_id, tag_id),
+    FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;</pre>
+</div>
+</div>
+
+<!-- ==================== 구현 체크리스트 ==================== -->
+<div class="section" id="checklist">
+<div class="section-title"><span class="dot" style="background:var(--f8)"></span>구현 체크리스트</div>
+<ul class="checklist">
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(86,212,224,.15);color:var(--c0)">Phase 1</span>공통 모듈 (C0) — C0.1~C0.10</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(91,141,239,.15);color:var(--f1)">Phase 2</span>인증 (F1) — F1.1~F1.3</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(91,141,239,.15);color:var(--f9)">Phase 3</span>태그 (F9) — F9.1~F9.3 (다른 Feature에서 참조하므로 먼저)</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(247,164,76,.15);color:var(--f3)">Phase 4</span>할일 (F3) — F3.1~F3.4</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(78,205,196,.15);color:var(--f4)">Phase 5</span>습관 (F4) — F4.1~F4.5</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(232,127,196,.15);color:var(--f5)">Phase 6</span>루틴 (F5) — F5.1~F5.3</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(155,127,237,.15);color:var(--f2)">Phase 7</span>캘린더 (F2) — F2.1~F2.4</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(239,104,104,.15);color:var(--f6)">Phase 8</span>목표 (F6) — F6.1~F6.5</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(239,208,96,.15);color:var(--f7)">Phase 9</span>타이머 (F7) — F7.1~F7.3</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(143,212,96,.15);color:var(--f8)">Phase 10</span>업적 (F8) — F8.1~F8.4</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(212,160,240,.15);color:var(--f10)">Phase 11</span>대시보드 (F10) — F10.1~F10.2</li>
+<li onclick="this.classList.toggle('done');this.querySelector('input').checked=!this.querySelector('input').checked">
+<input type="checkbox"><span class="phase-tag" style="background:rgba(86,212,224,.15);color:var(--c0)">Phase 12</span>Flyway 마이그레이션 — V1~V10</li>
+</ul>
+</div>
+
+</div><!-- /container -->
+
+<script>
+/* 모듈 토글 */
+function toggleModule(header){
+header.classList.toggle('open');
+var body=header.nextElementSibling;
+body.classList.toggle('open');
+}
+
+/* Feature 그룹 토글 */
+function toggleFeature(header){
+header.classList.toggle('open');
+var body=header.nextElementSibling;
+body.classList.toggle('open');
+}
+
+/* Feature 내 모두 펼치기/접기 */
+function expandFeature(f){
+var body=document.querySelector('[data-feature-body="'+f+'"]');
+if(!body.classList.contains('open')){
+var header=body.previousElementSibling;
+header.classList.add('open');
+body.classList.add('open');
+}
+body.querySelectorAll('.module-header').forEach(function(h){
+h.classList.add('open');
+h.nextElementSibling.classList.add('open');
+});
+}
+function collapseFeature(f){
+var body=document.querySelector('[data-feature-body="'+f+'"]');
+body.querySelectorAll('.module-header').forEach(function(h){
+h.classList.remove('open');
+h.nextElementSibling.classList.remove('open');
+});
+}
+
+/* 전역 펼치기/접기 */
+function expandAll(){
+document.querySelectorAll('.feature-header').forEach(function(h){h.classList.add('open')});
+document.querySelectorAll('.feature-body').forEach(function(b){b.classList.add('open')});
+document.querySelectorAll('.module-header').forEach(function(h){h.classList.add('open')});
+document.querySelectorAll('.module-body').forEach(function(b){b.classList.add('open')});
+}
+function collapseAll(){
+document.querySelectorAll('.feature-header').forEach(function(h){h.classList.remove('open')});
+document.querySelectorAll('.feature-body').forEach(function(b){b.classList.remove('open')});
+document.querySelectorAll('.module-header').forEach(function(h){h.classList.remove('open')});
+document.querySelectorAll('.module-body').forEach(function(b){b.classList.remove('open')});
+}
+
+/* 모듈로 스크롤 */
+function scrollToModule(id){
+var el=document.getElementById(id);
+if(el){
+/* 부모 Feature 열기 */
+var fg=el.closest('.feature-group');
+if(fg){
+fg.querySelector('.feature-header').classList.add('open');
+fg.querySelector('.feature-body').classList.add('open');
+}
+/* 모듈 열기 */
+var mh=el.querySelector('.module-header');
+if(mh){mh.classList.add('open');mh.nextElementSibling.classList.add('open');}
+el.scrollIntoView({behavior:'smooth',block:'center'});
+el.style.boxShadow='0 0 0 2px var(--api)';
+setTimeout(function(){el.style.boxShadow='';},2000);
+}
+}
+
+/* 검색 필터 */
+function filterModules(q){
+q=q.toLowerCase().trim();
+document.querySelectorAll('.module-block').forEach(function(block){
+var data=block.getAttribute('data-module')||'';
+var title=block.querySelector('.module-header')?.textContent||'';
+var match=!q||data.indexOf(q)!==-1||title.toLowerCase().indexOf(q)!==-1;
+block.classList.toggle('hidden',!match);
+});
+/* Feature 그룹 안의 모든 모듈이 숨겨지면 그룹도 숨김 */
+document.querySelectorAll('.feature-group').forEach(function(fg){
+var visible=fg.querySelectorAll('.module-block:not(.hidden)');
+fg.classList.toggle('hidden',q&&visible.length===0);
+/* 검색 중이면 Feature 펼치기 */
+if(q&&visible.length>0){
+fg.querySelector('.feature-header').classList.add('open');
+fg.querySelector('.feature-body').classList.add('open');
+}
+});
+}
+</script>
+</body>
+</html>

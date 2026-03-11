@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    스플래시 배경 레이아웃
+    앱 그라디언트 시작 색상(#667eea: 연보라)을 배경으로 사용하여
+    Flutter UI 로딩 전 시각적 연속성을 확보한다
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 앱 메인 그라디언트의 시작 색상과 매칭되는 배경색 -->
+    <item android:drawable="@color/splash_background"/>
+</layer-list>
