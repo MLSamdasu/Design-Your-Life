@@ -1,19 +1,19 @@
 // F5: 목표·만다라트 화면 컨테이너
 // "목표 리스트"/"만다라트" 서브탭 전환을 goalSubTabProvider로 관리한다.
 // 각 탭은 GoalListView / MandalartView로 전환된다 (AN-F5: 슬라이드 전환).
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/color_tokens.dart';
 import '../../../core/theme/typography_tokens.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../providers/goal_provider.dart';
 import 'widgets/goal_list_view.dart';
 import 'widgets/mandalart_view.dart';
 import '../../../core/theme/animation_tokens.dart';
-import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
-import '../../../core/theme/layout_tokens.dart';
+import '../../../shared/widgets/global_action_bar.dart';
+import '../../../shared/widgets/segmented_control.dart';
 
 /// 목표 화면 메인 컨테이너
 /// 상단 서브탭 전환기 + 콘텐츠 영역으로 구성된다
@@ -25,8 +25,11 @@ class GoalScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTab = ref.watch(goalSubTabProvider);
 
-    // 상단 SafeArea는 MainShell에서 처리하므로 top: false로 중복 적용을 방지한다
-    return SafeArea(
+    // Scaffold를 제공하여 ScaffoldMessenger.of(context)가 정상 동작하도록 한다
+    // GoalCreateDialog, MandalartWizard 등에서 SnackBar 표시 시 필요하다
+    return Scaffold(
+      backgroundColor: ColorTokens.transparent,
+      body: SafeArea(
       top: false,
       bottom: false,
       child: Column(
@@ -34,7 +37,7 @@ class GoalScreen extends ConsumerWidget {
         children: [
           // 화면 제목 + 서브탭 전환기 (다른 화면과 동일한 상단 패딩 16px)
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, AppSpacing.pageVertical, AppSpacing.pageHorizontal, 0),
             child: _GoalScreenHeader(activeTab: activeTab),
           ),
           const SizedBox(height: AppSpacing.xl),
@@ -43,6 +46,7 @@ class GoalScreen extends ConsumerWidget {
             child: _TabContent(activeTab: activeTab),
           ),
         ],
+      ),
       ),
     );
   }
@@ -62,7 +66,7 @@ class _GoalScreenHeader extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 화면 제목 (headingSm: 습관/투두 화면과 동일 토큰)
+        // 화면 제목 + 업적/설정 아이콘 (headingSm: 습관/투두 화면과 동일 토큰)
         Row(
           children: [
             Expanded(
@@ -73,118 +77,22 @@ class _GoalScreenHeader extends ConsumerWidget {
                 ),
               ),
             ),
+            // 업적 + 설정 아이콘 버튼
+            const GlobalActionBar(),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        // 서브탭 전환기 (목표 리스트 / 만다라트)
-        _SubTabSwitcher(activeTab: activeTab),
+        // 서브탭 전환기 (공유 SegmentedControl 사용)
+        SegmentedControl<GoalSubTab>(
+          values: GoalSubTab.values,
+          selected: activeTab,
+          labelBuilder: (tab) => switch (tab) {
+            GoalSubTab.goalList => '목표 리스트',
+            GoalSubTab.mandalart => '만다라트',
+          },
+          onChanged: (tab) => ref.read(goalSubTabProvider.notifier).state = tab,
+        ),
       ],
-    );
-  }
-}
-
-/// "목표 리스트" / "만다라트" 서브탭 전환기 (유리 필 스타일)
-/// 투두/습관 화면과 동일한 Glass Pill 디자인 패턴을 적용한다
-/// (borderRadius: 16, 전체 너비, 동일한 색상/패딩 값)
-class _SubTabSwitcher extends ConsumerWidget {
-  final GoalSubTab activeTab;
-
-  const _SubTabSwitcher({required this.activeTab});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.xxl),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.xs),
-          decoration: BoxDecoration(
-            color: context.themeColors.textPrimaryWithAlpha(0.12),
-            borderRadius: BorderRadius.circular(AppRadius.xxl),
-            border: Border.all(
-              color: context.themeColors.textPrimaryWithAlpha(0.15),
-            ),
-          ),
-          child: Row(
-            children: [
-              _SubTab(
-                label: '목표 리스트',
-                icon: Icons.list_alt_rounded,
-                isSelected: activeTab == GoalSubTab.goalList,
-                onTap: () => ref.read(goalSubTabProvider.notifier).state =
-                    GoalSubTab.goalList,
-              ),
-              _SubTab(
-                label: '만다라트',
-                icon: Icons.grid_view_rounded,
-                isSelected: activeTab == GoalSubTab.mandalart,
-                onTap: () => ref.read(goalSubTabProvider.notifier).state =
-                    GoalSubTab.mandalart,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 개별 서브탭 아이템
-/// 투두/습관 화면의 서브탭 아이템과 동일한 스타일링을 사용한다
-class _SubTab extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SubTab({
-    required this.label,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppAnimation.standard,
-          curve: Curves.easeInOutCubic,
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.mdLg),
-          decoration: isSelected
-              ? BoxDecoration(
-                  color: context.themeColors.textPrimaryWithAlpha(0.25),
-                  borderRadius: BorderRadius.circular(AppRadius.xl),
-                )
-              : null,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: AppLayout.iconSm,
-                color: isSelected
-                    ? context.themeColors.textPrimary
-                    : context.themeColors.textPrimaryWithAlpha(0.5),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: AppTypography.bodyMd.copyWith(
-                  color: isSelected
-                      ? context.themeColors.textPrimary
-                      : context.themeColors.textPrimaryWithAlpha(0.55),
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
@@ -236,7 +144,7 @@ class _TabContentState extends State<_TabContent> {
       transitionBuilder: (child, animation) {
         // 전환 방향에 따라 슬라이드 오프셋 결정
         final slideBegin =
-            isForward ? const Offset(0.08, 0) : const Offset(-0.08, 0);
+            isForward ? const Offset(AppAnimation.tabSlideOffset, 0) : const Offset(-AppAnimation.tabSlideOffset, 0);
 
         final slideAnim = Tween<Offset>(
           begin: slideBegin,
