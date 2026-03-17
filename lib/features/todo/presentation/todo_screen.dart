@@ -3,7 +3,6 @@
 // selectedDateProvider로 날짜를 관리하고, TodoOrchestrator(F3.4) 상태를 watch한다.
 // F16: TagFilterBar를 서브탭 전환 아래에 배치하여 태그 기반 필터링을 지원한다.
 // F20: QuickInputBar를 _TodoHeader 아래에 배치하여 자연어 빠른 투두 입력을 지원한다.
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/nlp/parsed_todo.dart';
@@ -12,20 +11,22 @@ import '../../../core/theme/typography_tokens.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../shared/models/todo.dart';
 import '../../../shared/widgets/date_slider.dart';
+import '../../../shared/widgets/segmented_control.dart';
 import '../../../shared/widgets/tag_filter_bar.dart';
-import '../../../core/auth/auth_provider.dart';
+import '../../../shared/providers/tag_provider.dart';
 import '../providers/todo_provider.dart';
 import 'widgets/daily_schedule_view.dart';
 import 'widgets/quick_input_bar.dart';
+import 'widgets/routine_weekly_view.dart';
 import 'widgets/todo_create_dialog.dart';
 import 'widgets/todo_list_view.dart';
 import '../../../core/theme/animation_tokens.dart';
-import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
+import '../../../shared/widgets/global_action_bar.dart';
 
 /// 자연어 빠른 입력 처리 함수 (F20)
-/// 파싱 결과에서 날짜/시간/제목을 추출하여 투두를 즉시 생성한다
+/// 파싱 결과에서 날짜/시간/제목/태그를 추출하여 투두를 즉시 생성한다
 /// [parsed]: 자연어 파싱 결과
 /// [selectedDate]: 현재 선택된 날짜 (파싱 결과에 날짜가 없을 때 폴백으로 사용)
 Future<void> _handleQuickInput(
@@ -37,15 +38,35 @@ Future<void> _handleQuickInput(
   // 파싱 결과가 유효하지 않으면 무시한다
   if (!parsed.isValid) return;
 
-  final userId = ref.read(currentUserIdProvider);
-  if (userId == null) return;
-
   final generateId = ref.read(generateTodoIdProvider);
   final createTodo = ref.read(createTodoProvider);
   final now = DateTime.now();
 
   // 파싱된 날짜가 있으면 해당 날짜 사용, 없으면 현재 선택된 날짜를 사용한다
   final todoDate = parsed.hasDate ? parsed.date! : selectedDate;
+
+  // 파싱된 #태그 이름을 기존 태그 객체로 변환한다 (이름 기준 매칭)
+  List<Map<String, dynamic>> matchedTags = const [];
+  if (parsed.hasTags) {
+    final tagsAsync = ref.read(userTagsProvider);
+    final allTags = tagsAsync.valueOrNull ?? [];
+    matchedTags = parsed.tagNames
+        .map((name) {
+          // 태그 이름이 정확히 일치하는 태그를 찾는다 (대소문자 무시)
+          final found = allTags
+              .where((t) => t.name.toLowerCase() == name.toLowerCase())
+              .toList();
+          if (found.isEmpty) return null;
+          final tag = found.first;
+          return <String, dynamic>{
+            'id': tag.id,
+            'name': tag.name,
+            'color_index': tag.colorIndex,
+          };
+        })
+        .whereType<Map<String, dynamic>>()
+        .toList();
+  }
 
   try {
     await createTodo(
@@ -56,6 +77,7 @@ Future<void> _handleQuickInput(
         // 파싱된 시간이 있으면 startTime으로 설정한다
         startTime: parsed.hasTime ? parsed.time : null,
         memo: null,
+        tags: matchedTags,
         createdAt: now,
       ),
     );
@@ -109,8 +131,20 @@ class TodoScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            // 서브탭 전환 (하루 일정표 / 할 일 목록)
-            _SubTabSwitcher(currentTab: subTab),
+            // 서브탭 전환 (일정표 / 주간 루틴 / 할 일)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+              child: SegmentedControl<TodoSubTab>(
+                values: TodoSubTab.values,
+                selected: subTab,
+                labelBuilder: (tab) => switch (tab) {
+                  TodoSubTab.dailySchedule => '일정표',
+                  TodoSubTab.weeklyRoutine => '주간 루틴',
+                  TodoSubTab.todoList => '할 일',
+                },
+                onChanged: (tab) => ref.read(todoSubTabProvider.notifier).state = tab,
+              ),
+            ),
             const SizedBox(height: AppSpacing.lg),
             // 태그 필터 바 (F16: 태그 기반 필터링)
             // 사용자 태그가 있을 때만 표시된다 (TagFilterBar 내부에서 처리)
@@ -127,9 +161,11 @@ class TodoScreen extends ConsumerWidget {
                 switchOutCurve: Curves.easeInCubic,
                 transitionBuilder: (child, animation) =>
                     FadeTransition(opacity: animation, child: child),
-                child: subTab == TodoSubTab.dailySchedule
-                    ? const DailyScheduleView(key: ValueKey('daily'))
-                    : const TodoListView(key: ValueKey('list')),
+                child: switch (subTab) {
+                  TodoSubTab.dailySchedule => const DailyScheduleView(key: ValueKey('daily')),
+                  TodoSubTab.weeklyRoutine => const RoutineWeeklyView(key: ValueKey('weekly-routine')),
+                  TodoSubTab.todoList => const TodoListView(key: ValueKey('list')),
+                },
               ),
             ),
           ],
@@ -149,29 +185,38 @@ class _TodoHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, AppSpacing.pageVertical, AppSpacing.pageHorizontal, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 년/월 표시 + 피커 버튼
-          GestureDetector(
-            onTap: () => _showMonthPicker(context, ref),
-            child: Row(
-              children: [
-                Text(
-                  '${selectedDate.year}년 ${selectedDate.month}월',
-                  style: AppTypography.headingSm.copyWith(
-                    color: context.themeColors.textPrimary,
+          // 년/월 표시 + 피커 버튼 + 업적/설정 아이콘
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _showMonthPicker(context, ref),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${selectedDate.year}년 ${selectedDate.month}월',
+                        style: AppTypography.headingSm.copyWith(
+                          color: context.themeColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: context.themeColors.textPrimaryWithAlpha(0.7),
+                        size: AppLayout.iconXl,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: AppSpacing.xs),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: context.themeColors.textPrimaryWithAlpha(0.7),
-                  size: AppLayout.iconXl,
-                ),
-              ],
-            ),
+              ),
+              // 업적 + 설정 아이콘 버튼
+              const GlobalActionBar(),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
           // 주간 날짜 슬라이더
@@ -192,12 +237,12 @@ class _TodoHeader extends ConsumerWidget {
     final picked = await showDatePicker(
       context: context,
       initialDate: current,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
+      firstDate: DateTime(AppLayout.calendarStartYear),
+      lastDate: DateTime(AppLayout.calendarEndYear),
       // 테마 인식 DatePicker: modalDecoration 배경색으로 모든 테마에서 가독성 보장
       builder: (context, child) {
         final dialogBg = context.themeColors.dialogSurface;
-        final isOnDark = context.themeColors.textPrimary == Colors.white;
+        final isOnDark = context.themeColors.isOnDarkBackground;
         return Theme(
           data: (isOnDark ? ThemeData.dark() : ThemeData.light()).copyWith(
             colorScheme: (isOnDark
@@ -215,75 +260,6 @@ class _TodoHeader extends ConsumerWidget {
   }
 }
 
-/// 서브탭 전환 위젯 (Glass Pill 스타일)
-class _SubTabSwitcher extends ConsumerWidget {
-  final TodoSubTab currentTab;
-
-  const _SubTabSwitcher({required this.currentTab});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.xxl),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.xs),
-            decoration: BoxDecoration(
-              color: context.themeColors.textPrimaryWithAlpha(0.12),
-              borderRadius: BorderRadius.circular(AppRadius.xxl),
-              border: Border.all(
-                color: context.themeColors.textPrimaryWithAlpha(0.15),
-              ),
-            ),
-            child: Row(
-              children: TodoSubTab.values.map((tab) {
-                final isActive = tab == currentTab;
-                final label = tab == TodoSubTab.dailySchedule
-                    ? '하루 일정표'
-                    : '할 일 목록';
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      ref.read(todoSubTabProvider.notifier).state = tab;
-                    },
-                    child: AnimatedContainer(
-                      duration: AppAnimation.standard,
-                      curve: Curves.easeInOutCubic,
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.mdLg),
-                      decoration: isActive
-                          ? BoxDecoration(
-                              color: context.themeColors.textPrimaryWithAlpha(0.25),
-                              borderRadius: BorderRadius.circular(AppRadius.xl),
-                            )
-                          : null,
-                      child: Center(
-                        child: Text(
-                          label,
-                          style: AppTypography.bodyMd.copyWith(
-                            color: isActive
-                                ? context.themeColors.textPrimary
-                                : context.themeColors.textPrimaryWithAlpha(0.55),
-                            fontWeight: isActive
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// 새 투두 추가 FAB (Floating Action Button)
 /// AN-06: 탭 시 TodoCreateDialog 모달 열기
 class _AddTodoFab extends ConsumerWidget {
@@ -293,12 +269,16 @@ class _AddTodoFab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return FloatingActionButton(
-      onPressed: () => _openCreateDialog(context, ref),
-      backgroundColor: ColorTokens.main,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      child: const Icon(Icons.add_rounded, size: AppLayout.iconHuge),
+    // FAB 하단 여백 (사이드 네비게이션 레이아웃 기준)
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppLayout.bottomNavArea),
+      child: FloatingActionButton(
+        onPressed: () => _openCreateDialog(context, ref),
+        backgroundColor: ColorTokens.main,
+        foregroundColor: ColorTokens.white,
+        elevation: AppLayout.elevationNone,
+        child: const Icon(Icons.add_rounded, size: AppLayout.iconHuge),
+      ),
     );
   }
 
@@ -308,12 +288,20 @@ class _AddTodoFab extends ConsumerWidget {
     final result = await TodoCreateDialog.show(context);
     if (result == null) return;
 
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
-
     final generateId = ref.read(generateTodoIdProvider);
     final createTodo = ref.read(createTodoProvider);
     final now = DateTime.now();
+
+    // 선택된 태그 ID를 Tag 객체 정보가 포함된 Map 목록으로 변환한다
+    final List<Map<String, dynamic>> tagMaps = result.tagIds.map((tagId) {
+      final tag = ref.read(tagByIdProvider(tagId));
+      if (tag == null) return null;
+      return <String, dynamic>{
+        'id': tag.id,
+        'name': tag.name,
+        'color_index': tag.colorIndex,
+      };
+    }).whereType<Map<String, dynamic>>().toList();
 
     try {
       await createTodo(
@@ -324,7 +312,11 @@ class _AddTodoFab extends ConsumerWidget {
           // 시작/종료 시간을 모두 설정한다
           startTime: result.startTime,
           endTime: result.endTime,
+          // 색상 인덱스를 문자열로 저장한다
+          color: result.colorIndex.toString(),
           memo: result.memo,
+          // 태그 정보를 Map 목록으로 전달한다
+          tags: tagMaps,
           createdAt: now,
         ),
       );
