@@ -61,9 +61,9 @@ void main() {
         isAuthenticatedProvider.overrideWithValue(true),
         isDarkModeProvider.overrideWith((ref) => isDark),
         hiveCacheServiceProvider.overrideWithValue(mockHiveCache),
-        themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+        themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
         themePresetDataProvider.overrideWith(
-          (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+          (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
         ),
         // F17: Google Calendar 연동은 테스트에서 비활성화한다 (네트워크/Hive 의존성 격리)
         googleCalendarSyncEnabledProvider.overrideWith((ref) => false),
@@ -107,11 +107,11 @@ void main() {
       expect(find.byType(SingleChildScrollView), findsOneWidget);
     });
 
-    testWidgets('GlassCard가 5개 존재한다 (계정정보, 앱설정, 테마선택, 데이터관리, 계정관리)', (tester) async {
+    testWidgets('GlassCard가 6개 존재한다 (계정정보, 앱설정, 테마선택, 데이터관리, 클라우드백업, 계정관리)', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(GlassCard), findsNWidgets(5));
+      expect(find.byType(GlassCard), findsNWidgets(6));
     });
 
     testWidgets('화면이 에러 없이 렌더링된다', (tester) async {
@@ -149,9 +149,9 @@ void main() {
             isAuthenticatedProvider.overrideWithValue(true),
             isDarkModeProvider.overrideWith((ref) => false),
             hiveCacheServiceProvider.overrideWithValue(mockHiveCache),
-            themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+            themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
             themePresetDataProvider.overrideWith(
-              (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+              (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
             ),
             // F17: Google Calendar 연동은 테스트에서 비활성화한다
             googleCalendarSyncEnabledProvider.overrideWith((ref) => false),
@@ -359,9 +359,9 @@ void main() {
         ProviderScope(
           overrides: [
             hiveCacheServiceProvider.overrideWithValue(mockHiveCache),
-            themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+            themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
             themePresetDataProvider.overrideWith(
-              (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+              (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
             ),
           ],
           child: MaterialApp(
@@ -388,9 +388,9 @@ void main() {
         ProviderScope(
           overrides: [
             hiveCacheServiceProvider.overrideWithValue(mockHiveCache),
-            themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+            themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
             themePresetDataProvider.overrideWith(
-              (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+              (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
             ),
           ],
           child: MaterialApp(
@@ -420,9 +420,9 @@ void main() {
         ProviderScope(
           overrides: [
             hiveCacheServiceProvider.overrideWithValue(mockHiveCache),
-            themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+            themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
             themePresetDataProvider.overrideWith(
-              (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+              (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
             ),
           ],
           child: const MaterialApp(
@@ -448,9 +448,9 @@ void main() {
         ProviderScope(
           overrides: [
             hiveCacheServiceProvider.overrideWithValue(mockHiveCache),
-            themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+            themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
             themePresetDataProvider.overrideWith(
-              (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+              (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
             ),
           ],
           child: const MaterialApp(

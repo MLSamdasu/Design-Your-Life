@@ -11,6 +11,7 @@ import '../../../core/theme/typography_tokens.dart';
 import '../../../core/theme/animation_tokens.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
+import '../../../core/theme/layout_tokens.dart';
 
 /// 테마 프리셋 미리보기 카드
 /// 각 프리셋의 배경/카드 스타일을 미니어처로 시각화한다
@@ -33,22 +34,16 @@ class ThemePreviewCard extends StatelessWidget {
 
   // ─── 프리셋 한국어 이름 매핑 ─────────────────────────────────────────────
   static const Map<ThemePreset, String> _presetNames = {
-    ThemePreset.glassmorphism: '글래스모피즘',
-    ThemePreset.minimal: '미니멀',
-    ThemePreset.retro: '레트로',
-    ThemePreset.neon: '네온',
-    ThemePreset.clean: '깔끔한',
-    ThemePreset.soft: '부드러운',
+    ThemePreset.refinedGlass: '기본',
+    ThemePreset.cleanMinimal: '깔끔함',
+    ThemePreset.darkGlass: '다크',
   };
 
   // ─── 프리셋 설명 매핑 ────────────────────────────────────────────────────
   static const Map<ThemePreset, String> _presetDescriptions = {
-    ThemePreset.glassmorphism: '유리 효과',
-    ThemePreset.minimal: '플랫 디자인',
-    ThemePreset.retro: '크림 톤',
-    ThemePreset.neon: '네온 글로우',
-    ThemePreset.clean: '클린 블루',
-    ThemePreset.soft: '소프트 파스텔',
+    ThemePreset.refinedGlass: '글라스 효과',
+    ThemePreset.cleanMinimal: '미니멀 디자인',
+    ThemePreset.darkGlass: '다크 글라스',
   };
 
   @override
@@ -71,16 +66,16 @@ class ThemePreviewCard extends StatelessWidget {
           border: Border.all(
             color: isSelected
                 ? context.themeColors.accent
-                : Colors.white.withValues(alpha: 0.15),
-            width: isSelected ? 2 : 1,
+                : ColorTokens.white.withValues(alpha: 0.15),
+            width: isSelected ? AppLayout.borderThick : AppLayout.borderThin,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
                     // 선택된 카드에 배경 테마 악센트 색상 글로우 효과를 적용한다
                     color: context.themeColors.accentWithAlpha(0.30),
-                    blurRadius: 8,
-                    spreadRadius: -2,
+                    blurRadius: AppLayout.colorPickerShadowBlur,
+                    spreadRadius: -AppLayout.gridCellSpacing,
                   ),
                 ]
               : null,
@@ -110,7 +105,7 @@ class ThemePreviewCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.md,
-                    vertical: 5,
+                    vertical: AppSpacing.sm,
                   ),
                   decoration: BoxDecoration(
                     // 텍스트 가독성을 위한 반투명 오버레이
@@ -118,8 +113,8 @@ class ThemePreviewCard extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Colors.black.withValues(alpha: 0.0),
-                        Colors.black.withValues(alpha: 0.45),
+                        ColorTokens.black.withValues(alpha: 0.0),
+                        ColorTokens.black.withValues(alpha: 0.45),
                       ],
                     ),
                   ),
@@ -130,14 +125,14 @@ class ThemePreviewCard extends StatelessWidget {
                       Text(
                         name,
                         style: AppTypography.captionLg.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
+                          color: ColorTokens.white,
+                          fontWeight: AppTypography.weightBold,
                         ),
                       ),
                       Text(
                         description,
                         style: AppTypography.captionSm.copyWith(
-                          color: Colors.white.withValues(alpha: 0.75),
+                          color: ColorTokens.white.withValues(alpha: 0.75),
                         ),
                       ),
                     ],
@@ -151,17 +146,17 @@ class ThemePreviewCard extends StatelessWidget {
                   top: AppSpacing.sm,
                   right: AppSpacing.sm,
                   child: Container(
-                    width: 20,
-                    height: 20,
+                    width: AppLayout.checkboxMd,
+                    height: AppLayout.checkboxMd,
                     // 선택 체크마크 배경: 배경 테마에 맞는 악센트 색상을 사용한다
                     decoration: BoxDecoration(
                       color: context.themeColors.accent,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.check_rounded,
-                      color: Colors.white,
-                      size: 13,
+                      color: ColorTokens.white,
+                      size: AppLayout.iconCheckSm,
                     ),
                   ),
                 ),
@@ -187,92 +182,62 @@ class _MiniCardSample extends StatelessWidget {
     // 프리셋별 미니 카드 색상/보더를 직접 정의한다 (미리보기 전용)
     final BoxDecoration decoration;
     switch (preset) {
-      case ThemePreset.glassmorphism:
-        // 반투명 흰색 + 흰색 보더
+      case ThemePreset.refinedGlass:
+        // 반투명 흰색 + 흰색 보더 (밝은 글라스 효과)
         decoration = BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.20),
+          color: ColorTokens.white.withValues(alpha: 0.60),
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.35),
-            width: 1,
+            color: ColorTokens.white.withValues(alpha: 0.50),
+            width: AppLayout.borderThin,
           ),
         );
-      case ThemePreset.minimal:
-        // 불투명 흰색 + 회색 보더 + 미세 그림자
+      case ThemePreset.cleanMinimal:
+        // 불투명 흰색 + 회색 보더 (깔끔한 미니멀)
         decoration = BoxDecoration(
-          color: Colors.white,
+          color: ColorTokens.white,
           borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(
-            color: ColorTokens.gray200,
-            width: 1,
+            color: ColorTokens.previewCleanBorder,
+            width: AppLayout.borderThin,
           ),
         );
-      case ThemePreset.retro:
-        // 크림색 + 두꺼운 크림 보더
-        decoration = BoxDecoration(
-          color: const Color(0xFFFFFCF7),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-            color: const Color(0xFFE8DFD0),
-            width: 1.5,
-          ),
-        );
-      case ThemePreset.neon:
+      case ThemePreset.darkGlass:
         // 반투명 다크 + MAIN 색상 네온 보더
         decoration = BoxDecoration(
-          color: const Color(0xFF1C1530).withValues(alpha: 0.85),
+          color: ColorTokens.previewDarkGlassBg.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(AppRadius.sm),
           border: Border.all(
             color: ColorTokens.main.withValues(alpha: 0.60),
-            width: 1,
-          ),
-        );
-      case ThemePreset.clean:
-        // 순백 배경 + 얇은 보더 (깔끔한 테마 미리보기)
-        decoration = BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(
-            color: const Color(0xFFE8ECF0),
-            width: 1,
-          ),
-        );
-      case ThemePreset.soft:
-        // 아이보리 배경 + 소프트 보더 (부드러운 테마 미리보기)
-        decoration = BoxDecoration(
-          color: const Color(0xFFFFFDF9),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(
-            color: const Color(0xFFF0E6D8),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
         );
     }
 
     // 미니 카드: 가로 막대 2줄로 카드 내용을 암시한다
     return Container(
-      width: 50,
-      height: 28,
+      width: AppLayout.miniCardWidth,
+      height: AppLayout.miniCardHeight,
       decoration: decoration,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           // 타이틀 줄 암시 (짧은 막대)
           Container(
-            height: 3,
-            width: 24,
+            height: AppLayout.miniLineHeightLg,
+            width: AppLayout.miniLineTitleWidth,
             decoration: BoxDecoration(
               color: _lineColor,
               borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
           ),
-          const SizedBox(height: 3),
+          SizedBox(height: AppLayout.miniLineHeightLg),
           // 본문 줄 암시 (긴 막대)
           Container(
-            height: 2,
-            width: 36,
+            height: AppLayout.miniLineHeightSm,
+            width: AppLayout.miniLineBodyWidth,
             decoration: BoxDecoration(
               color: _lineColor.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(AppRadius.xs),
@@ -286,18 +251,12 @@ class _MiniCardSample extends StatelessWidget {
   /// 프리셋별 미니 카드 내부 선 색상
   Color get _lineColor {
     switch (preset) {
-      case ThemePreset.glassmorphism:
-        return Colors.white;
-      case ThemePreset.minimal:
+      case ThemePreset.refinedGlass:
         return ColorTokens.gray800;
-      case ThemePreset.retro:
-        return const Color(0xFF4A3F33);
-      case ThemePreset.neon:
-        return Colors.white;
-      case ThemePreset.clean:
-        return const Color(0xFF1A1A2E);
-      case ThemePreset.soft:
-        return const Color(0xFF3D2C2E);
+      case ThemePreset.cleanMinimal:
+        return ColorTokens.previewCleanLine;
+      case ThemePreset.darkGlass:
+        return ColorTokens.white;
     }
   }
 }

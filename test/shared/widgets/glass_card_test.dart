@@ -30,9 +30,9 @@ void main() {
           // 다크 모드: 기본값 false로 고정한다
           isDarkModeProvider.overrideWith((ref) => false),
           // 테마 프리셋 Provider: GlassCard가 ConsumerWidget으로 변경되어 필수 override
-          themePresetProvider.overrideWith((ref) => ThemePreset.glassmorphism),
+          themePresetProvider.overrideWith((ref) => ThemePreset.refinedGlass),
           themePresetDataProvider.overrideWith(
-            (ref) => ThemePresetRegistry.dataFor(ThemePreset.glassmorphism),
+            (ref) => ThemePresetRegistry.dataFor(ThemePreset.refinedGlass),
           ),
         ],
         child: MaterialApp(

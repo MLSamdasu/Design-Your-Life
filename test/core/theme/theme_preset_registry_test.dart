@@ -111,38 +111,38 @@ void main() {
       });
     }
 
-    group('glassmorphism 프리셋 특성', () {
+    group('refinedGlass 프리셋 특성', () {
       late ThemePresetData data;
 
       setUp(() {
-        data = ThemePresetRegistry.dataFor(ThemePreset.glassmorphism);
+        data = ThemePresetRegistry.dataFor(ThemePreset.refinedGlass);
       });
 
       test('블러가 활성화되어 있다', () {
-        // glassmorphism은 블러를 반드시 사용해야 한다
+        // refinedGlass는 미묘한 블러 효과를 사용한다
         expect(data.useBlur, isTrue);
       });
 
-      test('blurSigma가 20.0이다 (기본값)', () {
-        // 기존 GlassDecoration.defaultBlurSigma와 동일해야 한다
-        expect(data.blurSigma, 20.0);
+      test('blurSigma가 12.0이다', () {
+        // 미묘한 글라스 효과를 위한 블러 시그마
+        expect(data.blurSigma, 12.0);
       });
 
       test('배경이 3가지 색상의 그라디언트이다', () {
-        // gradientStart, gradientMid, gradientEnd 3색
+        // refinedGradientStart, refinedGradientMid, refinedGradientEnd 3색
         expect(data.backgroundGradient.colors.length, 3);
       });
     });
 
-    group('minimal 프리셋 특성', () {
+    group('cleanMinimal 프리셋 특성', () {
       late ThemePresetData data;
 
       setUp(() {
-        data = ThemePresetRegistry.dataFor(ThemePreset.minimal);
+        data = ThemePresetRegistry.dataFor(ThemePreset.cleanMinimal);
       });
 
       test('블러가 비활성화되어 있다', () {
-        // minimal은 플랫 디자인 원칙에 따라 블러를 사용하지 않는다
+        // cleanMinimal은 플랫 디자인 원칙에 따라 블러를 사용하지 않는다
         expect(data.useBlur, isFalse);
       });
 
@@ -151,34 +151,29 @@ void main() {
       });
     });
 
-    group('retro 프리셋 특성', () {
+    group('darkGlass 프리셋 특성', () {
       late ThemePresetData data;
 
       setUp(() {
-        data = ThemePresetRegistry.dataFor(ThemePreset.retro);
-      });
-
-      test('블러가 비활성화되어 있다', () {
-        // retro는 종이 질감 원칙에 따라 블러를 사용하지 않는다
-        expect(data.useBlur, isFalse);
-      });
-    });
-
-    group('neon 프리셋 특성', () {
-      late ThemePresetData data;
-
-      setUp(() {
-        data = ThemePresetRegistry.dataFor(ThemePreset.neon);
+        data = ThemePresetRegistry.dataFor(ThemePreset.darkGlass);
       });
 
       test('블러가 활성화되어 있다', () {
-        // neon은 깊이감 표현을 위해 약한 블러를 사용한다
+        // darkGlass는 글라스 효과를 유지한다
         expect(data.useBlur, isTrue);
       });
 
-      test('blurSigma가 12.0이다 (약한 블러)', () {
-        // glassmorphism(20.0)보다 작은 12.0으로 깊이감만 표현한다
-        expect(data.blurSigma, 12.0);
+      test('blurSigma가 16.0이다', () {
+        // 다크 글라스 블러 시그마
+        expect(data.blurSigma, 16.0);
+      });
+
+      test('라이트/다크 배경이 동일하다 (항상 다크)', () {
+        // darkGlass는 항상 다크 테마이므로 라이트/다크 배경이 같다
+        expect(
+          data.backgroundGradient.colors,
+          data.darkBackgroundGradient.colors,
+        );
       });
     });
   });

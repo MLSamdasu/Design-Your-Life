@@ -72,6 +72,12 @@ abstract class ColorTokens {
   /// 투명 색상 토큰
   static const Color transparent = Color(0x00000000);
 
+  /// 순수 흰색 토큰 (Glass 오버레이, CTA 전경색 등)
+  static const Color white = Color(0xFFFFFFFF);
+
+  /// 순수 검정색 토큰 (오버레이 그라디언트 등)
+  static const Color black = Color(0xFF000000);
+
   // ─── 외부 브랜드 컬러 ───────────────────────────────────────────────────
   /// Google 브랜드 블루
   /// Google 로그인 버튼, Google Calendar 뱃지 등 Google 관련 UI에 사용한다
@@ -86,6 +92,14 @@ abstract class ColorTokens {
 
   /// 앱 배경 그라디언트 끝점
   static const Color gradientEnd = Color(0xFFF093FB);
+
+  // ─── Refined Glass 라이트 배경 그라디언트 ───────────────────────────────
+  /// 밝은 라벤더 시작점
+  static const Color refinedGradientStart = Color(0xFFF5F3FF);
+  /// sub 색상과 동일한 중간점
+  static const Color refinedGradientMid = Color(0xFFEDE9FE);
+  /// 밝은 핑크 라벤더 끝점
+  static const Color refinedGradientEnd = Color(0xFFFDF4FF);
 
   // ─── 다크 모드 그라디언트 ─────────────────────────────────────────────────
   /// 다크 모드 배경 그라디언트 시작점
@@ -176,6 +190,16 @@ abstract class ColorTokens {
   /// 다크 모드 DatePicker/TimePicker 서피스 색상
   /// gradientMid와 유사한 딥 퍼플 (#2D1F4E)
   static const Color darkPickerSurface = Color(0xFF2D1F4E);
+
+  // ─── 테마 프리뷰 전용 색상 ──────────────────────────────────────────────
+  /// 다크 글라스 테마 프리뷰 카드 배경 (딥 다크 퍼플)
+  static const Color previewDarkGlassBg = Color(0xFF1A1130);
+
+  /// 클린 테마 프리뷰 카드 보더 (라이트 블루 그레이)
+  static const Color previewCleanBorder = Color(0xFFE8ECF0);
+
+  /// 클린 테마 프리뷰 텍스트 줄 색상 (딥 네이비)
+  static const Color previewCleanLine = Color(0xFF1A1A2E);
 
   // ─── 헬퍼 메서드 ─────────────────────────────────────────────────────────
   /// colorIndex(0~8)로 Light Mode 이벤트 색상 반환
