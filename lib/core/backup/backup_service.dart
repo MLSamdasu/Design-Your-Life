@@ -5,7 +5,9 @@
 // Google Drive appdata 폴더에 JSON 파일로 백업한다 (앱 전용, 사용자에게 보이지 않음).
 
 import 'dart:convert';
+import 'dart:developer' as developer;
 
+import 'package:crypto/crypto.dart';
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
@@ -124,7 +126,10 @@ class BackupService {
       // 2단계: 모든 Hive 박스의 데이터를 JSON으로 수집한다
       final backupData = <String, List<Map<String, dynamic>>>{};
 
+      // settingsBox 제외: 테마, 다크모드 등 사용자 설정은 디바이스 환경에 종속되므로
+      // 백업/복원 대상에서 제외한다. 복원 시 현재 디바이스 설정이 덮어쓰이는 문제를 방지한다.
       final boxNames = [
+        AppConstants.userProfileBox,
         AppConstants.eventsBox,
         AppConstants.todosBox,
         AppConstants.habitsBox,
@@ -136,6 +141,7 @@ class BackupService {
         AppConstants.achievementsBox,
         AppConstants.tagsBox,
         AppConstants.routinesBox,
+        AppConstants.routineLogsBox,
       ];
 
       for (int i = 0; i < boxNames.length; i++) {
@@ -145,10 +151,14 @@ class BackupService {
         onProgress?.call(0.1 + (0.5 * (i + 1) / boxNames.length));
       }
 
-      // 3단계: JSON 직렬화
+      // 3단계: JSON 직렬화 + SHA-256 무결성 해시
+      // 데이터 JSON을 먼저 직렬화한 후 해시를 계산하여 최종 백업 JSON에 포함한다
+      final dataJsonString = jsonEncode(backupData);
+      final dataHash = sha256.convert(utf8.encode(dataJsonString)).toString();
       final jsonString = jsonEncode({
-        'version': 1,
+        'version': 2,
         'createdAt': DateTime.now().toIso8601String(),
+        'checksum': dataHash,
         'data': backupData,
       });
 
@@ -170,8 +180,10 @@ class BackupService {
         ..name = _backupFileName
         ..parents = ['appDataFolder'];
 
-      final mediaStream = Stream.value(utf8.encode(jsonString));
-      final media = drive.Media(mediaStream, utf8.encode(jsonString).length);
+      // UTF-8 인코딩을 한 번만 수행하여 메모리 이중 할당을 방지한다
+      final bytes = utf8.encode(jsonString);
+      final mediaStream = Stream.value(bytes);
+      final media = drive.Media(mediaStream, bytes.length);
 
       await driveApi.files.create(
         fileMetadata,
@@ -188,8 +200,11 @@ class BackupService {
 
       onProgress?.call(1.0);
       return BackupResult.success();
-    } catch (e) {
-      return BackupResult.failure('백업 중 오류가 발생했습니다: $e');
+    } catch (e, st) {
+      // 내부 예외 상세를 사용자에게 노출하지 않는다 (보안)
+      developer.log('[BackupService] 백업 실패: $e',
+          name: 'backup', error: e, stackTrace: st);
+      return BackupResult.failure('백업 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
     }
   }
 
@@ -230,12 +245,20 @@ class BackupService {
 
       onProgress?.call(0.3);
 
-      // 백업 파일 다운로드
-      final fileId = files.first.id!;
-      final response = await driveApi.files.get(
+      // 백업 파일 다운로드 — Drive API가 id를 누락할 수 있으므로 방어 처리한다
+      final fileId = files.first.id;
+      if (fileId == null) {
+        return BackupResult.failure('백업 파일 ID를 가져올 수 없습니다');
+      }
+      // Drive API 응답을 안전하게 타입 검사한다 (as 캐스트 대신 is 검사)
+      final rawResponse = await driveApi.files.get(
         fileId,
         downloadOptions: drive.DownloadOptions.fullMedia,
-      ) as drive.Media;
+      );
+      if (rawResponse is! drive.Media) {
+        return BackupResult.failure('백업 파일을 다운로드할 수 없습니다');
+      }
+      final response = rawResponse;
 
       final bytes = <int>[];
       await for (final chunk in response.stream) {
@@ -252,32 +275,104 @@ class BackupService {
         return BackupResult.failure('백업 파일 형식이 올바르지 않습니다');
       }
 
+      // 무결성 검증: version 2 이상이면 SHA-256 체크섬을 확인한다
+      final version = backupJson['version'] as int? ?? 1;
+      if (version >= 2) {
+        final storedChecksum = backupJson['checksum'] as String?;
+        if (storedChecksum == null) {
+          return BackupResult.failure('백업 파일의 무결성 정보가 없습니다');
+        }
+        final computedChecksum =
+            sha256.convert(utf8.encode(jsonEncode(data))).toString();
+        if (storedChecksum != computedChecksum) {
+          developer.log(
+            '[BackupService] 체크섬 불일치: stored=$storedChecksum, computed=$computedChecksum',
+            name: 'backup',
+          );
+          return BackupResult.failure('백업 파일이 손상되었습니다. 다시 백업해주세요.');
+        }
+      }
+
+      // 허용된 박스 이름 목록 — 알 수 없는 박스 이름의 데이터 주입을 방지한다
+      const allowedBoxes = {
+        AppConstants.userProfileBox,
+        AppConstants.eventsBox,
+        AppConstants.todosBox,
+        AppConstants.habitsBox,
+        AppConstants.habitLogsBox,
+        AppConstants.routinesBox,
+        AppConstants.routineLogsBox,
+        AppConstants.goalsBox,
+        AppConstants.subGoalsBox,
+        AppConstants.goalTasksBox,
+        AppConstants.timerLogsBox,
+        AppConstants.achievementsBox,
+        AppConstants.tagsBox,
+      };
       // 각 박스의 데이터를 Hive에 복원한다
-      final boxNames = data.keys.toList();
-      for (int i = 0; i < boxNames.length; i++) {
-        final boxName = boxNames[i];
+      // settingsBox는 복원 대상에서 제외한다: 이전 백업 파일에 settingsBox가 포함되어 있어도
+      // 현재 디바이스의 테마, 다크모드 등 사용자 설정을 보존하기 위해 건너뛴다.
+      final boxNames = data.keys
+          .where((name) => allowedBoxes.contains(name))
+          .toList();
+
+      // 1단계: 모든 데이터를 먼저 파싱하여 유효성을 검증한다
+      // 로컬 데이터를 지우기 전에 파싱을 완료해야 실패 시 데이터 손실을 방지할 수 있다
+      final parsedData =
+          <String, List<MapEntry<String, Map<String, dynamic>>>>{};
+      for (final boxName in boxNames) {
         final items = data[boxName] as List<dynamic>?;
         if (items == null) continue;
-
-        // 기존 박스 데이터 초기화 후 클라우드 데이터로 덮어쓴다
-        await _cache.clearBox(boxName);
-
+        final parsed = <MapEntry<String, Map<String, dynamic>>>[];
         for (final item in items) {
           if (item is! Map) continue;
           final map = Map<String, dynamic>.from(item);
           final id = map['id']?.toString();
           if (id == null || id.isEmpty) continue;
-          await _cache.put(boxName, id, map);
+          parsed.add(MapEntry(id, map));
         }
+        if (parsed.isNotEmpty) parsedData[boxName] = parsed;
+      }
 
-        // 진행률: 50% ~ 95% (데이터 복원 구간)
-        onProgress?.call(0.5 + (0.45 * (i + 1) / boxNames.length));
+      onProgress?.call(0.6);
+
+      // 2단계: 파싱 성공 후 로컬 데이터를 교체한다
+      // 박스별로 try-catch하여 일부 실패해도 나머지 박스는 복원을 계속한다
+      final failedBoxes = <String>[];
+      final totalBoxes = parsedData.length;
+      var processedBoxes = 0;
+      for (final entry in parsedData.entries) {
+        try {
+          await _cache.clearBox(entry.key);
+          for (final item in entry.value) {
+            await _cache.put(entry.key, item.key, item.value);
+          }
+        } catch (e) {
+          developer.log(
+            '[BackupService] 복원 중 박스 쓰기 실패: ${entry.key} - $e',
+            name: 'backup',
+          );
+          failedBoxes.add(entry.key);
+        }
+        processedBoxes++;
+        // 진행률: 60% ~ 95% (데이터 복원 구간)
+        onProgress
+            ?.call(0.6 + (0.35 * processedBoxes / totalBoxes));
+      }
+
+      if (failedBoxes.isNotEmpty) {
+        return BackupResult.failure(
+          '일부 데이터 복원에 실패했습니다: ${failedBoxes.join(', ')}',
+        );
       }
 
       onProgress?.call(1.0);
       return BackupResult.success();
-    } catch (e) {
-      return BackupResult.failure('복원 중 오류가 발생했습니다: $e');
+    } catch (e, st) {
+      // 내부 예외 상세를 사용자에게 노출하지 않는다 (보안)
+      developer.log('[BackupService] 복원 실패: $e',
+          name: 'backup', error: e, stackTrace: st);
+      return BackupResult.failure('복원 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.');
     }
   }
 
@@ -299,8 +394,14 @@ class BackupService {
           }
         }
       }
-    } catch (_) {
-      // 기존 파일 삭제 실패는 무시한다 (새 파일 업로드에는 영향 없음)
+    } catch (e, st) {
+      // 기존 파일 삭제 실패는 백업 업로드를 막지 않지만 진단을 위해 로깅한다
+      developer.log(
+        '[BackupService] 기존 백업 삭제 실패 (무시): $e',
+        name: 'backup',
+        error: e,
+        stackTrace: st,
+      );
     }
   }
 }

@@ -2,7 +2,8 @@
 // Hive.initFlutter() 호출 후 각 Box를 오픈한다.
 // AES 암호화 키를 flutter_secure_storage에서 읽어 Hive Box 암호화에 사용한다.
 // 암호화 키가 없으면 새로 생성 후 저장한다 (초회 설치 시).
-import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
+
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -25,13 +26,13 @@ abstract class HiveInitializer {
   /// Hive를 초기화하고 모든 Box를 오픈한다
   /// 암호화 Box는 AES 256-bit 키로 보호한다
   static Future<void> init() async {
-    // Flutter + Web 환경 초기화
+    // Flutter 네이티브 환경 초기화
     await Hive.initFlutter();
 
-    // 암호화 키 획득 또는 생성 (Web이면 null 반환)
+    // 암호화 키 획득 또는 생성
     final encryptionKey = await _getOrCreateEncryptionKey();
 
-    // 암호화 적용 Box (사용자 데이터 보관) — Web에서는 암호화 없이 오픈
+    // 암호화 적용 Box (사용자 데이터 보관)
     await _openEncryptedBoxes(encryptionKey);
 
     // 비암호화 Box (설정, 메타데이터)
@@ -50,21 +51,25 @@ abstract class HiveInitializer {
 
   // ─── 암호화 키 관리 ──────────────────────────────────────────────────────
   /// AES 암호화 키를 반환한다 (없으면 생성 후 SecureStorage에 저장)
-  /// Web 환경에서는 null을 반환하여 암호화 없이 Box를 열도록 한다.
-  /// 이유: Web은 페이지 로드마다 새 키를 생성하면 이전에 저장한 Box를 읽지 못하므로
-  /// 암호화를 적용하지 않는 것이 올바른 동작이다.
-  static Future<HiveAesCipher?> _getOrCreateEncryptionKey() async {
-    // Web 환경에서는 암호화 없이 사용 (페이지 로드 시 키가 초기화되어 재사용 불가)
-    if (kIsWeb) {
-      return null;
-    }
-
+  /// 네이티브 환경 전용: iOS Keychain, Android Keystore에 키를 안전하게 보관한다
+  /// 본 앱은 Android/iOS/macOS 전용이므로 Web 분기를 제거한다 (배포 대상 아님)
+  static Future<HiveAesCipher> _getOrCreateEncryptionKey() async {
     String? existingKey = await _secureStorage.read(key: _hiveEncryptionKeyName);
 
     if (existingKey != null) {
-      // 기존 키를 List<int>로 변환 (쉼표 구분 문자열로 저장)
-      final keyList = existingKey.split(',').map(int.parse).toList();
-      return HiveAesCipher(keyList);
+      try {
+        // 기존 키를 List<int>로 변환 (쉼표 구분 문자열로 저장)
+        final keyList = existingKey.split(',').map(int.parse).toList();
+        return HiveAesCipher(keyList);
+      } catch (e) {
+        // 키 문자열이 손상된 경우: 새 키를 생성하여 복구한다
+        // 기존 암호화된 Box 데이터는 복호화할 수 없으므로 손실된다
+        // 사용자에게 Google Drive 백업에서 복원하도록 안내해야 한다
+        developer.log(
+          '[HiveInitializer] 암호화 키 파싱 실패, 새 키 생성: $e',
+          name: 'hive',
+        );
+      }
     }
 
     // 최초 설치: 새 256-bit 키 생성
@@ -76,10 +81,8 @@ abstract class HiveInitializer {
   }
 
   // ─── Box 오픈 ────────────────────────────────────────────────────────────
-  /// 사용자 데이터 Box를 오픈한다
-  /// cipher가 null이면 (Web 환경) 암호화 없이 오픈한다.
-  /// cipher가 존재하면 (네이티브 환경) AES 256-bit 암호화를 적용한다.
-  static Future<void> _openEncryptedBoxes(HiveAesCipher? cipher) async {
+  /// 사용자 데이터 Box를 AES 256-bit 암호화로 오픈한다
+  static Future<void> _openEncryptedBoxes(HiveAesCipher cipher) async {
     await Future.wait([
       _safeOpenBox(AppConstants.userProfileBox, cipher: cipher),
       _safeOpenBox(AppConstants.eventsBox, cipher: cipher),
@@ -87,6 +90,7 @@ abstract class HiveInitializer {
       _safeOpenBox(AppConstants.habitsBox, cipher: cipher),
       _safeOpenBox(AppConstants.habitLogsBox, cipher: cipher),
       _safeOpenBox(AppConstants.routinesBox, cipher: cipher),
+      _safeOpenBox(AppConstants.routineLogsBox, cipher: cipher),
       _safeOpenBox(AppConstants.goalsBox, cipher: cipher),
       _safeOpenBox(AppConstants.subGoalsBox, cipher: cipher),
       _safeOpenBox(AppConstants.goalTasksBox, cipher: cipher),
@@ -120,6 +124,7 @@ abstract class HiveInitializer {
       AppConstants.habitsBox,
       AppConstants.habitLogsBox,
       AppConstants.routinesBox,
+      AppConstants.routineLogsBox,
       AppConstants.goalsBox,
       AppConstants.subGoalsBox,
       AppConstants.goalTasksBox,

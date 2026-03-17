@@ -98,6 +98,7 @@ abstract class AppConstants {
   static const String habitsBox = 'habitsBox';
   static const String habitLogsBox = 'habitLogsBox';
   static const String routinesBox = 'routinesBox';
+  static const String routineLogsBox = 'routineLogsBox';
   static const String goalsBox = 'goalsBox';
   static const String subGoalsBox = 'subGoalsBox';
   static const String goalTasksBox = 'goalTasksBox';
@@ -114,24 +115,23 @@ abstract class AppConstants {
   /// 테마 프리셋 설정 키 (ThemePreset.name 문자열로 저장)
   static const String settingsKeyThemePreset = 'themePreset';
 
+  /// 네비게이션 바 좌/우 위치 키 ('left' | 'right')
+  static const String settingsKeyNavSide = 'navSide';
+
+  /// 네비게이션 바 수직 위치 키 (Alignment.y 값, -1.0 ~ 1.0)
+  static const String settingsKeyNavVerticalPos = 'navVerticalPos';
+
+  /// 네비게이션 바 크기 키 (double, 최소~최대 범위 내)
+  static const String settingsKeyNavSize = 'navSize';
+
   // ─── 애니메이션 Duration ─────────────────────────────────────────────────
-  /// 페이지 전환 애니메이션 시간
-  static const Duration pageTransitionDuration = Duration(milliseconds: 250);
-
-  /// 카드 등장 애니메이션 시간
-  static const Duration cardAppearDuration = Duration(milliseconds: 350);
-
-  /// 체크박스 완료 애니메이션 시간 (빠른 연속 체크 시 방해 없도록 짧게)
-  static const Duration checkboxDuration = Duration(milliseconds: 300);
-
-  /// 도넛 차트 스윕 애니메이션 시간
-  static const Duration donutChartDuration = Duration(milliseconds: 800);
-
-  /// 모달 열기 애니메이션 시간
-  static const Duration modalOpenDuration = Duration(milliseconds: 250);
-
-  /// 모달 닫기 애니메이션 시간
-  static const Duration modalCloseDuration = Duration(milliseconds: 200);
+  // AppAnimation 토큰으로 통합됨:
+  //   pageTransitionDuration → AppAnimation.standard (250ms)
+  //   cardAppearDuration     → AppAnimation.slow (350ms)
+  //   checkboxDuration       → AppAnimation.medium (300ms)
+  //   donutChartDuration     → AppAnimation.effect (800ms)
+  //   modalOpenDuration      → AppAnimation.standard (250ms)
+  //   modalCloseDuration     → AppAnimation.normal (200ms)
 
   // ─── 만다라트 ─────────────────────────────────────────────────────────────
   /// 만다라트 전체 그리드 크기 (9x9)
@@ -175,6 +175,10 @@ abstract class AppConstants {
   /// 사용자 태그 Hive Box 이름
   static const String tagsBox = 'tagsBox';
 
+  // ─── Hive 설정 키 (튜토리얼) ────────────────────────────────────────────
+  /// 앱 튜토리얼 완료 여부 설정 키 (bool)
+  static const String settingsKeyHasSeenTutorial = 'hasSeenTutorial';
+
   // ─── Hive 설정 키 (백업 관련) ────────────────────────────────────────────
   /// 마지막 백업 시각 설정 키
   static const String settingsKeyLastBackupTime = 'lastBackupTime';
@@ -185,4 +189,9 @@ abstract class AppConstants {
 
   /// HabitLog ID 날짜 포맷
   static const String habitLogDateFormat = 'yyyy-MM-dd';
+
+  // ─── 로컬 퍼스트 사용자 ID ─────────────────────────────────────────────
+  /// 로컬 퍼스트 아키텍처에서 사용하는 기본 사용자 ID
+  /// 서버 없이 로컬 Hive에 저장할 때 user_id 필드에 사용한다
+  static const String localUserId = 'local_user';
 }
