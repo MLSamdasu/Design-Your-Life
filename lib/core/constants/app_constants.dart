@@ -124,6 +124,9 @@ abstract class AppConstants {
   /// 네비게이션 바 크기 키 (double, 최소~최대 범위 내)
   static const String settingsKeyNavSize = 'navSize';
 
+  /// 캘린더 월간뷰 캘린더/리스트 비율 키 (double, 0.3~0.7)
+  static const String settingsKeyCalendarRatio = 'calendarRatio';
+
   // ─── 애니메이션 Duration ─────────────────────────────────────────────────
   // AppAnimation 토큰으로 통합됨:
   //   pageTransitionDuration → AppAnimation.standard (250ms)
