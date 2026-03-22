@@ -33,7 +33,7 @@ class RoutineNameField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      maxLength: 50,
+      maxLength: AppLayout.routineNameMaxLength,
       onChanged: onChanged,
       style: AppTypography.bodyMd.copyWith(color: context.themeColors.textPrimary),
       decoration: InputDecoration(
@@ -81,8 +81,8 @@ class RoutineDaySelector extends StatelessWidget {
           onTap: () => onToggle(day),
           child: AnimatedContainer(
             duration: AppAnimation.fast,
-            width: 36,
-            height: 36,
+            width: AppLayout.containerLg,
+            height: AppLayout.containerLg,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               // 선택된 요일: 배경 테마에 맞는 악센트 색상으로 표시한다
@@ -105,7 +105,7 @@ class RoutineDaySelector extends StatelessWidget {
                       : i >= 5
                           ? context.themeColors.textPrimaryWithAlpha(0.5)
                           : context.themeColors.textPrimaryWithAlpha(0.7),
-                  fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+                  fontWeight: sel ? AppTypography.weightBold : AppTypography.weightRegular,
                 ),
               ),
             ),
@@ -188,20 +188,20 @@ class RoutineSubmitButton extends StatelessWidget {
         onTap: enabled ? onTap : null,
         child: AnimatedContainer(
           duration: AppAnimation.fast,
-          height: 48,
+          height: AppLayout.formButtonHeight,
           decoration: BoxDecoration(
             color: enabled ? ColorTokens.main : context.themeColors.textPrimaryWithAlpha(0.12),
             borderRadius: BorderRadius.circular(AppRadius.xlLg),
             boxShadow: enabled
                 ? [BoxShadow(color: ColorTokens.main.withValues(alpha: 0.4),
-                    blurRadius: 12, offset: const Offset(0, 4))]
+                    blurRadius: AppLayout.shadowBlurMd, offset: const Offset(0, AppLayout.shadowOffsetSm))]
                 : null,
           ),
           child: Center(
             child: Text('루틴 만들기',
               style: AppTypography.titleMd.copyWith(
                 // MAIN 컬러 배경(#7C3AED) 위이므로 활성 시 흰색이 적절하다
-                color: enabled ? Colors.white : context.themeColors.textPrimaryWithAlpha(0.35))),
+                color: enabled ? ColorTokens.white : context.themeColors.textPrimaryWithAlpha(0.35))),
           ),
         ),
       );

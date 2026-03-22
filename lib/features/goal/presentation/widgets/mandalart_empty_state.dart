@@ -41,7 +41,7 @@ class _MandalartEmptyStateState extends State<MandalartEmptyState>
       duration: AppAnimation.snackBar,
     )..repeat(reverse: true);
 
-    _floatAnim = Tween<double>(begin: -6, end: 6).animate(
+    _floatAnim = Tween<double>(begin: -AppAnimation.floatOffsetLg, end: AppAnimation.floatOffsetLg).animate(
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
     );
   }
@@ -69,7 +69,7 @@ class _MandalartEmptyStateState extends State<MandalartEmptyState>
             },
             child: Icon(
               Icons.grid_view_rounded,
-              size: 56,
+              size: AppLayout.iconEmptyLg,
               color: context.themeColors.textPrimaryWithAlpha(0.3),
             ),
           ),
@@ -88,20 +88,21 @@ class _MandalartEmptyStateState extends State<MandalartEmptyState>
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 28),
+          const SizedBox(height: AppLayout.iconHuge),
           // 만다라트 생성 버튼
           GestureDetector(
             onTap: widget.onCreateTap,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: AppSpacing.lgXl),
+              // CTA 버튼 좌우 패딩: iconHuge(28)과 동일 값을 사용한다
+              padding: const EdgeInsets.symmetric(horizontal: AppLayout.iconHuge, vertical: AppSpacing.lgXl),
               decoration: BoxDecoration(
                 color: ColorTokens.main,
                 borderRadius: BorderRadius.circular(AppRadius.xlLg),
                 boxShadow: [
                   BoxShadow(
-                    color: ColorTokens.main.withValues(alpha: 0.40),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
+                    color: ColorTokens.main.withValues(alpha: AppAnimation.ctaButtonShadowAlpha),
+                    blurRadius: AppLayout.shadowBlurLg,
+                    offset: const Offset(0, AppLayout.shadowOffsetMd),
                   ),
                 ],
               ),
@@ -111,7 +112,7 @@ class _MandalartEmptyStateState extends State<MandalartEmptyState>
                   const Icon(
                     Icons.auto_awesome_rounded,
                     // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-                    color: Colors.white,
+                    color: ColorTokens.white,
                     size: AppLayout.iconLg,
                   ),
                   const SizedBox(width: AppSpacing.md),
@@ -119,7 +120,7 @@ class _MandalartEmptyStateState extends State<MandalartEmptyState>
                     '만다라트 만들기',
                     style: AppTypography.titleMd.copyWith(
                       // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-                      color: Colors.white,
+                      color: ColorTokens.white,
                     ),
                   ),
                 ],
@@ -138,7 +139,7 @@ Future<void> showMandalartWizard(BuildContext context) async {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Close',
-    barrierColor: ColorTokens.barrierBase.withValues(alpha: 0.5),
+    barrierColor: ColorTokens.barrierBase.withValues(alpha: AppAnimation.barrierAlphaStrong),
     transitionDuration: AppAnimation.medium,
     pageBuilder: (_, __, ___) => const MandalartWizard(),
     transitionBuilder: (ctx, animation, _, child) {
@@ -148,7 +149,7 @@ Future<void> showMandalartWizard(BuildContext context) async {
         reverseCurve: Curves.easeInCubic,
       );
       return ScaleTransition(
-        scale: Tween<double>(begin: 0.88, end: 1.0).animate(curved),
+        scale: Tween<double>(begin: AppAnimation.wizardScaleIn, end: 1.0).animate(curved),
         child: FadeTransition(opacity: curved, child: child),
       );
     },

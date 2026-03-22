@@ -30,7 +30,7 @@ abstract class RoutePaths {
   static const String onboarding = '/onboarding';
 
   /// 포모도로 타이머 (F6)
-  /// StatefulShellRoute 바깥 독립 라우트 (하단 탭에 포함되지 않음)
+  /// StatefulShellRoute 6번째 탭으로 포함
   static const String timer = '/timer';
 
   /// 업적/배지 화면 (F8)
@@ -53,4 +53,5 @@ abstract class TabIndex {
   static const int todo = 2;
   static const int habit = 3;
   static const int goal = 4;
+  static const int timer = 5;
 }

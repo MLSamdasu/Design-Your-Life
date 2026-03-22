@@ -4,7 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/auth/auth_provider.dart';
 import '../../../core/auth/auth_service.dart';
+import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/global_providers.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/typography_tokens.dart';
@@ -31,8 +33,8 @@ class SettingsAccountInfoCard extends StatelessWidget {
         children: [
           // 프로필 아이콘 (Google 사진 미사용 시 기본 아이콘 표시)
           Container(
-            width: 48,
-            height: 48,
+            width: AppLayout.iconEmpty,
+            height: AppLayout.iconEmpty,
             // 프로필 아이콘 배경: 배경 테마에 맞는 악센트 색상을 사용한다
             decoration: BoxDecoration(
               color: context.themeColors.accentWithAlpha(0.3),
@@ -116,7 +118,7 @@ class SettingsAppCard extends ConsumerWidget {
                 value: isDark,
                 onChanged: (value) {
                   ref.read(isDarkModeProvider.notifier).state = value;
-                  ref.read(hiveCacheServiceProvider).saveSetting('isDarkMode', value);
+                  ref.read(hiveCacheServiceProvider).saveSetting(AppConstants.settingsKeyDarkMode, value);
                 },
                 // 배경 테마에 따른 스위치 색상: 어두운 배경에서 진한 보라 대신 밝은 보라를 사용한다
                 activeThumbColor: context.themeColors.accent,
@@ -135,12 +137,17 @@ class SettingsAppCard extends ConsumerWidget {
 // ─── 계정 관리 카드 ─────────────────────────────────────────────────────────
 
 /// 로그아웃과 계정 삭제 버튼을 포함하는 계정 관리 카드
+/// P1-13: 미인증 사용자에게는 이 카드를 표시하지 않는다
 /// 실제 액션 처리는 SettingsActions로 위임한다 (SRP)
-class SettingsAccountActionsCard extends StatelessWidget {
+class SettingsAccountActionsCard extends ConsumerWidget {
   const SettingsAccountActionsCard({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // P1-13: 로그인하지 않은 사용자에게는 로그아웃/계정삭제를 표시하지 않는다
+    final isAuthenticated = ref.watch(isAuthenticatedProvider);
+    if (!isAuthenticated) return const SizedBox.shrink();
+
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

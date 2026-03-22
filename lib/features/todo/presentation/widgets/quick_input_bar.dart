@@ -4,6 +4,7 @@
 // Glassmorphism 스타일, GlassInputField 패턴을 따른다.
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/nlp/nlp_todo_parser.dart';
 import '../../../../core/nlp/parsed_todo.dart';
@@ -88,17 +89,21 @@ class _QuickInputBarState extends State<QuickInputBar> {
   @override
   Widget build(BuildContext context) {
     final hasParsed = _parsed != null &&
-        (_parsed!.hasDate || _parsed!.hasTime || _parsed!.title.isNotEmpty);
+        (_parsed!.hasDate || _parsed!.hasTime || _parsed!.hasTags || _parsed!.title.isNotEmpty);
     final hasText = _controller.text.trim().isNotEmpty;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppRadius.xxl),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(
-          sigmaX: GlassDecoration.defaultBlurSigma,
-          sigmaY: GlassDecoration.defaultBlurSigma,
-        ),
-        child: AnimatedContainer(
+    // RepaintBoundary로 감싸 BackdropFilter 리페인트가 상위 위젯으로 전파되는 것을 차단한다
+    return RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.xxl),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: GlassDecoration.defaultBlurSigma,
+            sigmaY: GlassDecoration.defaultBlurSigma,
+          ),
+          child: Material(
+          type: MaterialType.transparency,
+          child: AnimatedContainer(
           duration: AppAnimation.normal,
           curve: Curves.easeOutCubic,
           decoration: BoxDecoration(
@@ -109,7 +114,7 @@ class _QuickInputBarState extends State<QuickInputBar> {
               color: _isFocused
                   ? context.themeColors.textPrimaryWithAlpha(0.45)
                   : context.themeColors.textPrimaryWithAlpha(0.18),
-              width: _isFocused ? 1.5 : 1.0,
+              width: _isFocused ? AppLayout.borderMedium : AppLayout.borderThin,
             ),
           ),
           child: Column(
@@ -130,6 +135,10 @@ class _QuickInputBarState extends State<QuickInputBar> {
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
+                      maxLength: AppLayout.todoTitleMaxLength,
+                      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                      // 카운터 위젯을 숨겨 시각적 노이즈를 제거한다
+                      buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                       onChanged: _onChanged,
                       onSubmitted: (_) => _onSubmit(),
                       cursorColor: context.themeColors.textPrimary,
@@ -137,9 +146,10 @@ class _QuickInputBarState extends State<QuickInputBar> {
                     color: context.themeColors.textPrimary,
                       ),
                       decoration: InputDecoration(
-                        hintText: "빠른 입력: '내일 오후 3시 미팅' 입력 후 Enter",
+                        hintText: "'내일 3시 미팅 #업무' 입력 후 Enter",
+                        // WCAG: 힌트 텍스트 알파 0.55 이상으로 가독성 보장
                         hintStyle: AppTypography.bodyMd.copyWith(
-                          color: context.themeColors.textPrimaryWithAlpha(0.38),
+                          color: context.themeColors.textPrimaryWithAlpha(0.55),
                         ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
@@ -164,7 +174,7 @@ class _QuickInputBarState extends State<QuickInputBar> {
                       onPressed: _onSubmit,
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                       constraints: const BoxConstraints(),
-                      splashRadius: 18,
+                      splashRadius: AppLayout.iconButtonSplashRadius,
                     )
                   else
                     const SizedBox(width: AppSpacing.lgXl),
@@ -173,16 +183,18 @@ class _QuickInputBarState extends State<QuickInputBar> {
               // 파싱 미리보기: 파싱 결과가 있을 때만 표시한다
               if (hasParsed) ...[
                 Divider(
-                  height: 1,
-                  thickness: 1,
+                  height: AppLayout.dividerHeight,
+                  thickness: AppLayout.dividerHeight,
                   color: context.themeColors.textPrimaryWithAlpha(0.12),
-                  indent: 14,
-                  endIndent: 14,
+                  indent: AppSpacing.lgXl,
+                  endIndent: AppSpacing.lgXl,
                 ),
                 _ParsePreview(parsed: _parsed!),
               ],
             ],
           ),
+        ),
+        ),
         ),
       ),
     );
@@ -200,10 +212,10 @@ class _ParsePreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lgXl, AppSpacing.md, AppSpacing.lgXl, AppSpacing.mdLg),
       child: Wrap(
-        spacing: 12,
-        runSpacing: 4,
+        spacing: AppSpacing.lg,
+        runSpacing: AppSpacing.xs,
         children: [
           // 날짜 표시: 파싱된 날짜가 있을 때만 보여준다
           if (parsed.hasDate)
@@ -217,6 +229,12 @@ class _ParsePreview extends StatelessWidget {
               emoji: '⏰',
               label: _formatTime(parsed.time!),
             ),
+          // 태그 표시: 파싱된 태그가 있을 때만 보여준다
+          if (parsed.hasTags)
+            ...parsed.tagNames.map((name) => _PreviewChip(
+              emoji: '🏷️',
+              label: '#$name',
+            )),
           // 제목 표시: 제목이 있을 때만 보여준다
           if (parsed.title.isNotEmpty)
             _PreviewChip(
@@ -259,15 +277,15 @@ class _PreviewChip extends StatelessWidget {
       children: [
         Text(
           emoji,
-          style: AppTypography.captionMd.copyWith(fontSize: 12),
+          style: AppTypography.captionMd,
         ),
-        const SizedBox(width: 3),
+        const SizedBox(width: AppSpacing.xxs),
         Text(
           label,
           style: AppTypography.captionMd.copyWith(
             // 파싱 미리보기 라벨: 배경 테마에 맞는 악센트 색상을 사용한다
             color: context.themeColors.accent,
-            fontWeight: FontWeight.w600,
+            fontWeight: AppTypography.weightSemiBold,
           ),
         ),
       ],

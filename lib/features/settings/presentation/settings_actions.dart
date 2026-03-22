@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/auth/auth_provider.dart';
+import '../../../core/backup/backup_provider.dart';
 import '../../../core/theme/color_tokens.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/typography_tokens.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
+import '../../../shared/widgets/app_snack_bar.dart';
 
 /// 설정 화면의 계정 관련 액션을 처리하는 유틸리티 클래스
 /// 로그아웃 및 계정 삭제 다이얼로그와 실제 처리를 담당한다
@@ -18,24 +20,25 @@ abstract class SettingsActions {
   /// 로그아웃을 수행한다
   /// 확인 없이 즉시 로그아웃하고 오류 발생 시 SnackBar로 알린다
   static Future<void> signOut(BuildContext context) async {
+    final container = ProviderScope.containerOf(context);
+
+    // 백업 진행 중이면 로그아웃을 차단하여 데이터 손실을 방지한다
+    if (container.read(isBackingUpProvider)) {
+      if (context.mounted) {
+        AppSnackBar.showError(context, '백업이 진행 중입니다. 완료 후 다시 시도해 주세요.');
+      }
+      return;
+    }
+
     // 로그아웃은 별도 확인 없이 즉시 실행한다
     try {
-      // ConsumerWidget의 ref 없이 직접 authServiceProvider에 접근할 수 없으므로
-      // 화면 레벨의 ref를 받거나 별도 ProviderContainer를 사용해야 한다.
-      // 여기서는 BuildContext를 통해 상위 ProviderScope에 접근한다.
-      final container = ProviderScope.containerOf(context);
-      final authService = container.read(authServiceProvider);
-      await authService.signOut();
+      // AuthStateNotifier를 통해 로그아웃하여 상태 동기화를 보장한다
+      await container.read(authStateProvider.notifier).logout();
       // 로그아웃 성공: GoRouter의 authStateChanges 스트림이 자동으로 로그인 화면으로 이동한다
     } catch (e) {
       // 로그아웃 실패 시 사용자에게 알린다
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('로그아웃에 실패했습니다'),
-            backgroundColor: ColorTokens.error,
-          ),
-        );
+        AppSnackBar.showError(context, '로그아웃에 실패했습니다');
       }
     }
   }
@@ -50,20 +53,13 @@ abstract class SettingsActions {
     if (confirmed != true) return;
 
     try {
-      final authService = container.read(authServiceProvider);
-      await authService.deleteAccount();
+      // AuthStateNotifier를 통해 삭제하여 상태 동기화를 보장한다
+      await container.read(authStateProvider.notifier).deleteAccount();
       // 삭제 성공: GoRouter가 자동으로 로그인 화면으로 이동한다
     } catch (e) {
       // 계정 삭제 실패 시 사용자에게 알린다
       if (!context.mounted) return;
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('계정 삭제에 실패했습니다. 다시 로그인 후 시도해 주세요.'),
-            backgroundColor: ColorTokens.error,
-          ),
-        );
-      }
+      AppSnackBar.showError(context, '계정 삭제에 실패했습니다. 다시 로그인 후 시도해 주세요.');
     }
   }
 

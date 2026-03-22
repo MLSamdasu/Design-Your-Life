@@ -53,10 +53,11 @@ class HabitLogRepository {
   // ─── 체크 (생성) ─────────────────────────────────────────────────────────
 
   /// 특정 날짜의 습관 체크를 로컬에 생성한다
+  /// [date]가 제공되면 해당 날짜로 기록하고, 없으면 오늘 날짜를 사용한다
   /// 이미 체크된 경우 기존 로그를 반환한다
-  Future<HabitLog> checkHabit(String habitId) async {
-    final today = DateTime.now();
-    final dateStr = _formatDate(today);
+  Future<HabitLog> checkHabit(String habitId, {DateTime? date}) async {
+    final targetDate = date ?? DateTime.now();
+    final dateStr = _formatDate(targetDate);
 
     // 동일 날짜 중복 체크를 방지한다
     final existing = _cache.query(
@@ -90,6 +91,22 @@ class HabitLogRepository {
     final matching = _cache.query(
       AppConstants.habitLogsBox,
       (m) => m['habit_id'] == habitId && m['log_date'] == dateStr,
+    );
+    for (final log in matching) {
+      final logId = log['id'] as String?;
+      if (logId != null) {
+        await _cache.delete(AppConstants.habitLogsBox, logId);
+      }
+    }
+  }
+
+  // ─── 고아 로그 정리 ─────────────────────────────────────────────────────
+
+  /// V3-011: 특정 습관에 연결된 모든 로그를 삭제한다 (습관 삭제 시 호출)
+  Future<void> deleteLogsByHabitId(String habitId) async {
+    final matching = _cache.query(
+      AppConstants.habitLogsBox,
+      (m) => m['habit_id'] == habitId,
     );
     for (final log in matching) {
       final logId = log['id'] as String?;

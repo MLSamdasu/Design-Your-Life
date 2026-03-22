@@ -8,59 +8,59 @@ import 'package:flutter/material.dart';
 /// 하드코딩 금지: 반드시 이 클래스를 통해 참조한다
 abstract class ColorTokens {
   // ─── MAIN + SUB 2색 시스템 ───────────────────────────────────────────────
-  /// 메인 컬러: Violet (#7C3AED)
+  /// 메인 컬러: Apple Blue (#007AFF)
   /// 용도: CTA 버튼, 주요 하이라이트, 활성 상태, 링크, 포커스 링
-  static const Color main = Color(0xFF7C3AED);
+  static const Color main = Color(0xFF007AFF);
 
   /// 메인 호버 상태: 밝기 10% 감소
-  static const Color mainHover = Color(0xFF6A2DD3);
+  static const Color mainHover = Color(0xFF006ADD);
 
   /// 메인 Pressed 상태: 밝기 20% 감소
-  static const Color mainPressed = Color(0xFF5B24BA);
+  static const Color mainPressed = Color(0xFF005ABB);
 
   /// 메인 다크 모드 밝은 변형 (링크, 뱃지 텍스트용)
-  static const Color mainLight = Color(0xFFA78BFA);
+  static const Color mainLight = Color(0xFF5AC8FA);
 
-  /// 서브 컬러: Light Violet (#EDE9FE)
+  /// 서브 컬러: Apple Light Gray (#F2F2F7)
   /// 용도: 페이지 배경, 카드 배경, 보조 보더, 뱃지 배경
-  static const Color sub = Color(0xFFEDE9FE);
+  static const Color sub = Color(0xFFF2F2F7);
 
   /// 서브 라이트 틴트 (배경 틴트용)
-  static const Color subLight = Color(0xFFFDFCFE);
+  static const Color subLight = Color(0xFFF9F9FB);
 
   /// 서브 호버 상태
-  static const Color subHover = Color(0xFFDDD8F1);
+  static const Color subHover = Color(0xFFE5E5EA);
 
-  // ─── Tinted Grey 팔레트 (MAIN Hue: 263, 순수 무채색 금지) ─────────────────
-  /// Gray 50: B=98.5%, S=1.5% - 가장 밝은 배경, 페이지 배경
-  static const Color gray50 = Color(0xFFF8F7FB);
+  // ─── Tinted Grey 팔레트 (MAIN Hue: 225, Apple 시스템 그레이 기반) ───────────
+  /// Gray 50: 가장 밝은 배경 — Apple systemBackground에 가까운 쿨 화이트
+  static const Color gray50 = Color(0xFFF8F8FA);
 
-  /// Gray 100: B=96%, S=2% - 카드 배경, 섹션 구분
-  static const Color gray100 = Color(0xFFF1EFF4);
+  /// Gray 100: 카드 배경, 섹션 구분 — Apple systemGray6 기반
+  static const Color gray100 = Color(0xFFF2F2F6);
 
-  /// Gray 200: B=91.5%, S=2.5% - 보더, 디바이더
-  static const Color gray200 = Color(0xFFE5E3E9);
+  /// Gray 200: 보더, 디바이더 — Apple systemGray5 기반
+  static const Color gray200 = Color(0xFFE5E5EA);
 
-  /// Gray 300: B=86.5%, S=2.5% - 비활성 보더, 입력 필드 배경
-  static const Color gray300 = Color(0xFFD9D7DC);
+  /// Gray 300: 비활성 보더, 입력 필드 배경 — Apple systemGray4 기반
+  static const Color gray300 = Color(0xFFD1D1D6);
 
-  /// Gray 400: B=65%, S=4% - 플레이스홀더 텍스트, 비활성 아이콘
-  static const Color gray400 = Color(0xFFA19FA5);
+  /// Gray 400: 플레이스홀더 텍스트, 비활성 아이콘 — Apple systemGray2 기반
+  static const Color gray400 = Color(0xFFAEAEB2);
 
-  /// Gray 500: B=50%, S=5% - 보조 텍스트, 캡션
-  static const Color gray500 = Color(0xFF7B797F);
+  /// Gray 500: 보조 텍스트, 캡션 — Apple systemGray 기반
+  static const Color gray500 = Color(0xFF8E8E93);
 
-  /// Gray 600: B=38%, S=5.5% - 본문 보조 텍스트
-  static const Color gray600 = Color(0xFF5D5B60);
+  /// Gray 600: 본문 보조 텍스트
+  static const Color gray600 = Color(0xFF636366);
 
-  /// Gray 700: B=30%, S=7% - 본문 텍스트
-  static const Color gray700 = Color(0xFF49474C);
+  /// Gray 700: 본문 텍스트
+  static const Color gray700 = Color(0xFF48484A);
 
-  /// Gray 800: B=18%, S=8% - 제목 텍스트
-  static const Color gray800 = Color(0xFF2B2A2D);
+  /// Gray 800: 제목 텍스트 — Apple tertiarySystemBackground 다크 기반
+  static const Color gray800 = Color(0xFF2C2C2E);
 
-  /// Gray 900: B=12%, S=10% - 가장 어두운 텍스트, 다크모드 배경
-  static const Color gray900 = Color(0xFF1C1B1E);
+  /// Gray 900: 가장 어두운 텍스트, 다크모드 배경 — Apple secondarySystemBackground 다크 기반
+  static const Color gray900 = Color(0xFF1C1C1E);
 
   // ─── 그림자·배리어 시맨틱 토큰 ──────────────────────────────────────────
   /// 그림자 베이스 색상: gray900 기반 (순수 #000000 대신 Tinted Grey 사용)
@@ -84,32 +84,32 @@ abstract class ColorTokens {
   static const Color googleBrand = Color(0xFF4285F4);
 
   // ─── Glassmorphism 그라디언트 ────────────────────────────────────────────
-  /// 앱 배경 그라디언트 시작점
-  static const Color gradientStart = Color(0xFF667EEA);
+  /// 앱 배경 그라디언트 시작점 (Apple Blue)
+  static const Color gradientStart = Color(0xFF007AFF);
 
-  /// 앱 배경 그라디언트 중간점
-  static const Color gradientMid = Color(0xFF764BA2);
+  /// 앱 배경 그라디언트 중간점 (딥 블루)
+  static const Color gradientMid = Color(0xFF005EC4);
 
-  /// 앱 배경 그라디언트 끝점
-  static const Color gradientEnd = Color(0xFFF093FB);
+  /// 앱 배경 그라디언트 끝점 (라이트 블루)
+  static const Color gradientEnd = Color(0xFF5AC8FA);
 
   // ─── Refined Glass 라이트 배경 그라디언트 ───────────────────────────────
-  /// 밝은 라벤더 시작점
-  static const Color refinedGradientStart = Color(0xFFF5F3FF);
-  /// sub 색상과 동일한 중간점
-  static const Color refinedGradientMid = Color(0xFFEDE9FE);
-  /// 밝은 핑크 라벤더 끝점
-  static const Color refinedGradientEnd = Color(0xFFFDF4FF);
+  /// 쿨 화이트 시작점 (Apple 스타일 절제된 톤)
+  static const Color refinedGradientStart = Color(0xFFF5F5FA);
+  /// 쿨 라이트 그레이 중간점
+  static const Color refinedGradientMid = Color(0xFFF0F0F6);
+  /// 쿨 화이트 끝점
+  static const Color refinedGradientEnd = Color(0xFFF8F8FC);
 
   // ─── 다크 모드 그라디언트 ─────────────────────────────────────────────────
-  /// 다크 모드 배경 그라디언트 시작점
-  static const Color darkGradientStart = Color(0xFF2D3561);
+  /// 다크 모드 배경 그라디언트 시작점 (Apple 다크 #1C1C1E)
+  static const Color darkGradientStart = Color(0xFF1C1C1E);
 
   /// 다크 모드 배경 그라디언트 중간점
-  static const Color darkGradientMid = Color(0xFF3B1F5C);
+  static const Color darkGradientMid = Color(0xFF141416);
 
-  /// 다크 모드 배경 그라디언트 끝점
-  static const Color darkGradientEnd = Color(0xFF5C2E6B);
+  /// 다크 모드 배경 그라디언트 끝점 (Apple 니어 블랙)
+  static const Color darkGradientEnd = Color(0xFF0D0D0F);
 
   // ─── Semantic 컬러 ────────────────────────────────────────────────────────
   /// Success (성공)
@@ -132,9 +132,16 @@ abstract class ColorTokens {
   static const Color infoLight = Color(0xFF60A5FA);
   static const Color infoDark = Color(0xFF2563EB);
 
+  // ─── 캘린더 카드 시맨틱 컬러 ────────────────────────────────────────────
+  /// 투두 카드 색상: 캘린더 뷰에서 투두 아이템 카드 배경/보더에 사용한다
+  static const Color todoCard = Color(0xFF0EA5E9);
+
+  /// 타이머 세션 카드 색상: 캘린더 뷰에서 포모도로 완료 세션 카드에 사용한다
+  static const Color timerSession = Color(0xFF10B981);
+
   // ─── 이벤트 색상 팔레트 (8색, Light Mode) ────────────────────────────────
-  /// 업무/회의 (index: 0)
-  static const Color eventWork = Color(0xFF7C3AED);
+  /// 업무/회의 (index: 0) → Apple Blue
+  static const Color eventWork = Color(0xFF007AFF);
 
   /// 개인 일정 (index: 1)
   static const Color eventPersonal = Color(0xFFEC4899);
@@ -162,7 +169,7 @@ abstract class ColorTokens {
   static const Color eventGoogle = googleBrand;
 
   // ─── 이벤트 색상 팔레트 (8색, Dark Mode) ────────────────────────────────
-  static const Color eventWorkDark = Color(0xFFA78BFA);
+  static const Color eventWorkDark = Color(0xFF5AC8FA);
   static const Color eventPersonalDark = Color(0xFFF472B6);
   static const Color eventStudyDark = Color(0xFF60A5FA);
   static const Color eventHealthDark = Color(0xFF4ADE80);
@@ -188,18 +195,18 @@ abstract class ColorTokens {
 
   // ─── 다크 모드 서피스 컬러 ─────────────────────────────────────────────
   /// 다크 모드 DatePicker/TimePicker 서피스 색상
-  /// gradientMid와 유사한 딥 퍼플 (#2D1F4E)
-  static const Color darkPickerSurface = Color(0xFF2D1F4E);
+  /// Apple 다크 서피스 (#2C2C2E)
+  static const Color darkPickerSurface = Color(0xFF2C2C2E);
 
   // ─── 테마 프리뷰 전용 색상 ──────────────────────────────────────────────
-  /// 다크 글라스 테마 프리뷰 카드 배경 (딥 다크 퍼플)
-  static const Color previewDarkGlassBg = Color(0xFF1A1130);
+  /// 다크 글라스 테마 프리뷰 카드 배경 (Apple 다크)
+  static const Color previewDarkGlassBg = Color(0xFF1C1C1E);
 
-  /// 클린 테마 프리뷰 카드 보더 (라이트 블루 그레이)
-  static const Color previewCleanBorder = Color(0xFFE8ECF0);
+  /// 클린 테마 프리뷰 카드 보더 (Apple 시스템 그레이)
+  static const Color previewCleanBorder = Color(0xFFE5E5EA);
 
-  /// 클린 테마 프리뷰 텍스트 줄 색상 (딥 네이비)
-  static const Color previewCleanLine = Color(0xFF1A1A2E);
+  /// 클린 테마 프리뷰 텍스트 줄 색상 (Apple 다크)
+  static const Color previewCleanLine = Color(0xFF2C2C2E);
 
   // ─── 헬퍼 메서드 ─────────────────────────────────────────────────────────
   /// colorIndex(0~8)로 Light Mode 이벤트 색상 반환

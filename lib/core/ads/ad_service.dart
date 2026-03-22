@@ -33,8 +33,10 @@ class AdService {
 
   /// AdMob SDK를 초기화한다
   /// 앱 시작 시 한 번만 호출해야 한다
+  /// 데스크톱(macOS/Windows)에서는 AdMob을 사용하지 않으므로 초기화를 건너뛴다
   Future<void> initialize() async {
     if (_isInitialized) return;
+    if (!AdConstants.isAdSupported) return;
     await MobileAds.instance.initialize();
     _isInitialized = true;
   }
@@ -43,7 +45,9 @@ class AdService {
 
   /// 전면 광고와 리워드 광고를 동시에 미리 로드한다
   /// 초기화 후 호출하여 광고 표시 지연을 최소화한다
+  /// 데스크톱에서는 광고를 사용하지 않으므로 로드를 건너뛴다
   Future<void> preloadAds() async {
+    if (!AdConstants.isAdSupported) return;
     if (!_isInitialized) return;
     await Future.wait([
       _loadInterstitialAd(),
@@ -93,8 +97,12 @@ class AdService {
 
   /// 전면 광고를 표시한다 (할일/습관/루틴 미완료 시)
   /// 쿨다운 기간 내이거나 광고가 로드되지 않았으면 무시한다
+  /// 데스크톱에서는 광고를 표시하지 않는다
   /// 반환값: 광고가 실제로 표시되었는지 여부
   bool showInterstitialAd() {
+    // 데스크톱에서는 광고를 지원하지 않으므로 즉시 반환한다
+    if (!AdConstants.isAdSupported) return false;
+
     // 쿨다운 검사: 마지막 표시로부터 일정 시간이 지나지 않았으면 표시하지 않는다
     if (_lastInterstitialShownAt != null) {
       final elapsed =
@@ -104,13 +112,15 @@ class AdService {
       }
     }
 
-    if (!_isInterstitialLoaded || _interstitialAd == null) {
+    // 로컬 변수에 캡처하여 콜백에 의한 null 할당 경쟁 조건을 방지한다
+    final ad = _interstitialAd;
+    if (!_isInterstitialLoaded || ad == null) {
       // 광고가 아직 로드되지 않았으면 백그라운드에서 로드를 시도한다
       _loadInterstitialAd();
       return false;
     }
 
-    _interstitialAd!.show();
+    ad.show();
     _lastInterstitialShownAt = DateTime.now();
     return true;
   }
@@ -157,16 +167,46 @@ class AdService {
 
   /// 리워드 광고를 표시하고, 보상 확인 후 콜백을 실행한다 (백업 전)
   /// [onRewarded]: 사용자가 광고를 끝까지 시청한 후 실행할 콜백
+  /// 데스크톱에서는 광고 없이 즉시 보상 콜백을 실행한다 (백업 차단 방지)
   /// 반환값: 광고가 실제로 표시되었는지 여부
-  bool showRewardedAd({required void Function() onRewarded}) {
-    if (!_isRewardedLoaded || _rewardedAd == null) {
+  bool showRewardedAd({
+    required void Function() onRewarded,
+    void Function()? onDismissed,
+  }) {
+    // 데스크톱에서는 광고 없이 즉시 보상 콜백을 실행한다
+    if (!AdConstants.isAdSupported) {
+      onRewarded();
+      return false;
+    }
+
+    // 로컬 변수에 캡처하여 콜백에 의한 null 할당 경쟁 조건을 방지한다
+    final ad = _rewardedAd;
+    if (!_isRewardedLoaded || ad == null) {
       // 광고가 로드되지 않았으면 콜백을 즉시 실행한다 (광고 없이 진행)
       onRewarded();
       _loadRewardedAd();
       return false;
     }
 
-    _rewardedAd!.show(
+    // 광고 닫힘 콜백을 재설정하여 onDismissed를 호출한다
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        onDismissed?.call();
+        ad.dispose();
+        _rewardedAd = null;
+        _isRewardedLoaded = false;
+        _loadRewardedAd();
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        onDismissed?.call();
+        ad.dispose();
+        _rewardedAd = null;
+        _isRewardedLoaded = false;
+        _loadRewardedAd();
+      },
+    );
+
+    ad.show(
       onUserEarnedReward: (ad, reward) {
         // 사용자가 보상을 획득한 후 콜백을 실행한다
         onRewarded();

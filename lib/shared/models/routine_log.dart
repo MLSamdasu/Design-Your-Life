@@ -29,7 +29,8 @@ class RoutineLog {
     try {
       return RoutineLog(
         id: map['id']?.toString() ?? '',
-        routineId: (map['routine_id'] ?? map['routineId']).toString(),
+        // null 안전: 두 키 모두 없을 경우 빈 문자열로 폴백한다
+        routineId: (map['routine_id'] ?? map['routineId'] ?? '').toString(),
         date: DateParser.parse(
             map['log_date'] ?? map['logDate'] ?? map['date']),
         isCompleted: map['is_completed'] as bool? ??

@@ -3,6 +3,8 @@
 // 달성 업적이 상단에, 미달성 업적이 하단에 정렬된다.
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 import '../../models/achievement_definition.dart';
 import 'achievement_card.dart';
 
@@ -41,9 +43,9 @@ class AchievementGrid extends StatelessWidget {
       itemCount: sortedDefs.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.90,
+        crossAxisSpacing: AppSpacing.lg,
+        mainAxisSpacing: AppSpacing.lg,
+        childAspectRatio: AppLayout.achievementGridAspectRatio,
       ),
       itemBuilder: (context, index) {
         final def = sortedDefs[index];

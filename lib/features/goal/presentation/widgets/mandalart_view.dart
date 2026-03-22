@@ -4,8 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/typography_tokens.dart';
-import '../../../../core/theme/theme_colors.dart';
 import '../../providers/goal_provider.dart';
 import '../../providers/mandalart_provider.dart';
 import 'mandalart_empty_state.dart';
@@ -20,61 +18,47 @@ class MandalartView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final goalsAsync = ref.watch(goalsStreamProvider);
+    // goalsStreamProvider는 동기 Provider이므로 직접 사용한다
+    final goals = ref.watch(goalsStreamProvider);
 
-    return goalsAsync.when(
-      data: (goals) {
-        if (goals.isEmpty) {
-          return MandalartEmptyState(
+    if (goals.isEmpty) {
+      return MandalartEmptyState(
+        onCreateTap: () => showMandalartWizard(context),
+      );
+    }
+
+    // 선택된 목표 ID 동기화: 없으면 첫 번째 목표 자동 선택
+    final selectedId = ref.watch(selectedMandalartGoalIdProvider);
+    final effectiveId = selectedId ?? goals.first.id;
+
+    // 선택 상태가 없으면 첫 번째 목표로 자동 지정 (빌드 사이클 이후 적용)
+    if (selectedId == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(selectedMandalartGoalIdProvider.notifier).state =
+            effectiveId;
+      });
+    }
+
+    return Column(
+      children: [
+        // 상단: 목표 선택 드롭다운 + 새 만다라트 버튼 — 수평 패딩 20px
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+          child: MandalartHeader(
+            goals: goals,
+            selectedId: effectiveId,
             onCreateTap: () => showMandalartWizard(context),
-          );
-        }
-
-        // 선택된 목표 ID 동기화: 없으면 첫 번째 목표 자동 선택
-        final selectedId = ref.watch(selectedMandalartGoalIdProvider);
-        final effectiveId = selectedId ?? goals.first.id;
-
-        // 선택 상태가 없으면 첫 번째 목표로 자동 지정 (빌드 사이클 이후 적용)
-        if (selectedId == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(selectedMandalartGoalIdProvider.notifier).state =
-                effectiveId;
-          });
-        }
-
-        return Column(
-          children: [
-            // 상단: 목표 선택 드롭다운 + 새 만다라트 버튼 — 수평 패딩 20px
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-              child: MandalartHeader(
-                goals: goals,
-                selectedId: effectiveId,
-                onCreateTap: () => showMandalartWizard(context),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            // 그리드 렌더링 영역 — 수평 패딩 20px
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-                child: _MandalartGridSection(goalId: effectiveId),
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => Center(
-        child: CircularProgressIndicator(color: context.themeColors.textPrimary),
-      ),
-      error: (_, __) => Center(
-        child: Text(
-          '만다라트를 불러올 수 없어요',
-          style: AppTypography.bodyLg.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.6),
           ),
         ),
-      ),
+        const SizedBox(height: AppSpacing.xl),
+        // 그리드 렌더링 영역 — 수평 패딩 20px
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+            child: _MandalartGridSection(goalId: effectiveId),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -87,30 +71,16 @@ class _MandalartGridSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gridAsync = ref.watch(mandalartGridProvider(goalId));
+    // mandalartGridProvider는 동기 Provider이므로 직접 사용한다
+    final grid = ref.watch(mandalartGridProvider(goalId));
 
-    return gridAsync.when(
-      data: (grid) {
-        if (grid == null) {
-          return MandalartEmptyState(
-            onCreateTap: () => showMandalartWizard(context),
-            message: '이 목표에 만다라트가 없어요',
-          );
-        }
-        // 그리드 렌더링 (InteractiveViewer 포함)
-        return MandalartGridWidget(grid: grid, goalId: goalId);
-      },
-      loading: () => Center(
-        child: CircularProgressIndicator(color: context.themeColors.textPrimary),
-      ),
-      error: (_, __) => Center(
-        child: Text(
-          '만다라트를 불러올 수 없어요',
-          style: AppTypography.bodyLg.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.6),
-          ),
-        ),
-      ),
-    );
+    if (grid == null) {
+      return MandalartEmptyState(
+        onCreateTap: () => showMandalartWizard(context),
+        message: '이 목표에 만다라트가 없어요',
+      );
+    }
+    // 그리드 렌더링 (InteractiveViewer 포함)
+    return MandalartGridWidget(grid: grid, goalId: goalId);
   }
 }

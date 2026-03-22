@@ -34,8 +34,8 @@ class _StaggeredCardState extends State<StaggeredCard>
       duration: AppAnimation.slow,
     );
 
-    // 카드 인덱스 기반 딜레이 (최대 8개 * 50ms = 400ms)
-    final delay = (widget.index * 50).clamp(0, 350);
+    // 카드 인덱스 기반 딜레이 (최대 8개 * staggerDelayMs)
+    final delay = (widget.index * AppAnimation.staggerDelayMs).clamp(0, AppAnimation.staggerDelayMaxMs);
     Future.delayed(Duration(milliseconds: delay), () {
       if (mounted) _controller.forward();
     });
@@ -44,7 +44,7 @@ class _StaggeredCardState extends State<StaggeredCard>
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+      begin: const Offset(0, AppAnimation.slideStartOffset),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),

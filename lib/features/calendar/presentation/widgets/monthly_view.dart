@@ -31,6 +31,7 @@ import '../utils/event_dialog_utils.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../shared/widgets/animated_strikethrough.dart';
 
 /// 월간 캘린더 뷰
 class MonthlyView extends ConsumerStatefulWidget {
@@ -102,8 +103,8 @@ class _MonthlyViewState extends ConsumerState<MonthlyView> {
     final eventsByDate = ref.watch(mergedEventsByDateMapProvider);
     // F17: 선택된 날짜의 이벤트도 병합된 Provider 사용
     final selectedDayEvents = ref.watch(mergedEventsForDayProvider);
-    // 선택된 날짜의 루틴 목록 (활성 루틴 중 해당 요일)
-    final routinesAsync = ref.watch(routinesForDayProvider);
+    // 선택된 날짜의 루틴 목록 (활성 루틴 중 해당 요일) — 동기 Provider이므로 직접 사용한다
+    final routines = ref.watch(routinesForDayProvider);
     // 선택된 날짜의 습관 체크리스트 데이터
     final habitsForDay = ref.watch(habitsForDayProvider);
 
@@ -112,7 +113,7 @@ class _MonthlyViewState extends ConsumerState<MonthlyView> {
     final listFlex = ((1 - _calendarRatio) * 100).round();
 
     final hasContent = selectedDayEvents.isNotEmpty ||
-        (routinesAsync.valueOrNull?.isNotEmpty ?? false) ||
+        routines.isNotEmpty ||
         habitsForDay.isNotEmpty;
 
     return Column(
@@ -263,7 +264,7 @@ class _MonthlyViewState extends ConsumerState<MonthlyView> {
                     )),
 
                 // 루틴 카드 목록 (이벤트 아래에 표시)
-                if (routinesAsync.valueOrNull?.isNotEmpty ?? false) ...[
+                if (routines.isNotEmpty) ...[
                   if (selectedDayEvents.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(
@@ -276,7 +277,7 @@ class _MonthlyViewState extends ConsumerState<MonthlyView> {
                         ),
                       ),
                     ),
-                  ...routinesAsync.valueOrNull!.map((routine) => Padding(
+                  ...routines.map((routine) => Padding(
                         padding: const EdgeInsets.only(bottom: AppSpacing.md),
                         child: GestureDetector(
                           onTap: () => _openRoutineEditDialog(routine),
@@ -337,7 +338,8 @@ class _MonthlyViewState extends ConsumerState<MonthlyView> {
 
 /// 루틴 정보 카드 (월간 뷰의 선택된 날짜 목록에서 사용)
 /// 루틴 이름 + 시간 범위 + 완료 체크박스를 표시한다
-class _RoutineInfoCard extends ConsumerWidget {
+/// CheckItem 위젯과 동일한 빨간색 취소선 + scale bounce 동작을 적용한다
+class _RoutineInfoCard extends ConsumerStatefulWidget {
   final RoutineEntry routine;
   final DateTime selectedDate;
 
@@ -347,17 +349,64 @@ class _RoutineInfoCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final color = ColorTokens.eventColor(routine.colorIndex);
+  ConsumerState<_RoutineInfoCard> createState() => _RoutineInfoCardState();
+}
+
+class _RoutineInfoCardState extends ConsumerState<_RoutineInfoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounceAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // 스케일 바운스: CheckItem 패턴과 동일한 TweenSequence (500ms)
+    _bounceController = AnimationController(
+      duration: AppAnimation.slow,
+      vsync: this,
+    );
+    _bounceAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.02), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0), weight: 30),
+    ]).animate(CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  /// 체크박스 토글: bounce 애니메이션 후 상태 변경
+  void _handleToggle(bool isCompleted) {
+    // Reduced Motion 확인: 접근성 설정 시 바운스 생략
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    if (!reduceMotion) {
+      _bounceController.forward(from: 0.0);
+    }
+    ref.read(toggleRoutineLogProvider)(
+      widget.routine.id,
+      widget.selectedDate,
+      !isCompleted,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = ColorTokens.eventColor(widget.routine.colorIndex);
     final startStr =
-        '${routine.startHour.toString().padLeft(2, '0')}:${routine.startMinute.toString().padLeft(2, '0')}';
+        '${widget.routine.startHour.toString().padLeft(2, '0')}:${widget.routine.startMinute.toString().padLeft(2, '0')}';
     final endStr =
-        '${routine.endHour.toString().padLeft(2, '0')}:${routine.endMinute.toString().padLeft(2, '0')}';
+        '${widget.routine.endHour.toString().padLeft(2, '0')}:${widget.routine.endMinute.toString().padLeft(2, '0')}';
 
     // 루틴 완료 상태를 Provider에서 읽는다
     final isCompleted = ref.watch(
       routineCompletionProvider(
-          (routineId: routine.id, date: selectedDate)),
+          (routineId: widget.routine.id, date: widget.selectedDate)),
     );
 
     return Container(
@@ -372,38 +421,39 @@ class _RoutineInfoCard extends ConsumerWidget {
           left: BorderSide(color: color, width: AppSpacing.xxs),
         ),
       ),
-      child: Row(
+      child: ScaleTransition(
+        scale: _bounceAnimation,
+        child: Row(
         children: [
-          // 완료 체크박스
+          // 완료 체크박스 (빨간색 스타일 + scale bounce)
           GestureDetector(
-            onTap: () {
-              ref.read(toggleRoutineLogProvider)(
-                routine.id,
-                selectedDate,
-                !isCompleted,
-              );
-            },
+            onTap: () => _handleToggle(isCompleted),
             child: AnimatedContainer(
-              duration: AppAnimation.normal,
+              duration: AppAnimation.slow,
+              curve: Curves.easeInOut,
               width: AppLayout.iconMd,
               height: AppLayout.iconMd,
               decoration: BoxDecoration(
                 color: isCompleted
-                    ? context.themeColors.accent
-                    : Colors.transparent,
+                    ? ColorTokens.error.withValues(alpha: 0.20)
+                    : ColorTokens.transparent,
                 borderRadius: BorderRadius.circular(AppRadius.xs),
                 border: Border.all(
                   color: isCompleted
-                      ? context.themeColors.accent
+                      ? ColorTokens.error
                       : context.themeColors.textPrimaryWithAlpha(0.3),
                   width: AppLayout.borderMedium,
                 ),
               ),
-              child: isCompleted
-                  ? Icon(Icons.check,
-                      size: AppLayout.iconSm,
-                      color: context.themeColors.dialogSurface)
-                  : null,
+              // 체크 아이콘: 조건부 렌더링 대신 AnimatedOpacity로 부드럽게 전환
+              child: AnimatedOpacity(
+                opacity: isCompleted ? 1.0 : 0.0,
+                duration: AppAnimation.slow,
+                curve: Curves.easeInOut,
+                child: Icon(Icons.check,
+                    size: AppLayout.iconSm,
+                    color: ColorTokens.error),
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
@@ -413,14 +463,19 @@ class _RoutineInfoCard extends ConsumerWidget {
             size: AppLayout.iconMd,
           ),
           const SizedBox(width: AppSpacing.md),
+          // 루틴 이름 (완료 시 opacity 0.50 + 빨간펜 취소선 애니메이션)
           Expanded(
-            child: Text(
-              routine.name,
-              style: AppTypography.bodyMd.copyWith(
-                color: context.themeColors.textPrimary,
+            child: AnimatedOpacity(
+              opacity: isCompleted ? 0.50 : 1.0,
+              duration: AppAnimation.textFade,
+              curve: Curves.easeInOut,
+              child: AnimatedStrikethrough(
+                text: widget.routine.name,
+                style: AppTypography.bodyMd.copyWith(
+                  color: context.themeColors.textPrimary,
+                ),
+                isActive: isCompleted,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
@@ -431,13 +486,14 @@ class _RoutineInfoCard extends ConsumerWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
 
 /// 습관 체크 아이템 위젯 (월간 뷰의 선택된 날짜 목록에서 사용)
-/// DailyView의 _buildHabitCheckItem 패턴을 따르되, StatelessWidget으로 분리한다
-class _HabitCheckItem extends StatelessWidget {
+/// 스케일 바운스 애니메이션으로 탭 피드백을 제공한다
+class _HabitCheckItem extends StatefulWidget {
   final Habit habit;
   final bool isCompleted;
   final VoidCallback onToggle;
@@ -449,59 +505,111 @@ class _HabitCheckItem extends StatelessWidget {
   });
 
   @override
+  State<_HabitCheckItem> createState() => _HabitCheckItemState();
+}
+
+class _HabitCheckItemState extends State<_HabitCheckItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounceAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // 스케일 바운스: CheckItem 패턴과 동일한 TweenSequence (500ms)
+    _bounceController = AnimationController(
+      duration: AppAnimation.slow,
+      vsync: this,
+    );
+    _bounceAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.02), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0), weight: 30),
+    ]).animate(CurvedAnimation(
+      parent: _bounceController,
+      curve: Curves.easeInOut,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
-      child: Row(
-        children: [
-          // 체크박스
-          GestureDetector(
-            onTap: onToggle,
-            child: AnimatedContainer(
-              duration: AppAnimation.normal,
-              width: AppLayout.iconMd,
-              height: AppLayout.iconMd,
-              decoration: BoxDecoration(
-                color: isCompleted
-                    ? context.themeColors.accent
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.xs),
-                border: Border.all(
-                  color: isCompleted
+    return GestureDetector(
+      onTap: () {
+        // Reduced Motion 확인: 접근성 설정 시 바운스 생략
+        final reduceMotion = MediaQuery.disableAnimationsOf(context);
+        if (!reduceMotion) {
+          _bounceController.forward(from: 0.0);
+        }
+        widget.onToggle();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: ScaleTransition(
+        scale: _bounceAnimation,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+          child: Row(
+            children: [
+              // 체크박스 (CheckItem과 동일한 애니메이션 파라미터)
+              AnimatedContainer(
+                duration: AppAnimation.slow,
+                curve: Curves.easeInOut,
+                width: AppLayout.iconMd,
+                height: AppLayout.iconMd,
+                decoration: BoxDecoration(
+                  color: widget.isCompleted
                       ? context.themeColors.accent
-                      : context.themeColors.textPrimaryWithAlpha(0.3),
-                  width: AppLayout.borderMedium,
+                      : ColorTokens.transparent,
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
+                  border: Border.all(
+                    color: widget.isCompleted
+                        ? context.themeColors.accent
+                        : context.themeColors.textPrimaryWithAlpha(0.3),
+                    width: AppLayout.borderMedium,
+                  ),
+                ),
+                // 체크 아이콘: 조건부 렌더링 대신 AnimatedOpacity로 부드럽게 전환
+                child: AnimatedOpacity(
+                  opacity: widget.isCompleted ? 1.0 : 0.0,
+                  duration: AppAnimation.slow,
+                  curve: Curves.easeInOut,
+                  child: Icon(
+                    Icons.check,
+                    size: AppLayout.iconSm,
+                    color: context.themeColors.dialogSurface,
+                  ),
                 ),
               ),
-              child: isCompleted
-                  ? Icon(
-                      Icons.check,
-                      size: AppLayout.iconSm,
-                      color: context.themeColors.dialogSurface,
-                    )
-                  : null,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          // 습관 아이콘
-          if (habit.icon != null)
-            Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.xs),
-              child: Text(habit.icon!, style: AppTypography.bodyMd),
-            ),
-          // 습관 이름
-          Expanded(
-            child: Text(
-              habit.name,
-              style: AppTypography.bodySm.copyWith(
-                color: context.themeColors.textPrimary,
-                decoration:
-                    isCompleted ? TextDecoration.lineThrough : null,
+              const SizedBox(width: AppSpacing.sm),
+              // 습관 아이콘
+              if (widget.habit.icon != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.xs),
+                  child: Text(widget.habit.icon!, style: AppTypography.bodyMd),
+                ),
+              // 습관 이름 (완료 시 빨간펜 취소선 애니메이션 + 행 전체 투명도 적용)
+              Expanded(
+                child: AnimatedOpacity(
+                  opacity: widget.isCompleted ? 0.50 : 1.0,
+                  duration: AppAnimation.textFade,
+                  curve: Curves.easeInOut,
+                  child: AnimatedStrikethrough(
+                    text: widget.habit.name,
+                    style: AppTypography.bodySm.copyWith(
+                      color: context.themeColors.textPrimary,
+                    ),
+                    isActive: widget.isCompleted,
+                  ),
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

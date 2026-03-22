@@ -75,10 +75,11 @@ void main() {
       expect(result!.date, DateTime(2026, 12, 25));
     });
 
-    test('1월 1일(신정)를 파싱한다', () {
+    test('1월 1일(신정)를 파싱한다 — 과거이면 다음 해로 전환', () {
+      // baseDate(3월 10일) 기준으로 1월 1일은 과거이므로 2027-01-01을 반환한다
       final result = KoreanDateParser.parse('1월 1일 신년회', baseDate: baseDate);
       expect(result, isNotNull);
-      expect(result!.date, DateTime(2026, 1, 1));
+      expect(result!.date, DateTime(2027, 1, 1));
     });
 
     test('절대 날짜의 연도는 baseDate 연도를 사용한다', () {

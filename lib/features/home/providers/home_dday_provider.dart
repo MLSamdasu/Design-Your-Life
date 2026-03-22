@@ -1,31 +1,39 @@
-// F1: 홈 D-Day + 주간 요약 Provider (SRP 분리)
-// home_provider.dart에서 추출한다.
-// 포함: upcomingDdaysProvider, weekSummaryProvider
-// Hive 캐시를 통해 데이터를 조회한다.
+// F1: 홈 D-Day + 오늘의 요약 Provider (Single Source of Truth)
+// allEventsRawProvider에서 파생하여 이벤트 CRUD 시 자동 갱신된다.
+// 포함: upcomingDdaysProvider, todaySummaryProvider
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/constants/app_constants.dart';
+import '../../../core/providers/data_store_providers.dart';
 import '../../../core/providers/global_providers.dart';
+import '../../../core/error/error_handler.dart';
 import '../../../core/utils/date_utils.dart';
 import '../../../shared/enums/urgency_level.dart';
 import 'home_provider.dart';
 
-/// 다가오는 D-Day 목록 Provider (FutureProvider)
-/// Hive 캐시를 통해 오늘 이후 이벤트를 조회한다
-final upcomingDdaysProvider = FutureProvider<List<DdayItem>>((ref) async {
-  final cache = ref.watch(hiveCacheServiceProvider);
-  final today = AppDateUtils.startOfDay(DateTime.now());
-  final todayStr =
-      '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+/// 다가오는 D-Day 목록 Provider (동기)
+/// allEventsRawProvider(Single Source of Truth)에서 파생하여
+/// 이벤트 CRUD 시 eventDataVersionProvider 증가 → 이 Provider 자동 갱신
+final upcomingDdaysProvider = Provider<List<DdayItem>>((ref) {
+  // Single Source of Truth: allEventsRawProvider에서 파생한다
+  final allEvents = ref.watch(allEventsRawProvider);
+  // 자정 경계 불일치 방지: 공유 todayDateProvider를 사용한다
+  final today = ref.watch(todayDateProvider);
+  final todayStr = AppDateUtils.toDateString(today);
 
   try {
-    // Hive에서 모든 이벤트를 가져와 오늘 이후 이벤트만 필터링한다
-    final allEvents = cache.getAll(AppConstants.eventsBox);
+    // D-3 이내(오늘~3일 후) 이벤트만 필터링한다
+    final maxDateStr = AppDateUtils.toDateString(
+      today.add(const Duration(days: 3)),
+    );
+
     final docs = allEvents
         .where((doc) {
-          final startDate = doc['start_date']?.toString();
-          if (startDate == null) return false;
-          return startDate.compareTo(todayStr) >= 0;
+          final raw = doc['start_date']?.toString();
+          if (raw == null) return false;
+          // 날짜 부분(YYYY-MM-DD)만 추출하여 범위를 비교한다
+          final datePart = raw.length >= 10 ? raw.substring(0, 10) : raw;
+          return datePart.compareTo(todayStr) >= 0 &&
+              datePart.compareTo(maxDateStr) <= 0;
         })
         .toList();
 
@@ -36,21 +44,14 @@ final upcomingDdaysProvider = FutureProvider<List<DdayItem>>((ref) async {
       return aDate.compareTo(bDate);
     });
 
-    // 최대 10개까지만 표시한다
-    final limitedDocs = docs.take(10).toList();
-
-    final items = limitedDocs
+    final items = docs
         .map((doc) {
-          // start_date가 null인 이벤트는 D-Day 계산이 불가하므로 건너뛴다
           if (doc['start_date'] == null) return null;
           final startDate = DateTime.parse(doc['start_date'] as String);
           final diff = startDate.difference(today).inDays;
 
-          final urgency = diff <= 3
-              ? UrgencyLevel.critical
-              : diff <= 7
-                  ? UrgencyLevel.warning
-                  : UrgencyLevel.normal;
+          // D-Day/D-1/D-2/D-3 4단계 긴급도 적용
+          final urgency = UrgencyLevel.fromDaysRemaining(diff);
 
           final label = '${startDate.month}월 ${startDate.day}일';
           return DdayItem(
@@ -66,27 +67,20 @@ final upcomingDdaysProvider = FutureProvider<List<DdayItem>>((ref) async {
 
     items.sort((a, b) => a.daysRemaining.compareTo(b.daysRemaining));
     return items;
-  } catch (_) {
+  } catch (e, stack) {
+    ErrorHandler.logServiceError('HomeProvider:upcomingDdays', e, stack);
     return const [];
   }
 });
 
-/// 오늘의 요약 Provider (파생)
+/// 오늘의 요약 Provider (동기 파생)
 /// todayTodosProvider와 todayHabitsProvider의 오늘 데이터를 결합한다
-final weekSummaryProvider = Provider<AsyncValue<WeeklySummary>>((ref) {
-  final todosAsync = ref.watch(todayTodosProvider);
-  final habitsAsync = ref.watch(todayHabitsProvider);
+final todaySummaryProvider = Provider<TodaySummary>((ref) {
+  final todos = ref.watch(todayTodosProvider);
+  final habits = ref.watch(todayHabitsProvider);
 
-  return todosAsync.when(
-    data: (todos) => habitsAsync.when(
-      data: (habits) => AsyncData(WeeklySummary(
-        todoWeekRate: todos.completionRate,
-        habitWeekRate: habits.achievementRate,
-      )),
-      loading: () => const AsyncLoading(),
-      error: AsyncError.new,
-    ),
-    loading: () => const AsyncLoading(),
-    error: AsyncError.new,
+  return TodaySummary(
+    todoTodayRate: todos.completionRate,
+    habitTodayRate: habits.achievementRate,
   );
 });

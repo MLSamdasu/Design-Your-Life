@@ -80,10 +80,11 @@ class PeriodTabItem extends StatelessWidget {
         child: Text(
           label,
           style: AppTypography.captionLg.copyWith(
+            // WCAG 최소 대비: 비선택 탭 텍스트 0.55 이상 보장
             color: isSelected
                 ? context.themeColors.textPrimary
-                : context.themeColors.textPrimaryWithAlpha(0.5),
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                : context.themeColors.textPrimaryWithAlpha(0.55),
+            fontWeight: isSelected ? AppTypography.weightBold : AppTypography.weightRegular,
           ),
         ),
       ),

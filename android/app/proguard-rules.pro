@@ -12,29 +12,20 @@
 # Flutter 플러그인 레지스트라 보존
 -keep class io.flutter.plugin.editing.** { *; }
 
-# ── Firebase Core ─────────────────────────────────────────────────────────────
-# Firebase 초기화에 필요한 클래스 보존
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.firebase.**
--dontwarn com.google.android.gms.**
-
-# ── Firebase Auth ─────────────────────────────────────────────────────────────
-# 인증 관련 클래스 보존 (리플렉션으로 로드되는 경우가 있음)
--keep class com.google.firebase.auth.** { *; }
--keepattributes Signature
--keepattributes *Annotation*
-
 # ── Google Sign-In ────────────────────────────────────────────────────────────
 # Google OAuth 처리 클래스 보존
 -keep class com.google.android.gms.auth.** { *; }
 -keep class com.google.android.gms.common.** { *; }
 -keep class com.google.android.gms.tasks.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+-keepattributes Signature
+-keepattributes *Annotation*
 
-# ── Cloud Firestore ───────────────────────────────────────────────────────────
-# Firestore SDK 보존 (직렬화/역직렬화에 리플렉션 사용)
--keep class com.google.firebase.firestore.** { *; }
--dontwarn com.google.firebase.firestore.**
+# ── Google APIs (Drive, Calendar) ─────────────────────────────────────────────
+# googleapis 패키지에서 사용하는 클래스 보존
+-keep class com.google.api.** { *; }
+-dontwarn com.google.api.**
 
 # ── Hive (로컬 캐시) ──────────────────────────────────────────────────────────
 # Hive 어댑터 클래스는 리플렉션으로 로드되므로 보존한다

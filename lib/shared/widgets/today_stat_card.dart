@@ -1,5 +1,5 @@
-// 공용 위젯: WeekStatCard (주간 통계 카드)
-// 수치, 레이블, 진행률 바를 포함한 주간 요약 통계 카드
+// 공용 위젯: TodayStatCard (오늘 통계 카드)
+// 수치, 레이블, 진행률 바를 포함한 오늘의 요약 통계 카드
 // design-system.md Subtle Card + radius-xl(14px) 스타일
 import 'package:flutter/material.dart';
 import '../../core/theme/layout_tokens.dart';
@@ -8,9 +8,9 @@ import '../../core/theme/spacing_tokens.dart';
 import '../../core/theme/theme_colors.dart';
 import '../../core/theme/typography_tokens.dart';
 
-/// 주간 통계 카드 위젯
-/// 홈 대시보드 주간 요약 섹션의 2열 그리드 카드로 사용한다
-class WeekStatCard extends StatelessWidget {
+/// 오늘 통계 카드 위젯
+/// 홈 대시보드 오늘의 요약 섹션의 2열 그리드 카드로 사용한다
+class TodayStatCard extends StatelessWidget {
   /// 수치 표시 값 (예: "75%", "5/7")
   final String value;
 
@@ -26,7 +26,7 @@ class WeekStatCard extends StatelessWidget {
   /// 왼쪽 아이콘 (선택)
   final IconData? icon;
 
-  const WeekStatCard({
+  const TodayStatCard({
     super.key,
     required this.value,
     required this.label,
@@ -92,7 +92,7 @@ class WeekStatCard extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation<Color>(
                   progressColor ?? context.themeColors.textPrimaryWithAlpha(0.80),
                 ),
-                minHeight: 4,
+                minHeight: AppLayout.progressBarHeightSm,
               ),
             ),
           ],

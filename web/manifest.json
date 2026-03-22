@@ -5,14 +5,45 @@
     "start_url": ".",
     "display": "standalone",
     "orientation": "portrait-primary",
-    "theme_color": "#7C3AED",
-    "background_color": "#667eea",
+    "theme_color": "#1E1145",
+    "background_color": "#1E1145",
     "prefer_related_applications": false,
     "lang": "ko",
     "dir": "ltr",
     "scope": "/",
     "id": "/",
-    "categories": ["productivity", "lifestyle", "utilities"],
+    "categories": [
+        "productivity",
+        "lifestyle",
+        "utilities"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "오늘의 투두",
+            "short_name": "투두",
+            "description": "오늘의 할 일 목록 열기",
+            "url": "/todo",
+            "icons": [
+                {
+                    "src": "icons/Icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "습관 체크",
+            "short_name": "습관",
+            "description": "오늘의 습관 체크하기",
+            "url": "/habit",
+            "icons": [
+                {
+                    "src": "icons/Icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -35,23 +66,6 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
-        }
-    ],
-    "screenshots": [],
-    "shortcuts": [
-        {
-            "name": "오늘의 투두",
-            "short_name": "투두",
-            "description": "오늘의 할 일 목록 열기",
-            "url": "/todo",
-            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
-        },
-        {
-            "name": "습관 체크",
-            "short_name": "습관",
-            "description": "오늘의 습관 체크하기",
-            "url": "/habit",
-            "icons": [{ "src": "icons/Icon-192.png", "sizes": "192x192" }]
         }
     ]
 }

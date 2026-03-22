@@ -14,6 +14,7 @@ import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../shared/widgets/animated_strikethrough.dart';
 
 /// 습관 카드 위젯 (오늘의 습관 섹션)
 /// AN-04: 원형 체크박스 bounce 애니메이션 300ms easeOutBack
@@ -23,6 +24,8 @@ class HabitCard extends StatefulWidget {
   final int currentStreak;
   final DateTime targetDate;
   final ValueChanged<bool> onToggle;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const HabitCard({
     required this.habit,
@@ -30,6 +33,8 @@ class HabitCard extends StatefulWidget {
     required this.currentStreak,
     required this.targetDate,
     required this.onToggle,
+    this.onEdit,
+    this.onDelete,
     super.key,
   });
 
@@ -54,7 +59,7 @@ class _HabitCardState extends State<HabitCard>
   void initState() {
     super.initState();
     _checkController = AnimationController(
-      duration: AppAnimation.medium,
+      duration: AppAnimation.slow,
       vsync: this,
     );
     if (_isChecked) _checkController.value = 1.0;
@@ -86,8 +91,74 @@ class _HabitCardState extends State<HabitCard>
     _isDebouncePending = true;
     HapticFeedback.lightImpact();
     widget.onToggle(!_isChecked);
-    Future.delayed(AppAnimation.medium, () {
+    Future.delayed(AppAnimation.slow, () {
+      // 위젯이 소멸된 후 상태 변경을 방지한다 (탭 전환 중 디바운스 타이머 만료 시)
+      if (!mounted) return;
       _isDebouncePending = false;
+    });
+  }
+
+  /// 길게 눌러 수정/삭제 팝업 메뉴를 표시한다
+  void _showPopupMenu(BuildContext context) {
+    final RenderBox renderBox = context.findRenderObject() as RenderBox;
+    final Offset offset = renderBox.localToGlobal(Offset.zero);
+    final Size size = renderBox.size;
+
+    showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        offset.dx + size.width - AppLayout.popupMenuOffsetLeft,
+        offset.dy + size.height,
+        offset.dx + size.width,
+        offset.dy + size.height + AppLayout.popupMenuOffsetBottom,
+      ),
+      color: context.themeColors.dialogSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      items: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit_rounded,
+                size: AppLayout.iconSm,
+                color: context.themeColors.textPrimary,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                '수정',
+                style: AppTypography.bodyMd.copyWith(
+                  color: context.themeColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(
+                Icons.delete_outline_rounded,
+                size: AppLayout.iconSm,
+                color: ColorTokens.error,
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                '삭제',
+                style: AppTypography.bodyMd.copyWith(
+                  color: ColorTokens.error,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'edit') widget.onEdit?.call();
+      if (value == 'delete') widget.onDelete?.call();
     });
   }
 
@@ -95,7 +166,9 @@ class _HabitCardState extends State<HabitCard>
   Widget build(BuildContext context) {
     final habitColor = ColorTokens.eventColor(widget.habit.colorIndex);
 
-    return Container(
+    return GestureDetector(
+      onLongPress: () => _showPopupMenu(context),
+      child: Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
@@ -122,8 +195,8 @@ class _HabitCardState extends State<HabitCard>
             const SizedBox(width: AppSpacing.lg),
           ] else ...[
             Container(
-              width: 8,
-              height: 36,
+              width: AppSpacing.md,
+              height: AppLayout.colorBarHeight,
               decoration: BoxDecoration(
                 color: habitColor,
                 borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -136,17 +209,15 @@ class _HabitCardState extends State<HabitCard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.habit.name,
+                // 습관명 (완료 시 빨간펜 취소선 애니메이션 적용)
+                AnimatedStrikethrough(
+                  text: widget.habit.name,
                   style: AppTypography.bodyMd.copyWith(
                     color: _isChecked
                         ? context.themeColors.textPrimaryWithAlpha(0.6)
                         : context.themeColors.textPrimary,
-                    decoration:
-                        _isChecked ? TextDecoration.lineThrough : null,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  isActive: _isChecked,
                 ),
                 if (widget.currentStreak > 0) ...[
                   const SizedBox(height: AppSpacing.xs),
@@ -162,8 +233,8 @@ class _HabitCardState extends State<HabitCard>
             checked: _isChecked,
             enabled: _isEditable,
             child: SizedBox(
-              width: 44,
-              height: 44,
+              width: AppLayout.minTouchTarget,
+              height: AppLayout.minTouchTarget,
               child: GestureDetector(
                 onTap: _handleTap,
                 behavior: HitTestBehavior.opaque,
@@ -173,8 +244,8 @@ class _HabitCardState extends State<HabitCard>
                     builder: (context, _) {
                       final scale = 1.0 +
                           (_checkController.value > 0.5
-                              ? (1 - _checkController.value) * 0.3
-                              : -_checkController.value * 0.15);
+                              ? (1 - _checkController.value) * AppLayout.checkboxBounceScale
+                              : -_checkController.value * AppLayout.checkboxShrinkScale);
                       return Transform.scale(
                         scale: scale,
                         child: _HabitCheckbox(
@@ -190,6 +261,7 @@ class _HabitCardState extends State<HabitCard>
           ),
         ],
       ),
+    ),
     );
   }
 }
@@ -207,9 +279,11 @@ class _HabitCheckbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: AppAnimation.normal,
-      width: 24,
-      height: 24,
+      // slow + easeInOut로 부드러운 색상/보더 전환
+      duration: AppAnimation.slow,
+      curve: Curves.easeInOut,
+      width: AppLayout.checkboxLg,
+      height: AppLayout.checkboxLg,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         // 완료 상태: habitCheck 토큰 (초록 계열) 기반 색상
@@ -222,16 +296,20 @@ class _HabitCheckbox extends StatelessWidget {
               : isEditable
                   ? context.themeColors.textPrimaryWithAlpha(0.3)
                   : context.themeColors.textPrimaryWithAlpha(0.15),
-          width: 2,
+          width: AppLayout.borderThick,
         ),
       ),
-      child: isChecked
-          ? Icon(
-              Icons.check_rounded,
-              size: AppLayout.iconSm,
-              color: context.themeColors.textPrimary,
-            )
-          : null,
+      // 체크 아이콘 페이드 인/아웃 (abrupt 전환 방지)
+      child: AnimatedOpacity(
+        opacity: isChecked ? 1.0 : 0.0,
+        duration: AppAnimation.slow,
+        curve: Curves.easeInOut,
+        child: Icon(
+          Icons.check_rounded,
+          size: AppLayout.iconSm,
+          color: context.themeColors.textPrimary,
+        ),
+      ),
     );
   }
 }

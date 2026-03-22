@@ -189,8 +189,46 @@ void main() {
       expect(updated.recurrenceRule, isNull);
     });
 
-    test('UI 호환 colorIndex getter가 0을 반환한다', () {
+    test('colorIndex가 기본값 0으로 생성된다', () {
       expect(normalEvent.colorIndex, 0);
+    });
+
+    test('colorIndex가 지정값으로 생성된다', () {
+      final event = Event(
+        id: 'color-test',
+        title: '색상 테스트',
+        eventType: EventType.normal,
+        startDate: testDate,
+        colorIndex: 3,
+        createdAt: testCreatedAt,
+      );
+      expect(event.colorIndex, 3);
+    });
+
+    test('fromMap에서 color_index를 올바르게 읽는다', () {
+      final map = <String, dynamic>{
+        'id': 'ci-1',
+        'title': '색상 인덱스 테스트',
+        'event_type': 'normal',
+        'start_date': testDate.toIso8601String(),
+        'color_index': 5,
+        'created_at': testCreatedAt.toIso8601String(),
+      };
+      final parsed = Event.fromMap(map);
+      expect(parsed.colorIndex, 5);
+    });
+
+    test('toCreateMap에 color_index가 포함된다', () {
+      final event = Event(
+        id: 'ci-2',
+        title: '색상 맵 테스트',
+        eventType: EventType.normal,
+        startDate: testDate,
+        colorIndex: 7,
+        createdAt: testCreatedAt,
+      );
+      final map = event.toCreateMap();
+      expect(map['color_index'], 7);
     });
 
     test('UI 호환 userId getter가 빈 문자열을 반환한다', () {
@@ -236,16 +274,17 @@ void main() {
       expect(event.allDay, true);
     });
 
-    test('dDay 값이 정상 처리된다', () {
+    test('dDay가 startDate 기준으로 자동 계산된다', () {
+      // 오늘 기준 3일 후 이벤트
+      final futureDate = DateTime.now().add(const Duration(days: 3));
       final event = Event(
         id: 'edge-6',
         title: 'D-Day 테스트',
         eventType: EventType.normal,
-        startDate: testDate,
-        dDay: -5,
+        startDate: DateTime(futureDate.year, futureDate.month, futureDate.day),
         createdAt: testCreatedAt,
       );
-      expect(event.dDay, -5);
+      expect(event.dDayFrom(DateTime.now()), 3);
     });
   });
 }

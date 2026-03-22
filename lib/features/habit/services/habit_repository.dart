@@ -44,7 +44,7 @@ class HabitRepository {
   Future<Habit> createHabit(Habit habit) async {
     // 로컬 저장용 ID를 UUID v4로 생성한다
     final id = const Uuid().v4();
-    final map = habit.toInsertMap('local_user')
+    final map = habit.toInsertMap(AppConstants.localUserId)
       ..['id'] = id
       ..['current_streak'] = 0
       ..['longest_streak'] = 0;
@@ -67,6 +67,7 @@ class HabitRepository {
   // ─── 삭제 ────────────────────────────────────────────────────────────────
 
   /// 습관을 로컬에서 삭제한다
+  /// 고아 로그 정리는 호출부(deleteHabitProvider)에서 HabitLogRepository를 통해 수행한다
   Future<void> deleteHabit(String habitId) async {
     await _cache.delete(AppConstants.habitsBox, habitId);
   }

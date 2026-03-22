@@ -33,9 +33,10 @@ abstract class KoreanDateParser {
     r'(\d{1,2})\s*월\s*(\d{1,2})\s*일',
   );
 
-  /// 마감 패턴: "N월 D일까지", "내일까지" 등 (~까지 접미사)
+  /// 마감 패턴: "N월 D일까지", "15일까지", "내일까지" 등 (~까지 접미사)
+  /// "15일까지"(일 단독 마감)도 지원하기 위해 \d{1,2}\s*일 패턴을 포함한다
   static final RegExp _deadlinePattern = RegExp(
-    r'((?:\d{1,2}\s*월\s*\d{1,2}\s*일|오늘|내일|모레|글피|(?:이번|다음|다다음)\s*주\s*(?:월|화|수|목|금|토|일)요일))까지',
+    r'((?:\d{1,2}\s*월\s*\d{1,2}\s*일|\d{1,2}\s*일|오늘|내일|모레|글피|(?:이번|다음|다다음)\s*주\s*(?:월|화|수|목|금|토|일)요일))까지',
   );
 
   /// 상대 날짜 패턴: "오늘", "내일", "모레", "글피", "내일모레"
@@ -200,7 +201,19 @@ abstract class KoreanDateParser {
     if (month == null || day == null) return null;
     if (month < 1 || month > 12 || day < 1 || day > 31) return null;
 
-    final date = DateTime(baseDate.year, month, day);
+    var date = DateTime(baseDate.year, month, day);
+
+    // Dart DateTime 자동 보정 방지: 입력한 월/일과 결과가 다르면 무효 처리
+    // 예: 2월 31일 → DateTime이 3월 3일로 보정하는 것을 차단한다
+    if (date.month != month || date.day != day) return null;
+
+    // 과거 날짜이면 다음 해로 전환 (사용자는 미래 날짜를 의도할 가능성이 높다)
+    final baseDay = DateTime(baseDate.year, baseDate.month, baseDate.day);
+    if (date.isBefore(baseDay)) {
+      date = DateTime(baseDate.year + 1, month, day);
+      // 다음 해에서도 유효하지 않은 날짜면 무효 처리 (예: 윤년이 아닌 해의 2월 29일)
+      if (date.month != month || date.day != day) return null;
+    }
 
     return DateParseResult(
       date: date,
@@ -218,9 +231,11 @@ abstract class KoreanDateParser {
     // 내부 날짜 표현 추출
     final innerText = match.group(1)!;
     // 내부 날짜를 재귀적으로 파싱한다 (단, 마감 패턴 제외)
+    // "15일까지" 같은 일 단독 마감도 지원하기 위해 _parseDayOnly를 포함한다
     final innerDate = _parseAbsoluteDate(innerText, baseDate) ??
         _parseRelativeDay(innerText, baseDate) ??
-        _parseWeekday(innerText, baseDate);
+        _parseWeekday(innerText, baseDate) ??
+        _parseDayOnlyInner(innerText, baseDate);
 
     if (innerDate == null) return null;
 
@@ -255,6 +270,34 @@ abstract class KoreanDateParser {
     if (day == null || day < 1 || day > 31) return null;
 
     final date = DateTime(baseDate.year, baseDate.month, day);
+
+    // Dart DateTime 자동 보정 방지: 해당 월에 존재하지 않는 날짜면 null을 반환한다
+    // 예: 2월 31일 → DateTime이 3월 3일로 보정하는 것을 차단한다
+    if (date.month != baseDate.month || date.day != day) return null;
+
+    return DateParseResult(
+      date: date,
+      matchStart: match.start,
+      matchEnd: match.end,
+    );
+  }
+
+  /// 마감 패턴 내부에서 "N일" 단독 파싱을 수행한다
+  /// _parseDayOnly와 달리 (?!까지) 제약 없이 "15일" 형태를 직접 파싱한다
+  static DateParseResult? _parseDayOnlyInner(
+    String text,
+    DateTime baseDate,
+  ) {
+    final match = RegExp(r'(\d{1,2})\s*일').firstMatch(text);
+    if (match == null) return null;
+
+    final day = int.tryParse(match.group(1)!);
+    if (day == null || day < 1 || day > 31) return null;
+
+    final date = DateTime(baseDate.year, baseDate.month, day);
+
+    // Dart DateTime 자동 보정 방지: 해당 월에 존재하지 않는 날짜면 null을 반환한다
+    if (date.month != baseDate.month || date.day != day) return null;
 
     return DateParseResult(
       date: date,

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/global_providers.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_preset.dart';
 // 배경 그라디언트는 themePresetDataProvider에서 가져오므로
 // ColorTokens 직접 참조 없이 global_providers.dart에서 간접 사용한다
 
@@ -23,6 +24,11 @@ class DesignYourLifeApp extends ConsumerWidget {
     // 다크 모드 여부를 구독한다 (Hive 설정에서 초기값 읽음)
     final isDarkMode = ref.watch(isDarkModeProvider);
 
+    // 테마 프리셋 변경을 구독하여 전체 UI 트리를 재빌드한다
+    // context.themeColors 확장이 read()만 수행하므로
+    // 프리셋 변경 시 _AppBackground의 Key를 갱신하여 자식 위젯 전체를 재빌드한다
+    final preset = ref.watch(themePresetProvider);
+
     // GoRouter 인스턴스를 구독한다 (인증 가드 포함)
     final router = ref.watch(routerProvider);
 
@@ -36,15 +42,27 @@ class DesignYourLifeApp extends ConsumerWidget {
       // 라이트/다크 테마 적용
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+      // Refined Glass, Dark Glass 프리셋은 항상 어두운 배경을 사용하므로
+      // 시스템/사용자 다크모드 설정과 무관하게 다크 ThemeData를 강제 적용한다.
+      // 이렇게 하지 않으면 Material 위젯(AlertDialog, TimePicker 등)이
+      // 라이트 TextTheme(gray900 텍스트)를 사용하여 어두운 배경에서 안 보인다.
+      // Clean Minimal만 라이트/다크 전환을 지원한다.
+      themeMode: (preset == ThemePreset.darkGlass ||
+              preset == ThemePreset.refinedGlass ||
+              isDarkMode)
+          ? ThemeMode.dark
+          : ThemeMode.light,
 
       // GoRouter 라우터 설정
       routerConfig: router,
 
-      // 글래스모피즘 배경을 위해 투명 배경 설정
-      // 실제 그라디언트 배경은 각 Screen의 Scaffold 위에서 Stack으로 구현한다
+      // 테마 프리셋 변경 시 Key를 갱신하여 전체 자식 트리를 재빌드한다
+      // 이를 통해 context.themeColors가 새 프리셋의 색상을 읽게 된다
       builder: (context, child) {
-        return _AppBackground(child: child ?? const SizedBox.shrink());
+        return _AppBackground(
+          key: ValueKey('${preset.name}_$isDarkMode'),
+          child: child ?? const SizedBox.shrink(),
+        );
       },
     );
   }
@@ -56,7 +74,7 @@ class DesignYourLifeApp extends ConsumerWidget {
 class _AppBackground extends ConsumerWidget {
   final Widget child;
 
-  const _AppBackground({required this.child});
+  const _AppBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

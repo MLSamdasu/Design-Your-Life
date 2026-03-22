@@ -7,7 +7,6 @@ import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/widgets/glass_card.dart';
-import '../../services/timer_engine.dart';
 import '../../models/timer_log.dart';
 import '../../models/timer_state.dart';
 import '../../../../core/theme/spacing_tokens.dart';
@@ -19,8 +18,12 @@ class TimerSessionInfo extends StatelessWidget {
   /// 현재 타이머 상태
   final TimerState timerState;
 
+  /// 사용자가 설정한 긴 휴식 전 세션 횟수 (기본값 4)
+  final int sessionsBeforeLongBreak;
+
   const TimerSessionInfo({
     required this.timerState,
+    this.sessionsBeforeLongBreak = 4,
     super.key,
   });
 
@@ -50,7 +53,7 @@ class TimerSessionInfo extends StatelessWidget {
             sessionLabel,
             style: AppTypography.bodyMd.copyWith(
                     color: context.themeColors.textPrimary,
-              fontWeight: FontWeight.w600,
+              fontWeight: AppTypography.weightSemiBold,
             ),
           ),
 
@@ -58,8 +61,8 @@ class TimerSessionInfo extends StatelessWidget {
 
           // 구분선
           Container(
-            width: 1,
-            height: 14,
+            width: AppLayout.borderThin,
+            height: AppLayout.separatorHeight,
             color: context.themeColors.textPrimaryWithAlpha(0.25),
           ),
 
@@ -126,11 +129,11 @@ class TimerSessionInfo extends StatelessWidget {
   }
 
   /// 집중 세션 회차 문자열 반환 ("1/4" 형식)
+  /// 사용자 설정값(sessionsBeforeLongBreak)을 사용한다
   String _buildSessionCount() {
-    // 현재 회차: completedSessions % sessionsBeforeLongBreak + 1
     final cyclePosition =
-        timerState.completedSessions % TimerEngine.sessionsBeforeLongBreak + 1;
-    return '$cyclePosition/${TimerEngine.sessionsBeforeLongBreak}';
+        timerState.completedSessions % sessionsBeforeLongBreak + 1;
+    return '$cyclePosition/$sessionsBeforeLongBreak';
   }
 
   /// 휴식 세션 안내 문자열 반환

@@ -8,6 +8,8 @@ import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../models/achievement_definition.dart';
+import '../../../../core/theme/glassmorphism.dart';
+import '../../../../core/theme/layout_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 
@@ -36,7 +38,7 @@ class AchievementCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.xxl),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: GlassDecoration.subtleBlurSigma, sigmaY: GlassDecoration.subtleBlurSigma),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lgXl),
           decoration: BoxDecoration(
@@ -45,14 +47,14 @@ class AchievementCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.xxl),
             border: Border.all(
               color: context.themeColors.accentWithAlpha(0.50),
-              width: 1.5,
+              width: AppLayout.borderMedium,
             ),
             boxShadow: [
               // 악센트 컬러 글로우 효과
               BoxShadow(
                 color: context.themeColors.accentWithAlpha(0.25),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
+                blurRadius: AppLayout.ctaShadowBlur,
+                offset: const Offset(0, AppLayout.ctaShadowOffsetY),
               ),
             ],
           ),
@@ -67,7 +69,7 @@ class AchievementCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.xxl),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: GlassDecoration.subtleBlurSigma, sigmaY: GlassDecoration.subtleBlurSigma),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lgXl),
           decoration: BoxDecoration(
@@ -76,7 +78,7 @@ class AchievementCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppRadius.xxl),
             border: Border.all(
               color: context.themeColors.textPrimaryWithAlpha(0.10),
-              width: 1,
+              width: AppLayout.borderThin,
             ),
           ),
           child: _buildCardContent(context, isUnlocked: false),
@@ -90,10 +92,12 @@ class AchievementCard extends StatelessWidget {
     // 잠금 상태면 이모지를 흑백 처리하기 위해 opacity를 낮춘다
     final iconOpacity = isUnlocked ? 1.0 : 0.35;
     final titleColor = isUnlocked ? context.themeColors.textPrimary : context.themeColors.textPrimaryWithAlpha(0.45);
+    // 잠금 상태 설명 텍스트: WCAG 최소 대비 0.45 보장 (비활성 텍스트)
     final descColor = isUnlocked
         ? context.themeColors.textPrimaryWithAlpha(0.70)
-        : context.themeColors.textPrimaryWithAlpha(0.30);
-    final xpColor = isUnlocked ? context.themeColors.accent : context.themeColors.textPrimaryWithAlpha(0.25);
+        : context.themeColors.textPrimaryWithAlpha(0.45);
+    // 잠금 상태 XP 텍스트/아이콘: WCAG 최소 대비 0.45 보장 (비활성 텍스트)
+    final xpColor = isUnlocked ? context.themeColors.accent : context.themeColors.textPrimaryWithAlpha(0.45);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +108,7 @@ class AchievementCard extends StatelessWidget {
           opacity: iconOpacity,
           child: Text(
             def.iconName,
-            style: AppTypography.emojiLg.copyWith(fontSize: 28),
+            style: AppTypography.emojiLg.copyWith(fontSize: AppLayout.emojiBadgeLg),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -136,7 +140,7 @@ class AchievementCard extends StatelessWidget {
           children: [
             Icon(
               Icons.bolt_rounded,
-              size: 12,
+              size: AppLayout.iconXxxs,
               color: xpColor,
             ),
             const SizedBox(width: AppSpacing.xxs),
@@ -144,7 +148,7 @@ class AchievementCard extends StatelessWidget {
               '+${def.xpReward} XP',
               style: AppTypography.captionLg.copyWith(
                 color: xpColor,
-                fontWeight: FontWeight.w700,
+                fontWeight: AppTypography.weightBold,
               ),
             ),
           ],

@@ -9,7 +9,6 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../shared/widgets/glass_card.dart';
-import '../../../../shared/widgets/loading_indicator.dart';
 import '../../../achievement/models/achievement.dart';
 import '../../../achievement/models/achievement_definition.dart';
 import '../../../achievement/providers/achievement_provider.dart';
@@ -23,7 +22,8 @@ class AchievementSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final achievementsAsync = ref.watch(userAchievementsProvider);
+    // userAchievementsProvider는 동기 Provider이므로 직접 사용한다
+    final achievements = ref.watch(userAchievementsProvider);
     final unlockedIds = ref.watch(unlockedAchievementIdsProvider);
 
     return GestureDetector(
@@ -31,67 +31,16 @@ class AchievementSummaryCard extends ConsumerWidget {
       onTap: () => context.push(RoutePaths.achievements),
       child: GlassCard(
         variant: GlassCardVariant.defaultCard,
-        child: achievementsAsync.when(
-          loading: () => _buildSkeleton(),
-          error: (_, __) => _buildError(context),
-          data: (achievements) => _buildContent(
-            context,
-            unlockedCount: unlockedIds.length,
-            totalCount: AchievementDef.all.length,
-            recentAchievements: achievements
-                .take(3) // 최근 달성 업적 최대 3개
-                .toList(),
-          ),
+        // 동기 Provider이므로 직접 렌더링한다
+        child: _buildContent(
+          context,
+          unlockedCount: unlockedIds.length,
+          totalCount: AchievementDef.all.length,
+          recentAchievements: achievements
+              .take(3) // 최근 달성 업적 최대 3개
+              .toList(),
         ),
       ),
-    );
-  }
-
-  /// 로딩 스켈레톤 UI
-  Widget _buildSkeleton() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            const LoadingSkeleton(width: 40, height: 40, borderRadius: 20),
-            const SizedBox(width: AppSpacing.lg),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LoadingSkeleton(width: 120, height: 14, borderRadius: 7),
-                  const SizedBox(height: AppSpacing.sm),
-                  LoadingSkeleton(width: 80, height: 12, borderRadius: 6),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.lgXl),
-        LoadingSkeleton(width: 180, height: 12, borderRadius: 6),
-      ],
-    );
-  }
-
-  /// 에러 상태 UI
-  Widget _buildError(BuildContext context) {
-    return Row(
-      children: [
-        Icon(
-          Icons.sync_problem_rounded,
-          color: context.themeColors.textPrimaryWithAlpha(0.40),
-          size: AppLayout.iconXxl,
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Text(
-          '업적 정보를 불러오지 못했어요',
-          style: AppTypography.bodySm.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.50),
-          ),
-        ),
-      ],
     );
   }
 
@@ -114,22 +63,23 @@ class AchievementSummaryCard extends ConsumerWidget {
           children: [
             // 업적 아이콘 원형 배경
             Container(
-              width: 40,
-              height: 40,
+              width: AppLayout.containerAchievement,
+              height: AppLayout.containerAchievement,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 // 배경 테마에 맞는 악센트 색상으로 표시한다
                 color: context.themeColors.accentWithAlpha(0.20),
                 border: Border.all(
                   color: context.themeColors.accentWithAlpha(0.40),
-                  width: 1.5,
+                  width: AppLayout.borderMedium,
                 ),
               ),
               child: Center(
                 child: Icon(
                   Icons.emoji_events_rounded,
                   size: AppLayout.iconXl,
-                  color: context.themeColors.accent,
+                  // WCAG 대비: accent 배경 위에서 테마 색상으로 고대비 확보
+                  color: context.themeColors.textPrimaryWithAlpha(0.8),
                 ),
               ),
             ),
@@ -146,7 +96,7 @@ class AchievementSummaryCard extends ConsumerWidget {
                       color: context.themeColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: AppSpacing.xxs),
                   // 달성 수 / 전체 수 텍스트
                   Text(
                     '$unlockedCount / $totalCount 달성',
@@ -186,15 +136,15 @@ class AchievementSummaryCard extends ConsumerWidget {
                 (achievement) => Padding(
                   padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: AppLayout.iconHuge,
+                    height: AppLayout.iconHuge,
                     // 업적 이모지 배경: 배경 테마에 맞는 악센트 색상으로 표시한다
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: context.themeColors.accentWithAlpha(0.20),
                       border: Border.all(
                         color: context.themeColors.accentWithAlpha(0.40),
-                        width: 1,
+                        width: AppLayout.borderThin,
                       ),
                     ),
                     child: Center(

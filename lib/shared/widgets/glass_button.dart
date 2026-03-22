@@ -109,8 +109,8 @@ class _GlassButtonState extends State<GlassButton> {
                   BoxShadow(
                     // CTA 버튼 전용 MAIN 컬러 그림자 (shadow-cta)
                     color: ColorTokens.main.withValues(alpha: 0.30),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    blurRadius: AppLayout.ctaShadowBlur,
+                    offset: const Offset(0, AppLayout.ctaShadowOffsetY),
                   ),
                 ],
         );
@@ -127,7 +127,7 @@ class _GlassButtonState extends State<GlassButton> {
           borderRadius: BorderRadius.circular(AppRadius.button),
           border: Border.all(
             color: tc.textPrimaryWithAlpha(0.30),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
         );
 
@@ -163,11 +163,12 @@ class _GlassButtonState extends State<GlassButton> {
     if (widget.variant == GlassButtonVariant.primary) {
       // Primary 버튼은 MAIN 컬러 배경이므로 항상 흰색 텍스트
       textColor = isDisabled
-          ? Colors.white.withValues(alpha: 0.50)
-          : Colors.white;
+          ? ColorTokens.white.withValues(alpha: 0.50)
+          : ColorTokens.white;
     } else if (widget.variant == GlassButtonVariant.ghost) {
       textColor = isDisabled
-          ? tc.textPrimaryWithAlpha(0.30)
+          // WCAG 대비 기준: 비활성 텍스트 최소 alpha 0.45
+          ? tc.textPrimaryWithAlpha(0.45)
           : tc.textPrimaryWithAlpha(0.70);
     } else {
       textColor = isDisabled

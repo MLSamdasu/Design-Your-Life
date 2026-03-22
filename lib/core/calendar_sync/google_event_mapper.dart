@@ -31,6 +31,8 @@ abstract class GoogleEventMapper {
       type: 'normal',
       memo: event.description,
       location: event.location,
+      // startHour가 null이면 종일 이벤트로 판단한다
+      isAllDay: event.startHour == null,
       // source를 'google'로 명시하여 EventCard에서 Google 뱃지를 표시한다
       source: 'google',
     );

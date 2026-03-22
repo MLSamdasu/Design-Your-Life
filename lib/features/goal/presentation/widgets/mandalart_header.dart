@@ -9,6 +9,7 @@ import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/models/goal.dart';
 import '../../providers/mandalart_provider.dart';
+import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
@@ -72,13 +73,14 @@ class MandalartGoalDropdown extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.xlLg),
         border: Border.all(
           color: context.themeColors.textPrimaryWithAlpha(0.2),
-          width: 1,
+          width: AppLayout.borderThin,
         ),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selectedId,
-          dropdownColor: ColorTokens.gradientMid,
+          // 테마 인식 드롭다운 배경: 모든 테마에서 가독성 보장
+          dropdownColor: context.themeColors.dialogSurface,
           isExpanded: true,
           icon: Icon(
             Icons.expand_more_rounded,
@@ -114,24 +116,24 @@ class MandalartAddButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 44,
-        height: 44,
+        width: AppLayout.minTouchTarget,
+        height: AppLayout.minTouchTarget,
         decoration: BoxDecoration(
           color: ColorTokens.main,
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: [
             BoxShadow(
-              color: ColorTokens.main.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: ColorTokens.main.withValues(alpha: AppAnimation.buttonShadowAlpha),
+              blurRadius: AppLayout.shadowBlurMd,
+              offset: const Offset(0, AppLayout.shadowOffsetSm),
             ),
           ],
         ),
         child: const Icon(
           Icons.add_rounded,
           // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-          color: Colors.white,
-          size: 22,
+          color: ColorTokens.white,
+          size: AppLayout.iconNav,
         ),
       ),
     );

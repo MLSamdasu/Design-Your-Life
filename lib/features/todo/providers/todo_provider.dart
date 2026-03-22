@@ -8,14 +8,13 @@ import 'package:uuid/uuid.dart';
 import '../../../core/providers/data_store_providers.dart';
 import '../../../core/providers/global_providers.dart';
 import '../../../core/utils/date_utils.dart';
-import '../../../shared/models/event.dart' show EventType;
+import '../../../shared/models/event.dart' show Event, EventType;
 import '../../../shared/models/habit.dart';
 import '../../../shared/models/habit_log.dart';
 import '../../../shared/models/routine.dart';
 import '../../../shared/models/todo.dart';
 import '../../../shared/providers/tag_provider.dart';
 import '../../achievement/providers/achievement_provider.dart';
-import '../../calendar/providers/event_provider.dart';
 import '../../timer/models/timer_log.dart';
 import '../../timer/providers/timer_provider.dart';
 import '../../../core/calendar_sync/calendar_sync_provider.dart';
@@ -25,10 +24,9 @@ import '../services/todo_filter.dart';
 // ─── 날짜 선택 Provider ─────────────────────────────────────────────────────
 
 /// 투두 탭에서 선택된 날짜 Provider
-/// 초기값: 오늘 날짜
+/// 초기값: 공유 todayDateProvider에서 가져온 오늘 날짜 (자정 경계 불일치 방지)
 final selectedDateProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
-  return DateTime(now.year, now.month, now.day);
+  return ref.read(todayDateProvider);
 });
 
 // ─── 서브탭 Provider ────────────────────────────────────────────────────────
@@ -62,19 +60,23 @@ final todoRepositoryProvider = Provider<TodoRepository>((ref) {
 
 // ─── 투두 목록 Provider (Single Source of Truth에서 파생) ──────────────────
 
-/// 선택된 날짜의 투두 목록 Provider (FutureProvider)
-/// allTodosRawProvider(Single Source of Truth)에서 파생하여 날짜별 필터링한다
+/// 선택된 날짜의 투두 목록 Provider (동기 Provider)
+/// P1-2: allTodosRawProvider가 동기 Provider이므로 FutureProvider로 래핑할 필요가 없다
+/// 불필요한 async 오버헤드와 loading 상태 발생을 제거한다
 /// todoDataVersionProvider 변경 → allTodosRawProvider 재평가 → 이 Provider 자동 갱신
-final todosForDateProvider = FutureProvider<List<Todo>>((ref) async {
+final todosForDateProvider = Provider<List<Todo>>((ref) {
   final selectedDate = ref.watch(selectedDateProvider);
   // Single Source of Truth: allTodosRawProvider에서 파생한다
   final allTodos = ref.watch(allTodosRawProvider);
   final dateStr = AppDateUtils.toDateString(selectedDate);
 
   // 해당 날짜의 투두만 필터링한다
+  // 백업 복원 데이터는 camelCase('scheduledDate')를 사용할 수 있으므로 양쪽 키를 확인한다
   final filtered = allTodos
       .where((m) =>
-          (m['scheduled_date'] as String?)?.startsWith(dateStr) == true)
+          ((m['scheduled_date'] ?? m['scheduledDate']) as String?)
+              ?.startsWith(dateStr) ==
+          true)
       .toList();
 
   // display_order 오름차순 정렬
@@ -95,13 +97,10 @@ final todoStatsProvider = Provider<TodoStats>((ref) {
 // ─── 정렬된 투두 Provider ───────────────────────────────────────────────────
 
 /// 정렬된 투두 목록 Provider (완료 항목 하단 배치)
+/// P1-2: todosForDateProvider가 동기 Provider로 변경되어 .when() 제거
 final sortedTodosProvider = Provider<List<Todo>>((ref) {
-  final todosAsync = ref.watch(todosForDateProvider);
-  return todosAsync.when(
-    data: (todos) => TodoFilter.sortTodos(todos),
-    loading: () => [],
-    error: (_, __) => [],
-  );
+  final todos = ref.watch(todosForDateProvider);
+  return TodoFilter.sortTodos(todos);
 });
 
 // ─── 태그 필터링 투두 Provider ──────────────────────────────────────────────
@@ -223,9 +222,8 @@ final todoFocusedMonthProvider = StateProvider<DateTime>((ref) {
 /// id 접두사 'cal_'로 캘린더 출처 항목을 구별한다
 final calendarEventsForTimelineProvider = Provider<List<Todo>>((ref) {
   final selectedDate = ref.watch(selectedDateProvider);
-  final repository = ref.watch(eventRepositoryProvider);
-  // Single Source of Truth: allEventsRawProvider를 watch하여 이벤트 변경 시 재평가한다
-  ref.watch(allEventsRawProvider);
+  // Single Source of Truth: allEventsRawProvider에서 직접 파생하여 Hive 이중 읽기를 제거한다
+  final allEventsRaw = ref.watch(allEventsRawProvider);
 
   final target = DateTime(
     selectedDate.year,
@@ -233,11 +231,8 @@ final calendarEventsForTimelineProvider = Provider<List<Todo>>((ref) {
     selectedDate.day,
   );
 
-  // ── 1. 앱 로컬 이벤트 (Hive) ──────────────────────────────────────────────
-  final events = repository.getEventsForMonth(
-    selectedDate.year,
-    selectedDate.month,
-  );
+  // ── 1. 앱 로컬 이벤트 (allEventsRawProvider에서 인메모리 필터링) ─────────
+  final events = allEventsRaw.map((m) => Event.fromMap(m)).toList();
 
   // 선택된 날짜에 해당하는 이벤트만 필터링한다
   final dayEvents = events.where((event) {
@@ -357,7 +352,7 @@ final routinesForTimelineProvider = Provider<List<Todo>>((ref) {
       endTime: routine.endTime,
       isCompleted: false,
       color: routine.colorIndex.toString(),
-      createdAt: DateTime.now(),
+      createdAt: routine.createdAt,
     );
   }).toList();
 });
@@ -382,8 +377,10 @@ final timerLogsForTimelineProvider = Provider<List<Todo>>((ref) {
     final durationMinutes = log.durationSeconds ~/ 60;
     final endTotalMinutes =
         log.startTime.hour * 60 + log.startTime.minute + durationMinutes;
-    final endHour = (endTotalMinutes ~/ 60).clamp(0, 23);
-    final endMinute = endTotalMinutes % 60;
+    // 총 분을 먼저 클램프한 뒤 시/분을 산출한다 (24시간 초과 방지)
+    final clampedMinutes = endTotalMinutes.clamp(0, 24 * 60 - 1);
+    final endHour = clampedMinutes ~/ 60;
+    final endMinute = clampedMinutes % 60;
 
     todos.add(Todo(
       id: 'timer_${log.id}',

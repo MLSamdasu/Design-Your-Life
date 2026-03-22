@@ -9,6 +9,7 @@ import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../providers/calendar_provider.dart';
 import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 
 /// 주간 날짜 헤더 행
 /// 요일 라벨(월~일) + 날짜 숫자를 표시하며 탭으로 날짜를 선택할 수 있다
@@ -17,6 +18,8 @@ class WeeklyDayHeader extends ConsumerWidget {
   final DateTime selectedDate;
   final DateTime now;
   final double timeColumnWidth;
+  /// 각 날짜별 습관 완료율 (선택적, 없으면 표시하지 않는다)
+  final Map<DateTime, ({int completed, int total})>? habitCompletion;
 
   const WeeklyDayHeader({
     super.key,
@@ -24,6 +27,7 @@ class WeeklyDayHeader extends ConsumerWidget {
     required this.selectedDate,
     required this.now,
     required this.timeColumnWidth,
+    this.habitCompletion,
   });
 
   /// 요일 라벨 (짧은 형식)
@@ -35,12 +39,12 @@ class WeeklyDayHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      height: 52,
+      height: AppLayout.weeklyHeaderHeight,
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
             color: context.themeColors.textPrimaryWithAlpha(0.12),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
         ),
       ),
@@ -76,14 +80,14 @@ class WeeklyDayHeader extends ConsumerWidget {
                             ? context.themeColors.accent
                             : context.themeColors.textPrimaryWithAlpha(0.55),
                         fontWeight:
-                            isToday ? FontWeight.w600 : FontWeight.w400,
+                            isToday ? AppTypography.weightSemiBold : AppTypography.weightRegular,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     // 날짜 숫자 (오늘/선택 표시)
                     Container(
-                      width: 28,
-                      height: 28,
+                      width: AppLayout.iconHuge,
+                      height: AppLayout.iconHuge,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         // 선택된 날짜는 배경 테마에 맞는 악센트 색상 원으로 표시한다
@@ -99,11 +103,34 @@ class WeeklyDayHeader extends ConsumerWidget {
                         style: AppTypography.captionLg.copyWith(
                     color: context.themeColors.textPrimary,
                           fontWeight: isSelected || isToday
-                              ? FontWeight.w700
-                              : FontWeight.w400,
+                              ? AppTypography.weightBold
+                              : AppTypography.weightRegular,
                         ),
                       ),
                     ),
+                    // 습관 완료율 표시 (있을 때만)
+                    if (habitCompletion != null) ...[
+                      const SizedBox(height: AppSpacing.xxs),
+                      Builder(builder: (context) {
+                        final dayKey = DateTime(day.year, day.month, day.day);
+                        final data = habitCompletion![dayKey];
+                        if (data == null || data.total == 0) {
+                          return const SizedBox.shrink();
+                        }
+                        final allDone = data.completed == data.total;
+                        return Text(
+                          '${data.completed}/${data.total}',
+                          style: AppTypography.captionSm.copyWith(
+                            color: allDone
+                                ? ColorTokens.success
+                                : context.themeColors.textPrimaryWithAlpha(0.4),
+                            fontWeight: allDone
+                                ? AppTypography.weightSemiBold
+                                : AppTypography.weightRegular,
+                          ),
+                        );
+                      }),
+                    ],
                   ],
                 ),
               ),

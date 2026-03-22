@@ -4,7 +4,9 @@
 import 'package:design_your_life/core/auth/auth_service.dart';
 import 'package:design_your_life/core/auth/auth_provider.dart';
 import 'package:design_your_life/core/cache/hive_cache_service.dart';
+import 'package:design_your_life/core/providers/data_store_providers.dart';
 import 'package:design_your_life/core/providers/global_providers.dart';
+import 'package:design_your_life/core/utils/date_utils.dart';
 import 'package:design_your_life/features/habit/presentation/habit_screen.dart';
 import 'package:design_your_life/features/habit/providers/habit_provider.dart';
 import 'package:design_your_life/shared/models/habit.dart';
@@ -54,15 +56,22 @@ void main() {
   });
 
   group('달성률 계산 통합 테스트', () {
+    // todayHabitCompletionRateProvider는 allHabitLogsRawProvider에서 오늘 날짜 로그를
+    // 직접 필터링하므로, 테스트 로그 데이터도 오늘 날짜 기준 Map으로 제공해야 한다
+    late String todayStr;
+
+    setUp(() {
+      final now = DateTime.now();
+      todayStr = AppDateUtils.toDateString(DateTime(now.year, now.month, now.day));
+    });
+
     test('습관 0개일 때 달성률 0.0', () {
       final container = ProviderContainer(
         overrides: [
           activeHabitsProvider.overrideWith(
-            (ref) async => <Habit>[],
+            (ref) => <Habit>[],
           ),
-          habitLogsForDateProvider.overrideWith(
-            (ref) async => <HabitLog>[],
-          ),
+          allHabitLogsRawProvider.overrideWithValue(<Map<String, dynamic>>[]),
         ],
       );
       addTearDown(container.dispose);
@@ -71,7 +80,7 @@ void main() {
       expect(rate, 0.0);
     });
 
-    test('습관 3개 중 1개 완료 시 약 33.3%', () async {
+    test('습관 3개 중 1개 완료 시 약 33.3%', () {
       final habits = List.generate(
         3,
         (i) => Habit(
@@ -79,113 +88,86 @@ void main() {
           name: '습관$i',
         ),
       );
-      final logs = [
-        HabitLog(
-          id: 'h0_2026-03-09',
-          habitId: 'h0',
-          date: DateTime(2026, 3, 9),
-          isCompleted: true,
-          checkedAt: DateTime(2026, 3, 9),
-        ),
-      ];
 
       final container = ProviderContainer(
         overrides: [
           activeHabitsProvider.overrideWith(
-            (ref) async => habits,
+            (ref) => habits,
           ),
-          habitLogsForDateProvider.overrideWith(
-            (ref) async => logs,
-          ),
+          allHabitLogsRawProvider.overrideWithValue([
+            {
+              'id': 'h0_log',
+              'habit_id': 'h0',
+              'log_date': todayStr,
+              'is_completed': true,
+              'checked_at': DateTime.now().toIso8601String(),
+            },
+          ]),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(activeHabitsProvider.future);
-      await container.read(habitLogsForDateProvider.future);
 
       final rate = container.read(todayHabitCompletionRateProvider);
       expect(rate, closeTo(33.33, 0.1));
     });
 
-    test('모든 습관 완료 시 100.0%', () async {
+    test('모든 습관 완료 시 100.0%', () {
       final habits = [
-        Habit(
-          id: 'h1',
-          name: '습관1',
-        ),
-        Habit(
-          id: 'h2',
-          name: '습관2',
-        ),
-      ];
-      final logs = [
-        HabitLog(
-          id: 'h1_2026-03-09',
-          habitId: 'h1',
-          date: DateTime(2026, 3, 9),
-          isCompleted: true,
-          checkedAt: DateTime(2026, 3, 9),
-        ),
-        HabitLog(
-          id: 'h2_2026-03-09',
-          habitId: 'h2',
-          date: DateTime(2026, 3, 9),
-          isCompleted: true,
-          checkedAt: DateTime(2026, 3, 9),
-        ),
+        Habit(id: 'h1', name: '습관1'),
+        Habit(id: 'h2', name: '습관2'),
       ];
 
       final container = ProviderContainer(
         overrides: [
           activeHabitsProvider.overrideWith(
-            (ref) async => habits,
+            (ref) => habits,
           ),
-          habitLogsForDateProvider.overrideWith(
-            (ref) async => logs,
-          ),
+          allHabitLogsRawProvider.overrideWithValue([
+            {
+              'id': 'h1_log',
+              'habit_id': 'h1',
+              'log_date': todayStr,
+              'is_completed': true,
+              'checked_at': DateTime.now().toIso8601String(),
+            },
+            {
+              'id': 'h2_log',
+              'habit_id': 'h2',
+              'log_date': todayStr,
+              'is_completed': true,
+              'checked_at': DateTime.now().toIso8601String(),
+            },
+          ]),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(activeHabitsProvider.future);
-      await container.read(habitLogsForDateProvider.future);
 
       final rate = container.read(todayHabitCompletionRateProvider);
       expect(rate, 100.0);
     });
 
-    test('미완료 로그만 있을 때 달성률 0.0', () async {
+    test('미완료 로그만 있을 때 달성률 0.0', () {
       final habits = [
-        Habit(
-          id: 'h1',
-          name: '습관1',
-        ),
-      ];
-      final logs = [
-        HabitLog(
-          id: 'h1_2026-03-09',
-          habitId: 'h1',
-          date: DateTime(2026, 3, 9),
-          isCompleted: false,
-          checkedAt: DateTime(2026, 3, 9),
-        ),
+        Habit(id: 'h1', name: '습관1'),
       ];
 
       final container = ProviderContainer(
         overrides: [
           activeHabitsProvider.overrideWith(
-            (ref) async => habits,
+            (ref) => habits,
           ),
-          habitLogsForDateProvider.overrideWith(
-            (ref) async => logs,
-          ),
+          allHabitLogsRawProvider.overrideWithValue([
+            {
+              'id': 'h1_log',
+              'habit_id': 'h1',
+              'log_date': todayStr,
+              'is_completed': false,
+              'checked_at': DateTime.now().toIso8601String(),
+            },
+          ]),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(activeHabitsProvider.future);
-      await container.read(habitLogsForDateProvider.future);
 
       final rate = container.read(todayHabitCompletionRateProvider);
       expect(rate, 0.0);
@@ -193,7 +175,7 @@ void main() {
   });
 
   group('캘린더 데이터 통합 테스트', () {
-    test('여러 날짜에 로그가 있을 때 날짜별 달성률이 올바르다', () async {
+    test('여러 날짜에 로그가 있을 때 날짜별 달성률이 올바르다', () {
       final habits = [
         Habit(
           id: 'h1',
@@ -240,17 +222,14 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           activeHabitsProvider.overrideWith(
-            (ref) async => habits,
+            (ref) => habits,
           ),
           habitLogsForMonthProvider.overrideWith(
-            (ref) async => logs,
+            (ref) => logs,
           ),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(activeHabitsProvider.future);
-      await container.read(habitLogsForMonthProvider.future);
 
       final data = container.read(habitCalendarDataProvider);
 
@@ -296,14 +275,19 @@ void main() {
             ),
             currentUserIdProvider.overrideWithValue('test-user'),
             isAuthenticatedProvider.overrideWithValue(true),
+            // Raw Provider를 오버라이드하여 Hive 접근을 차단한다
+            allHabitsRawProvider.overrideWithValue(<Map<String, dynamic>>[]),
+            allHabitLogsRawProvider.overrideWithValue(<Map<String, dynamic>>[]),
+            allRoutinesRawProvider.overrideWithValue(<Map<String, dynamic>>[]),
+            allRoutineLogsRawProvider.overrideWithValue(<Map<String, dynamic>>[]),
             activeHabitsProvider.overrideWith(
-              (ref) async => <Habit>[],
+              (ref) => <Habit>[],
             ),
             habitLogsForDateProvider.overrideWith(
-              (ref) async => <HabitLog>[],
+              (ref) => <HabitLog>[],
             ),
             habitLogsForMonthProvider.overrideWith(
-              (ref) async => <HabitLog>[],
+              (ref) => <HabitLog>[],
             ),
           ],
           child: const MaterialApp(
@@ -374,13 +358,13 @@ void main() {
       expect(find.byType(AnimatedSwitcher), findsOneWidget);
     });
 
-    testWidgets('서브탭에 아이콘이 표시된다', (tester) async {
+    testWidgets('서브탭에 텍스트 라벨이 표시된다', (tester) async {
       await pumpHabitWidget(tester);
       await tester.pump(const Duration(milliseconds: 100));
 
-      // 트래커 아이콘과 루틴 아이콘이 존재한다
-      expect(find.byIcon(Icons.track_changes_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.repeat_rounded), findsOneWidget);
+      // SegmentedControl 전환 후 아이콘 대신 텍스트 라벨로 서브탭을 표시한다
+      expect(find.text('습관 트래커'), findsOneWidget);
+      expect(find.text('내 루틴'), findsOneWidget);
     });
 
     testWidgets('화면이 에러 없이 렌더링된다', (tester) async {

@@ -14,6 +14,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/providers/global_providers.dart';
 import '../../../core/router/route_paths.dart';
+import '../../../shared/providers/tutorial_provider.dart';
 import 'onboarding_widgets.dart';
 import '../../../core/theme/animation_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
@@ -125,6 +126,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
         'is_dark_mode': false,
         'schema_version': 1,
       });
+      // 첫 사용자이므로 홈 진입 후 튜토리얼 오버레이를 자동 표시한다
+      final hasSeen = ref.read(hasSeenTutorialProvider);
+      if (!hasSeen) {
+        ref.read(showTutorialProvider.notifier).state = true;
+      }
       // 저장 완료 → 홈으로 이동
       if (mounted) context.go(RoutePaths.home);
     } catch (e) {

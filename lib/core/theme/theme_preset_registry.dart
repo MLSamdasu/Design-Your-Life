@@ -21,137 +21,47 @@ abstract class ThemePresetRegistry {
     };
   }
 
-  // ─── Refined Glass 프리셋 (기본, 밝은 배경 + 미묘한 글라스 효과) ─────────
-  /// Refined Glass 프리셋: 밝은 라벤더 배경 + 반투명 카드 + 블러 효과
-  static ThemePresetData _refinedGlass() => ThemePresetData(
-        // 라이트 배경: 밝은 라벤더 → 서브 → 핑크 라벤더 3색 그라디언트
-        backgroundGradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFF5F3FF), // refinedGradientStart
-            Color(0xFFEDE9FE), // refinedGradientMid (SUB와 동일)
-            Color(0xFFFDF4FF), // refinedGradientEnd
-          ],
-          stops: [0.0, 0.5, 1.0],
-        ),
-        // 다크 배경: 기존 다크 그라디언트 유지
-        darkBackgroundGradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            ColorTokens.darkGradientStart,
-            ColorTokens.darkGradientEnd,
-          ],
-          stops: [0.0, 1.0],
-        ),
-        // 라이트 카드: 반투명 white alpha 0.70 + 블러 효과
-        cardDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.70),
+  // ─── Refined Glass 프리셋 (기본, 리치 그라디언트 글라스모피즘) ─────────────
+  /// Refined Glass 프리셋: 딥 퍼플→바이올렛→마젠타→틸 리치 그라디언트 + 프로스트 글라스
+  /// Clean Minimal과의 차별화: 화려한 컬러 그라디언트 배경, 낮은 알파 카드, 강한 블러
+  /// Dark Glass와의 차별화: 컬러풀 그라디언트 (vs 거의 단색 다크), 네온 글로우 없음
+  static ThemePresetData _refinedGlass() {
+    // 라이트/다크 공통: 리치 그라디언트 배경 (항상 어두운 컬러풀 그라디언트)
+    const gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [
+        Color(0xFF1E1145), // 딥 인디고 퍼플
+        Color(0xFF4A2B8A), // 리치 바이올렛
+        Color(0xFF6B2FA0), // 마젠타 바이올렛
+        Color(0xFF1A5B6B), // 딥 틸
+      ],
+      stops: [0.0, 0.35, 0.65, 1.0],
+    );
+
+    // 프로스트 글라스 카드: 배경 그라디언트가 비쳐 보이는 반투명 카드
+    BoxDecoration cardDeco() => BoxDecoration(
+          color: ColorTokens.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(AppRadius.huge),
           border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.50),
+            color: ColorTokens.white.withValues(alpha: 0.25),
             width: AppLayout.borderThin,
           ),
           boxShadow: [
             BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.06),
-              blurRadius: AppLayout.blurRadiusMd,
+              color: ColorTokens.shadowBase.withValues(alpha: 0.20),
+              blurRadius: AppLayout.blurRadiusLg,
               offset: const Offset(0, 4),
             ),
           ],
-        ),
-        // 다크 카드: 반투명 다크 글라스
-        darkCardDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(AppRadius.huge),
-          border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.22),
-            width: AppLayout.borderThin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.30),
-              blurRadius: AppLayout.blurRadiusXxl,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        // 강조 카드: 더 높은 알파 + 더 선명한 그림자
-        elevatedCardDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.80),
+        );
+
+    // 강조 카드: 약간 더 불투명
+    BoxDecoration elevatedDeco() => BoxDecoration(
+          color: ColorTokens.white.withValues(alpha: 0.24),
           borderRadius: BorderRadius.circular(AppRadius.massive),
           border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.60),
-            width: AppLayout.borderThin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.08),
-              blurRadius: AppLayout.blurRadiusXxl,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        // 다크 강조 카드
-        darkElevatedCardDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(AppRadius.massive),
-          border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.28),
-            width: AppLayout.borderThin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.35),
-              blurRadius: AppLayout.blurRadiusXxxl,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        // 보조 카드: 반투명 white alpha 0.50, 보더 없음
-        subtleCardDecoration: ({double radius = AppRadius.xl}) => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.50),
-          borderRadius: BorderRadius.circular(radius),
-        ),
-        // 모달: 높은 알파로 선명하게 표시
-        modalDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.90),
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.60),
-            width: AppLayout.borderThin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.12),
-              blurRadius: AppLayout.blurRadiusMax,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        // Bottom Nav: 반투명 캡슐
-        bottomNavDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.65),
-          borderRadius: BorderRadius.circular(AppRadius.circle),
-          border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.45),
-            width: AppLayout.borderThin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.08),
-              blurRadius: AppLayout.blurRadiusXxl,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        // 다크 Bottom Nav
-        darkBottomNavDecoration: () => BoxDecoration(
-          color: ColorTokens.white.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(AppRadius.circle),
-          border: Border.all(
-            color: ColorTokens.white.withValues(alpha: 0.22),
+            color: ColorTokens.white.withValues(alpha: 0.32),
             width: AppLayout.borderThin,
           ),
           boxShadow: [
@@ -161,38 +71,90 @@ abstract class ThemePresetRegistry {
               offset: const Offset(0, 8),
             ),
           ],
+        );
+
+    // Bottom Nav: 프로스트 캡슐
+    BoxDecoration bottomNavDeco() => BoxDecoration(
+          color: ColorTokens.white.withValues(alpha: 0.18),
+          borderRadius: BorderRadius.circular(AppRadius.circle),
+          border: Border.all(
+            color: ColorTokens.white.withValues(alpha: 0.25),
+            width: AppLayout.borderThin,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: ColorTokens.shadowBase.withValues(alpha: 0.20),
+              blurRadius: AppLayout.blurRadiusXxl,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        );
+
+    return ThemePresetData(
+      // 항상 리치 그라디언트: 라이트/다크 배경 동일 (항상 어두운 컬러풀 배경)
+      backgroundGradient: gradient,
+      darkBackgroundGradient: gradient,
+      // 프로스트 글라스 카드 (라이트/다크 동일)
+      cardDecoration: cardDeco,
+      darkCardDecoration: cardDeco,
+      // 강조 카드 (라이트/다크 동일)
+      elevatedCardDecoration: elevatedDeco,
+      darkElevatedCardDecoration: elevatedDeco,
+      // 보조 카드: 극미세 반투명
+      subtleCardDecoration: ({double radius = AppRadius.xl}) => BoxDecoration(
+        color: ColorTokens.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      // 모달: 프로스트 효과 + 높은 불투명도 (가독성 보장)
+      modalDecoration: () => BoxDecoration(
+        color: const Color(0xFF1E1145).withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(
+          color: ColorTokens.white.withValues(alpha: 0.20),
+          width: AppLayout.borderThin,
         ),
-        // 블러: 미묘한 글라스 효과
-        useBlur: true,
-        blurSigma: 12.0,
-        // 텍스트: 밝은 배경 위에서 가독성 최적 (어두운 텍스트)
-        textPrimary: ColorTokens.gray800,
-        textSecondary: ColorTokens.gray500,
-        // 다크 모드: 흰색 텍스트
-        darkTextPrimary: ColorTokens.white,
-        darkTextSecondary: ColorTokens.white,
-      );
+        boxShadow: [
+          BoxShadow(
+            color: ColorTokens.shadowBase.withValues(alpha: 0.30),
+            blurRadius: AppLayout.blurRadiusMax,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      // Bottom Nav (라이트/다크 동일)
+      bottomNavDecoration: bottomNavDeco,
+      darkBottomNavDecoration: bottomNavDeco,
+      // 블러: 20.0으로 강한 글라스 효과
+      useBlur: true,
+      blurSigma: 20.0,
+      // 텍스트: 항상 흰색 (어두운 그라디언트 배경 기준)
+      textPrimary: ColorTokens.white,
+      textSecondary: ColorTokens.white,
+      darkTextPrimary: ColorTokens.white,
+      darkTextSecondary: ColorTokens.white,
+    );
+  }
 
   // ─── Clean Minimal 프리셋 (밝은 단색 배경 + 블러 없음) ────────────────────
   /// Clean Minimal 프리셋: 불투명 카드 + 미세 그림자 + 블러 없음
   static ThemePresetData _cleanMinimal() => ThemePresetData(
-        // 라이트 배경: 매우 밝은 그레이 → 순백색
+        // 라이트 배경: Apple 쿨 화이트 → 순백색
         backgroundGradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            Color(0xFFF9FAFB),
+            Color(0xFFF8F8FA), // Apple 쿨 화이트
             ColorTokens.white,
           ],
           stops: [0.0, 1.0],
         ),
-        // 다크 배경: gray900 → 딥 다크
+        // 다크 배경: gray900 → Apple 딥 다크
         darkBackgroundGradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
             ColorTokens.gray900,
-            const Color(0xFF151419),
+            const Color(0xFF141416), // Apple 딥 다크
           ],
           stops: const [0.0, 1.0],
         ),
@@ -327,13 +289,13 @@ abstract class ThemePresetRegistry {
   /// Dark Glass 프리셋: 딥 다크 배경 + 네온 글로우 보더 + 블러 효과
   /// 항상 다크 테마이므로 라이트/다크 값이 동일하다
   static ThemePresetData _darkGlass() {
-    // 공통 배경 그라디언트 (항상 다크)
+    // 공통 배경 그라디언트 (항상 다크, Apple 다크 기반)
     const bgGradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [
-        Color(0xFF1A1130),
-        Color(0xFF0F0B1A),
+        Color(0xFF1C1C1E), // Apple secondarySystemBackground 다크
+        Color(0xFF0D0D0F), // Apple 니어 블랙
       ],
       stops: [0.0, 1.0],
     );
@@ -425,9 +387,9 @@ abstract class ThemePresetRegistry {
           width: AppLayout.borderThin,
         ),
       ),
-      // 모달: 강한 글로우 + 진한 배경
+      // 모달: Apple 다크 배경 + 글로우
       modalDecoration: () => BoxDecoration(
-        color: const Color(0xFF1A1130).withValues(alpha: 0.95),
+        color: const Color(0xFF1C1C1E).withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(AppRadius.massive),
         border: Border.all(
           color: ColorTokens.main.withValues(alpha: 0.50),

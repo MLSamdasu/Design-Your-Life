@@ -31,8 +31,8 @@ class StepIndicator extends StatelessWidget {
           duration: AppAnimation.medium,
           curve: Curves.easeInOutCubic,
           margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          width: isActive ? 24 : 8,
-          height: 8,
+          width: isActive ? AppLayout.stepIndicatorActiveWidth : AppLayout.stepIndicatorInactiveWidth,
+          height: AppLayout.stepIndicatorHeightLg,
           decoration: BoxDecoration(
             color: isActive
                 ? context.themeColors.textPrimary
@@ -56,8 +56,8 @@ class GlassCheckbox extends StatelessWidget {
     return AnimatedContainer(
       duration: AppAnimation.normal,
       curve: Curves.easeOutCubic,
-      width: 22,
-      height: 22,
+      width: AppLayout.checkboxOnboarding,
+      height: AppLayout.checkboxOnboarding,
       decoration: BoxDecoration(
         color: isChecked
             ? context.themeColors.accentWithAlpha(0.85)
@@ -67,7 +67,7 @@ class GlassCheckbox extends StatelessWidget {
           color: isChecked
               ? context.themeColors.accent
               : context.themeColors.textPrimaryWithAlpha(0.30),
-          width: 1.5,
+          width: AppLayout.borderMedium,
         ),
       ),
       child: isChecked
@@ -135,18 +135,18 @@ class _NextButtonState extends State<NextButton> {
                 : [
                     BoxShadow(
                       color: context.themeColors.accentWithAlpha(0.30),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
+                      blurRadius: AppLayout.ctaShadowBlur,
+                      offset: const Offset(0, AppLayout.ctaShadowOffsetY),
                     ),
                   ],
           ),
           child: Center(
             child: widget.isLoading
                 ? SizedBox(
-                    width: 20,
-                    height: 20,
+                    width: AppLayout.googleLogoSize,
+                    height: AppLayout.googleLogoSize,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                      strokeWidth: AppLayout.spinnerStrokeWidth,
                       color: context.themeColors.textPrimary,
                     ),
                   )
@@ -156,7 +156,7 @@ class _NextButtonState extends State<NextButton> {
                       color: isDisabled
                           ? context.themeColors.textPrimaryWithAlpha(0.60)
                           : context.themeColors.textPrimary,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: AppTypography.weightBold,
                     ),
                   ),
           ),

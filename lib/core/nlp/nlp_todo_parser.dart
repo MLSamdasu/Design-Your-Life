@@ -30,15 +30,19 @@ abstract class NlpTodoParser {
     // 테스트 가능성을 위해 DateTime.now()는 여기서만 호출한다
     final base = baseDate ?? DateTime.now();
 
-    // 1. 날짜 파싱
-    final dateResult = KoreanDateParser.parse(text, baseDate: base);
+    // 0. #태그 파싱: 날짜/시간 파싱 전에 #태그를 먼저 추출하여 간섭을 방지한다
+    final tagResult = _parseTags(text);
+    final textWithoutTags = tagResult.cleanedText;
 
-    // 2. 시간 파싱
-    final timeResult = KoreanTimeParser.parse(text);
+    // 1. 날짜 파싱 (태그 제거된 텍스트에서 수행)
+    final dateResult = KoreanDateParser.parse(textWithoutTags, baseDate: base);
+
+    // 2. 시간 파싱 (태그 제거된 텍스트에서 수행)
+    final timeResult = KoreanTimeParser.parse(textWithoutTags);
 
     // 3. 매칭된 부분을 뒤에서부터 제거하여 제목 추출한다
     //    뒤에서부터 제거하는 이유: 앞쪽 매칭을 먼저 제거하면 뒤쪽 인덱스가 틀어진다
-    String title = text;
+    String title = textWithoutTags;
     final ranges = <({int start, int end})>[];
 
     if (dateResult != null) {
@@ -67,7 +71,33 @@ abstract class NlpTodoParser {
       title: title,
       date: dateResult?.date,
       time: timeResult?.time,
+      tagNames: tagResult.tagNames,
       originalText: text,
+    );
+  }
+
+  /// #태그 구문을 파싱하여 태그 이름 목록과 태그가 제거된 텍스트를 반환한다
+  /// 예: "회의 준비 #업무 #긴급" → tagNames: ['업무', '긴급'], cleanedText: "회의 준비"
+  /// # 뒤에 한글/영문/숫자/밑줄이 1자 이상 이어지는 패턴을 인식한다
+  static _TagParseResult _parseTags(String text) {
+    final tagPattern = RegExp(r'#([\w가-힣]+)');
+    final matches = tagPattern.allMatches(text);
+
+    if (matches.isEmpty) {
+      return _TagParseResult(tagNames: const [], cleanedText: text);
+    }
+
+    final tagNames = matches
+        .map((m) => m.group(1)!)
+        .toSet() // 중복 태그 이름 제거
+        .toList();
+
+    // 태그 구문을 원본 텍스트에서 제거한다
+    final cleanedText = text.replaceAll(tagPattern, '');
+
+    return _TagParseResult(
+      tagNames: tagNames,
+      cleanedText: cleanedText,
     );
   }
 
@@ -108,4 +138,19 @@ abstract class NlpTodoParser {
     merged.add(current);
     return merged;
   }
+}
+
+/// #태그 파싱 결과 (내부 전용)
+/// 추출된 태그 이름 목록과 태그가 제거된 텍스트를 담는다
+class _TagParseResult {
+  /// 파싱된 태그 이름 목록 (#을 제외한 순수 이름)
+  final List<String> tagNames;
+
+  /// 태그 구문이 제거된 텍스트
+  final String cleanedText;
+
+  const _TagParseResult({
+    required this.tagNames,
+    required this.cleanedText,
+  });
 }

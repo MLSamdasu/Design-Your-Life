@@ -1,7 +1,7 @@
 // TodoProvider 단위 테스트
 // StateProvider, 파생 Provider의 초기값과 상태 변경을 검증한다.
 // API 의존 Provider는 override로 격리하여 테스트한다.
-// 백엔드 TodoDto 대응 모델로 전환 후 테스트를 업데이트했다.
+// P1-2: todosForDateProvider가 동기 Provider로 변경됨에 따라 테스트 업데이트
 import 'package:design_your_life/features/todo/providers/todo_provider.dart';
 import 'package:design_your_life/shared/models/todo.dart';
 import 'package:flutter/material.dart';
@@ -104,11 +104,11 @@ void main() {
   });
 
   group('todoStatsProvider', () {
-    test('todosForDateProvider가 loading일 때 빈 통계를 반환한다', () {
+    test('todosForDateProvider가 빈 목록일 때 빈 통계를 반환한다', () {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => <Todo>[],
+            (ref) => <Todo>[],
           ),
         ],
       );
@@ -121,7 +121,7 @@ void main() {
       expect(stats.completionRate, 0);
     });
 
-    test('todosForDateProvider에 데이터가 있을 때 통계를 계산한다', () async {
+    test('todosForDateProvider에 데이터가 있을 때 통계를 계산한다', () {
       final testTodos = [
         Todo(
           id: 't1',
@@ -142,14 +142,11 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => testTodos,
+            (ref) => testTodos,
           ),
         ],
       );
       addTearDown(container.dispose);
-
-      // 스트림 데이터 대기
-      await container.read(todosForDateProvider.future);
 
       final stats = container.read(todoStatsProvider);
 
@@ -158,7 +155,7 @@ void main() {
       expect(stats.completionRate, 50.0);
     });
 
-    test('모든 투두가 완료되었을 때 completionRate가 100이다', () async {
+    test('모든 투두가 완료되었을 때 completionRate가 100이다', () {
       final testTodos = [
         Todo(
           id: 't1',
@@ -172,13 +169,11 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => testTodos,
+            (ref) => testTodos,
           ),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(todosForDateProvider.future);
 
       final stats = container.read(todoStatsProvider);
 
@@ -187,11 +182,11 @@ void main() {
   });
 
   group('sortedTodosProvider', () {
-    test('todosForDateProvider가 loading일 때 빈 리스트를 반환한다', () {
+    test('todosForDateProvider가 빈 목록일 때 빈 리스트를 반환한다', () {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => <Todo>[],
+            (ref) => <Todo>[],
           ),
         ],
       );
@@ -202,7 +197,7 @@ void main() {
       expect(sorted, isEmpty);
     });
 
-    test('미완료 항목이 완료 항목보다 앞에 정렬된다', () async {
+    test('미완료 항목이 완료 항목보다 앞에 정렬된다', () {
       final testTodos = [
         Todo(
           id: 't1',
@@ -223,13 +218,11 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => testTodos,
+            (ref) => testTodos,
           ),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(todosForDateProvider.future);
 
       final sorted = container.read(sortedTodosProvider);
 
@@ -237,7 +230,7 @@ void main() {
       expect(sorted.last.title, '완료');
     });
 
-    test('시간이 있는 항목이 없는 항목보다 앞에 온다', () async {
+    test('시간이 있는 항목이 없는 항목보다 앞에 온다', () {
       final testTodos = [
         Todo(
           id: 't1',
@@ -257,13 +250,11 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => testTodos,
+            (ref) => testTodos,
           ),
         ],
       );
       addTearDown(container.dispose);
-
-      await container.read(todosForDateProvider.future);
 
       final sorted = container.read(sortedTodosProvider);
 
@@ -280,8 +271,12 @@ void main() {
       expect(TodoSubTab.todoList, isNotNull);
     });
 
-    test('values에 2개 항목이 있다', () {
-      expect(TodoSubTab.values.length, 2);
+    test('weeklyRoutine 값이 존재한다', () {
+      expect(TodoSubTab.weeklyRoutine, isNotNull);
+    });
+
+    test('values에 3개 항목이 있다', () {
+      expect(TodoSubTab.values.length, 3);
     });
   });
 }

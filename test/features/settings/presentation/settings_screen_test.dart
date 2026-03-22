@@ -107,11 +107,11 @@ void main() {
       expect(find.byType(SingleChildScrollView), findsOneWidget);
     });
 
-    testWidgets('GlassCard가 6개 존재한다 (계정정보, 앱설정, 테마선택, 데이터관리, 클라우드백업, 계정관리)', (tester) async {
+    testWidgets('GlassCard가 8개 존재한다 (계정정보, 앱설정, 테마선택, 네비게이션바, 데이터관리, 튜토리얼, 클라우드백업, 계정관리)', (tester) async {
       await tester.pumpWidget(buildTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byType(GlassCard), findsNWidgets(6));
+      expect(find.byType(GlassCard), findsNWidgets(8));
     });
 
     testWidgets('화면이 에러 없이 렌더링된다', (tester) async {

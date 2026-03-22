@@ -3,6 +3,7 @@
 // 선택된 날짜를 Riverpod selectedDateProvider로 관리한다.
 import 'package:flutter/material.dart';
 import '../../core/theme/animation_tokens.dart';
+import '../../core/theme/color_tokens.dart';
 import '../../core/theme/layout_tokens.dart';
 import '../../core/theme/radius_tokens.dart';
 import '../../core/theme/spacing_tokens.dart';
@@ -141,19 +142,19 @@ class _DateItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: AppAnimation.normal,
         curve: Curves.easeInOutCubic,
-        width: 36,
+        width: AppLayout.containerLg,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         // 선택된 날짜 캡슐: 배경 테마에 맞는 악센트 색상을 사용한다.
         // Glassmorphism/Neon에서는 밝은 보라(mainLight)로 표시해 가독성을 확보한다.
         decoration: isSelected
             ? BoxDecoration(
                 color: context.themeColors.accent,
-                borderRadius: BorderRadius.circular(AppRadius.xxl + 2),
+                borderRadius: BorderRadius.circular(AppRadius.xxl + AppSpacing.xxs),
                 boxShadow: [
                   BoxShadow(
                     color: context.themeColors.accentWithAlpha(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    blurRadius: AppLayout.shadowBlurMd,
+                    offset: const Offset(0, AppLayout.shadowOffsetSm),
                   ),
                 ],
               )
@@ -167,10 +168,10 @@ class _DateItem extends StatelessWidget {
               style: AppTypography.captionMd.copyWith(
                 // 선택된 상태는 MAIN 컬러 배경 위이므로 흰색 유지
                 color: isSelected
-                    ? Colors.white
+                    ? ColorTokens.white
                     : context.themeColors.textPrimaryWithAlpha(0.6),
                 fontWeight:
-                    isSelected ? FontWeight.w600 : FontWeight.w400,
+                    isSelected ? AppTypography.weightSemiBold : AppTypography.weightRegular,
               ),
             ),
             const SizedBox(height: AppSpacing.xs),
@@ -180,13 +181,13 @@ class _DateItem extends StatelessWidget {
               style: AppTypography.bodyMd.copyWith(
                 // 선택된 상태는 MAIN 컬러 배경 위이므로 흰색 유지
                 color: isSelected
-                    ? Colors.white
+                    ? ColorTokens.white
                     : isToday
                         ? context.themeColors.textPrimary
                         : context.themeColors.textPrimaryWithAlpha(0.7),
                 fontWeight: isSelected || isToday
-                    ? FontWeight.w700
-                    : FontWeight.w400,
+                    ? AppTypography.weightBold
+                    : AppTypography.weightRegular,
               ),
             ),
             // 오늘 표시 점: 배경 테마에 맞는 악센트 색상을 사용한다.
@@ -194,8 +195,8 @@ class _DateItem extends StatelessWidget {
             if (isToday && !isSelected)
               Container(
                 margin: const EdgeInsets.only(top: AppSpacing.xxs),
-                width: 4,
-                height: 4,
+                width: AppSpacing.xs,
+                height: AppSpacing.xs,
                 decoration: BoxDecoration(
                   color: context.themeColors.accent,
                   shape: BoxShape.circle,

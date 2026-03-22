@@ -171,8 +171,8 @@ class _HabitPillState extends State<HabitPill>
                   scale: scale.clamp(0.85, 1.15),
                   child: AnimatedContainer(
                     duration: AppAnimation.normal,
-                    width: 22,
-                    height: 22,
+                    width: AppLayout.iconNav,
+                    height: AppLayout.iconNav,
                     decoration: BoxDecoration(
                       // 완료: habitCheck 토큰 기반 초록 배경
                       color: widget.isCompleted
@@ -183,7 +183,7 @@ class _HabitPillState extends State<HabitPill>
                         color: widget.isCompleted
                             ? ColorTokens.habitCheck.withValues(alpha: 0.60)
                             : context.themeColors.textPrimaryWithAlpha(0.30),
-                        width: 2,
+                        width: AppLayout.borderThick,
                       ),
                     ),
                     child: widget.isCompleted

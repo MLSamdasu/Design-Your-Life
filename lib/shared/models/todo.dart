@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/date_parser.dart';
+import '../../core/utils/date_utils.dart';
 import '../../core/error/app_exception.dart';
 
 /// 투두 아이템 모델
@@ -47,9 +48,15 @@ class Todo {
   TimeOfDay? get time => startTime;
 
   /// UI에서 사용하는 colorIndex (0~7)
-  /// 백엔드의 hex 색상 문자열을 인덱스로 변환한다
-  /// 매핑되지 않는 색상은 기본값 0을 반환한다
-  int get colorIndex => 0;
+  /// color 필드에 저장된 인덱스 문자열을 정수로 변환한다
+  /// color가 null이거나 파싱 불가능하면 기본값 0을 반환한다
+  int get colorIndex {
+    if (color == null) return 0;
+    final parsed = int.tryParse(color!);
+    if (parsed == null) return 0;
+    // 유효 범위(0~7)를 벗어나면 기본값 0을 반환한다
+    return (parsed >= 0 && parsed <= 7) ? parsed : 0;
+  }
 
   /// 태그 ID 목록 (UI 호환용)
   /// 태그 목록에서 id 필드를 추출하여 String 리스트로 반환한다
@@ -95,7 +102,7 @@ class Todo {
     try {
       return Todo(
         id: map['id']?.toString() ?? '',
-        title: map['title'] as String,
+        title: (map['title'] as String?) ?? '',
         // scheduled_date 필드 (date 타입 → "yyyy-MM-dd")
         date: DateParser.parse(
             map['scheduled_date'] ?? map['scheduledDate'] ?? map['date']),
@@ -112,7 +119,7 @@ class Todo {
         color: map['color'] as String?,
         memo: map['memo'] as String?,
         displayOrder:
-            map['display_order'] as int? ?? map['displayOrder'] as int? ?? 0,
+            (map['display_order'] as num?)?.toInt() ?? (map['displayOrder'] as num?)?.toInt() ?? 0,
         // 태그는 별도 조인 또는 후처리로 채운다
         tags: map['tags'] != null
             ? List<Map<String, dynamic>>.from(
@@ -142,6 +149,7 @@ class Todo {
       'memo': memo,
       'is_completed': isCompleted,
       'display_order': displayOrder,
+      'tags': tags,
     };
   }
 
@@ -156,6 +164,7 @@ class Todo {
       'color': color,
       'memo': memo,
       'display_order': displayOrder,
+      'tags': tags,
     };
   }
 
@@ -164,7 +173,7 @@ class Todo {
 
   /// DateTime을 "yyyy-MM-dd" 문자열로 변환한다 (PostgreSQL date 대응)
   static String _dateToLocalDateString(DateTime dt) {
-    return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+    return AppDateUtils.toDateString(dt);
   }
 
   /// 불변 업데이트: 특정 필드만 변경된 새 인스턴스를 반환한다

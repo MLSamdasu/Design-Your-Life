@@ -1,5 +1,5 @@
 // F1: 홈 대시보드 오늘의 집중 시간 요약 카드
-// todayFocusMinutesProvider에서 오늘의 총 집중 시간을 표시한다.
+// todayOnlyFocusMinutesProvider에서 항상 오늘 날짜 기준 총 집중 시간을 표시한다.
 // 탭 시 타이머 화면으로 이동한다.
 // GlassCard(defaultCard variant) 사용.
 import 'package:flutter/material.dart';
@@ -10,7 +10,6 @@ import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../shared/widgets/glass_card.dart';
-import '../../../../shared/widgets/loading_indicator.dart';
 import '../../../timer/models/timer_log.dart';
 import '../../../timer/providers/timer_provider.dart';
 import '../../../../core/theme/radius_tokens.dart';
@@ -24,46 +23,23 @@ class TimerSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final logsAsync = ref.watch(todayTimerLogsProvider);
-    final focusMinutes = ref.watch(todayFocusMinutesProvider);
+    // 홈 대시보드 전용: 항상 오늘 날짜 기준으로 타이머 데이터를 표시한다
+    // 동기 Provider이므로 직접 사용한다
+    final logs = ref.watch(todayOnlyTimerLogsProvider);
+    final focusMinutes = ref.watch(todayOnlyFocusMinutesProvider);
+
+    // focus 타입의 세션 수를 계산한다
+    final sessionCount = logs
+        .where((log) => log.type == TimerSessionType.focus)
+        .length;
 
     return GestureDetector(
-      // 카드 탭 시 타이머 화면으로 이동한다
-      onTap: () => context.push(RoutePaths.timer),
+      // 카드 탭 시 타이머 탭으로 전환한다
+      onTap: () => context.go(RoutePaths.timer),
       child: GlassCard(
         variant: GlassCardVariant.defaultCard,
-        child: logsAsync.when(
-          loading: () => _buildSkeleton(),
-          error: (_, __) => _buildContent(context, 0, 0),
-          data: (logs) {
-            // focus 타입의 세션 수를 계산한다
-            final sessionCount = logs
-                .where((log) => log.type == TimerSessionType.focus)
-                .length;
-            return _buildContent(context, focusMinutes, sessionCount);
-          },
-        ),
+        child: _buildContent(context, focusMinutes, sessionCount),
       ),
-    );
-  }
-
-  /// 로딩 스켈레톤 UI
-  Widget _buildSkeleton() {
-    return Row(
-      children: [
-        const LoadingSkeleton(width: 48, height: 48, borderRadius: 12),
-        const SizedBox(width: AppSpacing.xl),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LoadingSkeleton(width: 120, height: 16, borderRadius: 6),
-              const SizedBox(height: AppSpacing.sm),
-              LoadingSkeleton(width: 80, height: 12, borderRadius: 6),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
@@ -77,8 +53,8 @@ class TimerSummaryCard extends ConsumerWidget {
       children: [
         // 타이머 아이콘 컨테이너
         Container(
-          width: 48,
-          height: 48,
+          width: AppLayout.iconEmpty,
+          height: AppLayout.iconEmpty,
           // 타이머 아이콘 배경: 배경 테마에 맞는 악센트 색상으로 표시한다
           decoration: BoxDecoration(
             color: context.themeColors.accentWithAlpha(0.20),
@@ -89,7 +65,8 @@ class TimerSummaryCard extends ConsumerWidget {
           ),
           child: Icon(
             Icons.timer_rounded,
-            color: context.themeColors.accent,
+            // WCAG 대비: accent 배경 위에서 테마 색상으로 고대비 확보
+            color: context.themeColors.textPrimaryWithAlpha(0.8),
             size: AppLayout.iconXxl,
           ),
         ),

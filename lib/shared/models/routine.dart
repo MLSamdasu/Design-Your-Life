@@ -69,9 +69,11 @@ class Routine {
   }
 
   /// DayOfWeek 약어 리스트를 int 요일 리스트로 변환한다
+  /// 인식 불가능한 요일 문자열은 기본값 대신 건너뛴다
   static List<int> _daysFromStringList(List<dynamic> days) {
     return days
-        .map((d) => _dayStringToInt[d.toString()] ?? 1)
+        .map((d) => _dayStringToInt[d.toString()])
+        .whereType<int>()
         .toList();
   }
 
@@ -85,12 +87,19 @@ class Routine {
   }
 
   /// "HH:mm" 또는 "HH:mm:ss" 형식 문자열에서 TimeOfDay로 변환한다
+  /// 파싱 실패 시 기본값 TimeOfDay(hour: 0, minute: 0)을 반환한다
   static TimeOfDay _timeFromIsoString(String value) {
-    final parts = value.split(':');
-    return TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
+    try {
+      final parts = value.split(':');
+      if (parts.length < 2) return const TimeOfDay(hour: 0, minute: 0);
+      return TimeOfDay(
+        hour: int.parse(parts[0]),
+        minute: int.parse(parts[1]),
+      );
+    } catch (_) {
+      // 잘못된 시간 문자열은 자정으로 기본 처리한다
+      return const TimeOfDay(hour: 0, minute: 0);
+    }
   }
 
   // ─── 색상 변환: colorIndex(0~7) ↔ hex 문자열 ─────────────────────────────
@@ -165,15 +174,16 @@ class Routine {
         id: map['id']?.toString() ?? '',
         // user_id 필드 (uuid)
         userId: (map['user_id'] ?? map['userId'] ?? '').toString(),
-        name: map['name'] as String,
+        name: (map['name'] as String?) ?? '',
         // days_of_week 필드 (text[] 배열)
         repeatDays: _daysFromStringList(
             map['days_of_week'] as List? ?? map['daysOfWeek'] as List? ?? []),
         // start_time/end_time 필드 (time 타입)
+        // null 안전: 양쪽 키가 모두 null이면 빈 문자열로 처리한다
         startTime: _timeFromIsoString(
-            (map['start_time'] ?? map['startTime']).toString()),
+            (map['start_time'] ?? map['startTime'] ?? '').toString()),
         endTime: _timeFromIsoString(
-            (map['end_time'] ?? map['endTime']).toString()),
+            (map['end_time'] ?? map['endTime'] ?? '').toString()),
         // color 필드 (text hex)
         colorIndex: _hexToColorIndex(map['color'] as String?),
         // is_active 필드 (boolean)
@@ -206,9 +216,10 @@ class Routine {
     };
   }
 
-  /// UPDATE용 Map (id, user_id 제외)
+  /// UPDATE용 Map (id 제외, user_id 포함)
   Map<String, dynamic> toUpdateMap() {
     return {
+      'user_id': userId,
       'name': name,
       'days_of_week': _daysToStringList(repeatDays),
       'start_time': _timeToIsoString(startTime),

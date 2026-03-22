@@ -9,11 +9,11 @@ import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/models/habit.dart';
 import '../../../../shared/models/habit_log.dart';
 import '../../../../shared/widgets/glassmorphic_card.dart';
-import '../../../../shared/widgets/loading_indicator.dart';
 import '../../providers/habit_provider.dart';
 import 'habit_calendar.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../shared/widgets/animated_strikethrough.dart';
 
 /// 섹션 2: 습관 캘린더 + 선택일 상세
 class HabitCalendarSection extends ConsumerWidget {
@@ -22,8 +22,8 @@ class HabitCalendarSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedDate = ref.watch(habitSelectedDateProvider);
-    final habitsAsync = ref.watch(activeHabitsProvider);
-    final logsAsync = ref.watch(habitLogsForDateProvider);
+    final habits = ref.watch(activeHabitsProvider);
+    final logs = ref.watch(habitLogsForDateProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,56 +52,37 @@ class HabitCalendarSection extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              habitsAsync.when(
-                data: (habits) => logsAsync.when(
-                  data: (logs) {
-                    if (habits.isEmpty) {
-                      return Text(
-                        '등록된 습관이 없어요',
-                        style: AppTypography.captionMd.copyWith(
-                          color: context.themeColors.textPrimaryWithAlpha(0.5),
-                        ),
-                      );
-                    }
-                    return Column(
-                      children: habits.map((h) {
-                        final log = logs.firstWhere(
-                          (l) => l.habitId == h.id,
-                          orElse: () => HabitLog(
-                            id: '',
-                            habitId: h.id,
-                            date: selectedDate,
-                            isCompleted: false,
-                            checkedAt: selectedDate,
-                          ),
-                        );
-                        return HabitDetailRow(
-                          habit: h,
-                          isCompleted: log.isCompleted,
-                        );
-                      }).toList(),
-                    );
-                  },
-                  loading: () =>
-                      const LoadingSkeleton(height: 40, borderRadius: 8),
-                  // 로그 로드 실패 시 사용자에게 오류 상태를 표시한다
-                  error: (_, __) => Text(
-                    '습관 기록을 불러오지 못했어요',
+              // 동기 Provider이므로 null 체크 불필요 — 즉시 데이터를 사용한다
+              () {
+                // P3: 선택된 날짜에 예정된 습관만 표시한다 (빈도 기반 필터링)
+                final scheduled = habits.where((h) => h.isScheduledFor(selectedDate)).toList();
+                if (scheduled.isEmpty) {
+                  return Text(
+                    habits.isEmpty ? '등록된 습관이 없어요' : '이 날짜에 예정된 습관이 없어요',
                     style: AppTypography.captionMd.copyWith(
-                      color: ColorTokens.infoHint.withValues(alpha: 0.9),
+                      color: context.themeColors.textPrimaryWithAlpha(0.5),
                     ),
-                  ),
-                ),
-                loading: () =>
-                    const LoadingSkeleton(height: 40, borderRadius: 8),
-                // 습관 목록 로드 실패 시 사용자에게 오류 상태를 표시한다
-                error: (_, __) => Text(
-                  '습관 정보를 불러오지 못했어요',
-                  style: AppTypography.captionMd.copyWith(
-                    color: ColorTokens.infoHint.withValues(alpha: 0.9),
-                  ),
-                ),
-              ),
+                  );
+                }
+                return Column(
+                  children: scheduled.map((h) {
+                    final log = logs.firstWhere(
+                      (l) => l.habitId == h.id,
+                      orElse: () => HabitLog(
+                        id: '',
+                        habitId: h.id,
+                        date: selectedDate,
+                        isCompleted: false,
+                        checkedAt: selectedDate,
+                      ),
+                    );
+                    return HabitDetailRow(
+                      habit: h,
+                      isCompleted: log.isCompleted,
+                    );
+                  }).toList(),
+                );
+              }(),
             ],
           ),
         ),
@@ -144,17 +125,16 @@ class HabitDetailRow extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
           ],
           // 긴 습관명이 Row를 넘지 않도록 Expanded로 감싼다
+          // 완료 시 빨간펜 취소선 애니메이션으로 시각적 일관성 유지
           Expanded(
-            child: Text(
-              habit.name,
+            child: AnimatedStrikethrough(
+              text: habit.name,
               style: AppTypography.bodySm.copyWith(
                 color: isCompleted
                     ? context.themeColors.textPrimaryWithAlpha(0.55)
                     : context.themeColors.textPrimaryWithAlpha(0.8),
-                decoration: isCompleted ? TextDecoration.lineThrough : null,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              isActive: isCompleted,
             ),
           ),
         ],

@@ -89,16 +89,25 @@ class GlassmorphicCard extends StatelessWidget {
     final radius = _borderRadius();
     final effectivePadding = padding ?? _defaultPadding();
 
-    Widget card = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-        child: Container(
-          width: width,
-          height: height,
-          padding: effectivePadding,
-          decoration: _decoration(),
-          child: child,
+    // RepaintBoundary로 감싸 BackdropFilter 리페인트가 상위 위젯으로 전파되는 것을 차단한다
+    // 스크롤 중 불필요한 BackdropFilter 재합성을 방지하여 투명도 깜빡임을 해소한다
+    Widget card = RepaintBoundary(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+          child: Container(
+            width: width,
+            height: height,
+            padding: effectivePadding,
+            decoration: _decoration(),
+            // Material 위젯을 제공하여 InkWell, Switch, PopupMenuButton 등
+            // Material 조상이 필요한 자식 위젯의 크래시를 방지한다
+            child: Material(
+              type: MaterialType.transparency,
+              child: child,
+            ),
+          ),
         ),
       ),
     );

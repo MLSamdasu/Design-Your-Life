@@ -37,14 +37,15 @@ class TemplateSection extends ConsumerWidget {
       children: [
         Text(
           '인기 목표 템플릿',
+          // WCAG 최소 대비: 섹션 제목 텍스트 0.55 이상 보장
           style: AppTypography.captionLg.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.5),
+            color: context.themeColors.textPrimaryWithAlpha(0.55),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
           alignment: WrapAlignment.center,
           children: _templates.map((t) {
             return _TemplateChip(
@@ -63,7 +64,7 @@ class TemplateSection extends ConsumerWidget {
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Close',
-      barrierColor: ColorTokens.barrierBase.withValues(alpha: 0.4),
+      barrierColor: ColorTokens.barrierBase.withValues(alpha: AppAnimation.barrierAlpha),
       transitionDuration: AppAnimation.standard,
       pageBuilder: (_, __, ___) => GoalCreateDialog(
         defaultPeriod: period,
@@ -76,7 +77,7 @@ class TemplateSection extends ConsumerWidget {
           reverseCurve: Curves.easeInCubic,
         );
         return ScaleTransition(
-          scale: Tween<double>(begin: 0.9, end: 1.0).animate(curved),
+          scale: Tween<double>(begin: AppAnimation.dialogScaleIn, end: 1.0).animate(curved),
           child: FadeTransition(opacity: curved, child: child),
         );
       },

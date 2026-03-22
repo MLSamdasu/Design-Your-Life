@@ -10,7 +10,7 @@ import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/models/todo.dart';
 import '../../../../shared/widgets/glass_card.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_indicator.dart' show GlassLoadingSpinner;
+import '../../../../shared/widgets/animated_strikethrough.dart';
 import '../../../todo/providers/todo_provider.dart';
 import '../../models/timer_state.dart';
 import '../../providers/timer_provider.dart';
@@ -28,7 +28,7 @@ class TimerTodoSelector extends ConsumerWidget {
     return showModalBottomSheet(
       context: context,
       // 배경 투명 처리로 GlassCard 스타일 유지
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorTokens.transparent,
       isScrollControlled: true,
       builder: (_) => const TimerTodoSelector(),
     );
@@ -36,17 +36,18 @@ class TimerTodoSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final todosAsync = ref.watch(todosForDateProvider);
+    // P1-2: todosForDateProvider가 동기 Provider로 변경되어 async 처리 불필요
+    final todos = ref.watch(todosForDateProvider);
     final timerState = ref.watch(timerStateProvider);
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.3,
-      maxChildSize: 0.85,
+      initialChildSize: AppLayout.sheetInitialSize,
+      minChildSize: AppLayout.sheetMinSize,
+      maxChildSize: AppLayout.sheetMaxSize,
       builder: (context, scrollController) {
         return GlassCard(
           variant: GlassCardVariant.elevated,
-          borderRadius: 28,
+          borderRadius: AppRadius.pill,
           padding: EdgeInsets.zero,
           child: Column(
             children: [
@@ -58,16 +59,12 @@ class TimerTodoSelector extends ConsumerWidget {
 
               // 투두 목록 영역
               Expanded(
-                child: todosAsync.when(
-                  loading: () => _buildLoading(),
-                  error: (_, __) => _buildError(),
-                  data: (todos) => _buildTodoList(
-                    context,
-                    ref,
-                    todos,
-                    timerState,
-                    scrollController,
-                  ),
+                child: _buildTodoList(
+                  context,
+                  ref,
+                  todos,
+                  timerState,
+                  scrollController,
                 ),
               ),
             ],
@@ -82,8 +79,8 @@ class TimerTodoSelector extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.lg, bottom: AppSpacing.xs),
       child: Container(
-        width: 40,
-        height: 4,
+        width: AppSpacing.massive,
+        height: AppSpacing.xs,
         decoration: BoxDecoration(
           color: context.themeColors.textPrimaryWithAlpha(0.30),
           borderRadius: BorderRadius.circular(AppRadius.xs),
@@ -124,25 +121,6 @@ class TimerTodoSelector extends ConsumerWidget {
           ],
         ],
       ),
-    );
-  }
-
-  /// 로딩 상태 UI
-  Widget _buildLoading() {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(AppSpacing.huge),
-        child: GlassLoadingSpinner(size: 32),
-      ),
-    );
-  }
-
-  /// 오류 상태 UI
-  Widget _buildError() {
-    return const EmptyState(
-      icon: Icons.sync_problem_rounded,
-      mainText: '투두를 불러오지 못했어요',
-      subText: '잠시 후 다시 시도해주세요',
     );
   }
 
@@ -223,8 +201,8 @@ class _TodoSelectorItem extends StatelessWidget {
           children: [
             // 색상 인디케이터
             Container(
-              width: 4,
-              height: 32,
+              width: AppLayout.colorBarWidth,
+              height: AppLayout.containerMd,
               decoration: BoxDecoration(
                 color: color,
                 borderRadius: BorderRadius.circular(AppRadius.xs),
@@ -232,18 +210,15 @@ class _TodoSelectorItem extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.lg),
 
-            // 투두 제목
+            // 투두 제목 (완료 시 빨간펜 취소선 애니메이션)
             Expanded(
-              child: Text(
-                todo.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              child: AnimatedStrikethrough(
+                text: todo.title,
                 style: AppTypography.bodyLg.copyWith(
-                    color: context.themeColors.textPrimary,
-                  decoration: todo.isCompleted
-                      ? TextDecoration.lineThrough
-                      : TextDecoration.none,
+                  color: context.themeColors.textPrimary,
                 ),
+                isActive: todo.isCompleted,
+                maxLines: 2,
               ),
             ),
 

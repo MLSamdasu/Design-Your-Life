@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import 'color_tokens.dart';
+import 'layout_tokens.dart';
 import 'radius_tokens.dart';
 import 'spacing_tokens.dart';
 import 'typography_tokens.dart';
@@ -23,15 +24,15 @@ abstract class AppTheme {
       // ColorScheme: Glassmorphism 배경 위에서는 Material 색상보다 토큰을 직접 사용한다
       colorScheme: ColorScheme.light(
         primary: ColorTokens.main,
-        onPrimary: Colors.white,
+        onPrimary: ColorTokens.white,
         primaryContainer: ColorTokens.sub,
         onPrimaryContainer: ColorTokens.main,
         secondary: ColorTokens.mainLight,
-        onSecondary: Colors.white,
+        onSecondary: ColorTokens.white,
         surface: ColorTokens.gray50,
         onSurface: ColorTokens.gray900,
         error: ColorTokens.error,
-        onError: Colors.white,
+        onError: ColorTokens.white,
         outline: ColorTokens.gray200,
         outlineVariant: ColorTokens.gray300,
       ),
@@ -50,9 +51,9 @@ abstract class AppTheme {
         titleMedium: AppTypography.titleMd.copyWith(color: ColorTokens.gray700),
         bodyLarge: AppTypography.bodyLg.copyWith(color: ColorTokens.gray700),
         bodyMedium: AppTypography.bodyMd.copyWith(color: ColorTokens.gray700),
-        bodySmall: AppTypography.bodySm.copyWith(color: ColorTokens.gray600),
+        bodySmall: AppTypography.bodySm.copyWith(color: ColorTokens.gray700),
         labelLarge: AppTypography.captionLg.copyWith(color: ColorTokens.gray700),
-        labelSmall: AppTypography.captionSm.copyWith(color: ColorTokens.gray500),
+        labelSmall: AppTypography.captionSm.copyWith(color: ColorTokens.gray600),
       ),
 
       // AppBar: 투명 배경, 텍스트/아이콘 색상은 colorScheme에서 자동 상속한다
@@ -69,7 +70,7 @@ abstract class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: ColorTokens.main,
-          foregroundColor: Colors.white,
+          foregroundColor: ColorTokens.white,
           textStyle: AppTypography.titleMd,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),
@@ -103,7 +104,7 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: BorderSide(
             color: ColorTokens.gray900.withValues(alpha: 0.40),
-            width: 1.5,
+            width: AppLayout.borderMedium,
           ),
         ),
         errorBorder: OutlineInputBorder(
@@ -113,7 +114,7 @@ abstract class AppTheme {
           ),
         ),
         hintStyle: AppTypography.bodyLg.copyWith(
-          color: ColorTokens.gray900.withValues(alpha: 0.40),
+          color: ColorTokens.gray900.withValues(alpha: 0.55),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl,
@@ -135,7 +136,7 @@ abstract class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.bottomSheet),
         ),
-        backgroundColor: Colors.white.withValues(alpha: 0.95),
+        backgroundColor: ColorTokens.white.withValues(alpha: 0.95),
         elevation: 0,
       ),
     );
@@ -150,7 +151,7 @@ abstract class AppTheme {
 
       colorScheme: ColorScheme.dark(
         primary: ColorTokens.main,
-        onPrimary: Colors.white,
+        onPrimary: ColorTokens.white,
         primaryContainer: ColorTokens.main.withValues(alpha: 0.15),
         onPrimaryContainer: ColorTokens.mainLight,
         secondary: ColorTokens.mainLight,
@@ -177,21 +178,21 @@ abstract class AppTheme {
         bodyMedium: AppTypography.bodyMd.copyWith(color: ColorTokens.gray200),
         bodySmall: AppTypography.bodySm.copyWith(color: ColorTokens.gray300),
         labelLarge: AppTypography.captionLg.copyWith(color: ColorTokens.gray200),
-        labelSmall: AppTypography.captionSm.copyWith(color: ColorTokens.gray400),
+        labelSmall: AppTypography.captionSm.copyWith(color: ColorTokens.gray300),
       ),
 
       appBarTheme: AppBarTheme(
         backgroundColor: ColorTokens.transparent,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: AppTypography.titleLg.copyWith(color: Colors.white),
-        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: AppTypography.titleLg.copyWith(color: ColorTokens.white),
+        iconTheme: const IconThemeData(color: ColorTokens.white),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: ColorTokens.main,
-          foregroundColor: Colors.white,
+          foregroundColor: ColorTokens.white,
           textStyle: AppTypography.titleMd,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.button),
@@ -205,37 +206,38 @@ abstract class AppTheme {
       ),
 
       // InputDecoration: 다크 모드 입력 필드 기본 스타일
-      // 어두운 배경 위에서 가독성을 확보하기 위해 흰색 기반 색상을 사용한다
+      // 어두운 배경(Glassmorphism/Neon 포함) 위에서 고대비 가독성을 확보한다
+      // Material TimePicker/DatePicker 등 기본 Material 위젯에 적용된다
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.10),
+        fillColor: ColorTokens.white.withValues(alpha: 0.15),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.20),
+            color: ColorTokens.white.withValues(alpha: 0.30),
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.20),
+            color: ColorTokens.white.withValues(alpha: 0.30),
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.50),
-            width: 1.5,
+            color: ColorTokens.white.withValues(alpha: 0.60),
+            width: AppLayout.borderMedium,
           ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.input),
           borderSide: BorderSide(
-            color: ColorTokens.errorLight.withValues(alpha: 0.60),
+            color: ColorTokens.errorLight.withValues(alpha: 0.70),
           ),
         ),
         hintStyle: AppTypography.bodyLg.copyWith(
-          color: Colors.white.withValues(alpha: 0.40),
+          color: ColorTokens.white.withValues(alpha: 0.70),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.xl,
@@ -250,12 +252,13 @@ abstract class AppTheme {
         ),
       ),
 
-      // Dialog: 다크 모드에서는 반투명 흰색 배경으로 유리 효과를 유지한다
+      // Dialog: 다크 모드 AlertDialog는 BackdropFilter 없이 단독 표시되므로
+      // 충분히 불투명한 배경을 적용하여 텍스트 가독성을 보장한다
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.bottomSheet),
         ),
-        backgroundColor: Colors.white.withValues(alpha: 0.20),
+        backgroundColor: ColorTokens.gray800.withValues(alpha: 0.95),
         elevation: 0,
       ),
     );

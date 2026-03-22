@@ -30,7 +30,7 @@ class DatePickerButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.lgXl),
           border: Border.all(
             color: context.themeColors.textPrimaryWithAlpha(0.20),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
         ),
         child: Row(
@@ -81,7 +81,7 @@ class TimePickerButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.lgXl),
           border: Border.all(
             color: context.themeColors.textPrimaryWithAlpha(0.20),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
         ),
         child: Row(
@@ -97,7 +97,8 @@ class TimePickerButton extends StatelessWidget {
               style: AppTypography.bodyMd.copyWith(
                 color: time != null
                     ? context.themeColors.textPrimary
-                    : context.themeColors.textPrimaryWithAlpha(0.45),
+                    // WCAG 최소 대비: 힌트 텍스트도 0.55 이상 보장
+                    : context.themeColors.textPrimaryWithAlpha(0.55),
               ),
             ),
           ],
@@ -111,7 +112,7 @@ class TimePickerButton extends StatelessWidget {
 Future<DateTime?> showGlassDatePicker(
     BuildContext context, DateTime initial) {
   final dialogBg = context.themeColors.dialogSurface;
-  final isOnDark = context.themeColors.textPrimary == Colors.white;
+  final isOnDark = context.themeColors.isOnDarkBackground;
   return showDatePicker(
     context: context,
     initialDate: initial,
@@ -133,7 +134,7 @@ Future<DateTime?> showGlassDatePicker(
 Future<TimeOfDay?> showGlassTimePicker(
     BuildContext context, TimeOfDay initial) {
   final dialogBg = context.themeColors.dialogSurface;
-  final isOnDark = context.themeColors.textPrimary == Colors.white;
+  final isOnDark = context.themeColors.isOnDarkBackground;
   return showTimePicker(
     context: context,
     initialTime: initial,

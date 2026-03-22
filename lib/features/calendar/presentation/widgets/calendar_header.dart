@@ -14,6 +14,7 @@ import 'calendar_view_switcher.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../shared/widgets/global_action_bar.dart';
 
 /// 캘린더 화면 상단 헤더 (월/연도 네비게이션 + 뷰 전환 탭)
 class CalendarHeader extends ConsumerWidget {
@@ -27,7 +28,7 @@ class CalendarHeader extends ConsumerWidget {
 
     return Container(
       // 다른 화면 헤더(투두, 습관)와 동일한 상단 패딩(16px)을 적용한다
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, AppSpacing.pageVertical, AppSpacing.pageHorizontal, 0),
       child: Column(
         children: [
           // 월/연도 네비게이션 행
@@ -44,6 +45,9 @@ class CalendarHeader extends ConsumerWidget {
               _GoogleSyncButton(),
               // 오늘 버튼
               _TodayButton(),
+              const SizedBox(width: AppSpacing.xs),
+              // 업적 + 설정 아이콘 버튼
+              const GlobalActionBar(),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -73,14 +77,15 @@ class _GoogleSyncButton extends ConsumerWidget {
           : () => ref.read(syncGoogleCalendarProvider)(),
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: AppLayout.minTouchTarget,
+        height: AppLayout.minTouchTarget,
         child: Center(
           child: isSyncing
               // 동기화 중: 회전 애니메이션 대신 단순 아이콘 표시 (AnimatedRotation 불필요)
+              // WCAG 최소 대비: 동기화 중 아이콘도 0.55 이상 보장
               ? Icon(
                   Icons.sync_rounded,
-                  color: context.themeColors.textPrimaryWithAlpha(0.50),
+                  color: context.themeColors.textPrimaryWithAlpha(0.55),
                   size: AppLayout.iconXl,
                 )
               : Icon(
@@ -113,7 +118,7 @@ class _TodayButton extends ConsumerWidget {
           borderRadius: BorderRadius.circular(AppRadius.huge),
           border: Border.all(
             color: context.themeColors.textPrimaryWithAlpha(0.25),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
         ),
         child: Text(
@@ -234,12 +239,12 @@ class _NavButton extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 44,
-        height: 44,
+        width: AppLayout.minTouchTarget,
+        height: AppLayout.minTouchTarget,
         child: Center(
           child: Container(
-            width: 32,
-            height: 32,
+            width: AppLayout.containerMd,
+            height: AppLayout.containerMd,
             decoration: BoxDecoration(
               color: context.themeColors.textPrimaryWithAlpha(0.12),
               shape: BoxShape.circle,

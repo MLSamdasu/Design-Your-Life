@@ -9,6 +9,7 @@ import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/widgets/donut_chart.dart';
 import '../../providers/habit_provider.dart';
 import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 
 /// 습관 캘린더 위젯
 /// table_calendar 패키지를 사용하여 월간 달력을 표시한다
@@ -24,8 +25,8 @@ class HabitCalendar extends ConsumerWidget {
     return TableCalendar(
       locale: 'ko_KR',
       focusedDay: focusedMonth,
-      firstDay: DateTime(2020),
-      lastDay: DateTime(2030),
+      firstDay: DateTime(AppLayout.calendarStartYear),
+      lastDay: DateTime(AppLayout.calendarEndYear),
       selectedDayPredicate: (day) => isSameDay(day, selectedDate),
       calendarFormat: CalendarFormat.month,
       startingDayOfWeek: StartingDayOfWeek.monday,
@@ -56,16 +57,17 @@ class HabitCalendar extends ConsumerWidget {
         weekendTextStyle: AppTypography.captionLg.copyWith(
           color: context.themeColors.textPrimaryWithAlpha(0.6),
         ),
+        // WCAG 최소 대비: 외부 날짜(다른 달) 텍스트 0.55 이상 보장
         outsideTextStyle: AppTypography.captionLg.copyWith(
-          color: context.themeColors.textPrimaryWithAlpha(0.3),
+          color: context.themeColors.textPrimaryWithAlpha(0.55),
         ),
         todayTextStyle: AppTypography.captionLg.copyWith(
                     color: context.themeColors.textPrimary,
-          fontWeight: FontWeight.w700,
+          fontWeight: AppTypography.weightBold,
         ),
         selectedTextStyle: AppTypography.captionLg.copyWith(
                     color: context.themeColors.textPrimary,
-          fontWeight: FontWeight.w700,
+          fontWeight: AppTypography.weightBold,
         ),
         cellMargin: const EdgeInsets.all(AppSpacing.xxs),
         cellPadding: EdgeInsets.zero,
@@ -75,7 +77,7 @@ class HabitCalendar extends ConsumerWidget {
         titleCentered: true,
         titleTextStyle: AppTypography.bodyMd.copyWith(
                     color: context.themeColors.textPrimary,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppTypography.weightSemiBold,
         ),
         leftChevronIcon: Icon(
           Icons.chevron_left_rounded,
@@ -87,12 +89,13 @@ class HabitCalendar extends ConsumerWidget {
         ),
         headerPadding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
       ),
+      // WCAG 최소 대비: 요일 헤더 텍스트 0.55 이상 보장
       daysOfWeekStyle: DaysOfWeekStyle(
         weekdayStyle: AppTypography.captionMd.copyWith(
-          color: context.themeColors.textPrimaryWithAlpha(0.5),
+          color: context.themeColors.textPrimaryWithAlpha(0.55),
         ),
         weekendStyle: AppTypography.captionMd.copyWith(
-          color: context.themeColors.textPrimaryWithAlpha(0.4),
+          color: context.themeColors.textPrimaryWithAlpha(0.55),
         ),
       ),
       // 날짜 셀 빌더: 미니 도넛 차트 표시
@@ -131,8 +134,8 @@ class HabitCalendar extends ConsumerWidget {
         children: [
           // 날짜 숫자
           Container(
-            width: 22,
-            height: 22,
+            width: AppLayout.iconNav,
+            height: AppLayout.iconNav,
             // 날짜 선택 원: 배경 테마에 맞는 악센트 색상을 사용한다
             decoration: isSelected
                 ? BoxDecoration(
@@ -157,8 +160,8 @@ class HabitCalendar extends ConsumerWidget {
                           ? context.themeColors.textPrimary
                           : context.themeColors.textPrimaryWithAlpha(0.8),
                   fontWeight: isSelected || isToday
-                      ? FontWeight.w700
-                      : FontWeight.w400,
+                      ? AppTypography.weightBold
+                      : AppTypography.weightRegular,
                 ),
               ),
             ),
@@ -166,7 +169,7 @@ class HabitCalendar extends ConsumerWidget {
           // 미니 도넛 차트
           if (hasData)
             Padding(
-              padding: const EdgeInsets.only(top: 1),
+              padding: const EdgeInsets.only(top: AppLayout.borderThin),
               child: DonutChart(
                 percentage: rate,
                 size: DonutChartSize.mini,
@@ -174,7 +177,7 @@ class HabitCalendar extends ConsumerWidget {
               ),
             )
           else
-            const SizedBox(height: 29), // 도넛차트 공간과 동일한 높이 맞춤 (28+1)
+            SizedBox(height: AppLayout.donutMini + AppLayout.borderThin), // 도넛차트 공간과 동일한 높이 맞춤 (28+1)
         ],
       ),
     );

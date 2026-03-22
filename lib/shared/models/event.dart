@@ -1,8 +1,10 @@
 // 공유 모델: Event (캘린더 일정)
 // Hive eventsBox에 저장되는 이벤트 모델이다.
 // 필드: id, user_id, title, description, event_type, start_date, end_date,
-//   all_day, color, location, recurrence_rule, range_tag, memo, created_at
+//   all_day, color, color_index, location, recurrence_rule, range_tag, memo, created_at
+// dDay는 startDate 기준으로 매번 계산하는 컴퓨티드 속성이다.
 import '../../core/utils/date_parser.dart';
+import '../../core/utils/date_utils.dart';
 import '../../core/error/app_exception.dart';
 
 /// 캘린더 이벤트 유형
@@ -61,8 +63,8 @@ class Event {
   /// 메모
   final String? memo;
 
-  /// D-Day (오늘로부터 시작일까지 남은 일수, 클라이언트에서 계산)
-  final int dDay;
+  /// 색상 인덱스 (0~7, UI 색상 팔레트 인덱스)
+  final int colorIndex;
 
   final DateTime createdAt;
 
@@ -79,14 +81,18 @@ class Event {
     this.recurrenceRule,
     this.rangeTag,
     this.memo,
-    this.dDay = 0,
+    this.colorIndex = 0,
     required this.createdAt,
   });
 
   // ─── UI 호환 컴퓨티드 속성 ────────────────────────────────────────────────
 
-  /// UI에서 사용하는 colorIndex (0~7)
-  int get colorIndex => 0;
+  /// D-Day 계산 (startDate 기준, 저장하지 않고 매번 계산한다)
+  /// [referenceDate]를 외부에서 전달받아 리스트 순회 시 동일한 기준 날짜를 사용한다.
+  /// 기존 getter 방식은 매 접근마다 DateTime.now()를 호출하여 20건 이벤트에서
+  /// 20개의 독립 호출이 발생하는 문제가 있었다.
+  int dDayFrom(DateTime referenceDate) =>
+      startDate.difference(AppDateUtils.startOfDay(referenceDate)).inDays;
 
   /// UI에서 사용하는 userId (빈 문자열)
   String get userId => '';
@@ -145,7 +151,7 @@ class Event {
     try {
       return Event(
         id: map['id']?.toString() ?? '',
-        title: map['title'] as String,
+        title: (map['title'] as String?) ?? '',
         description: map['description'] as String?,
         // event_type 필드 (text)
         eventType: _eventTypeFromString(
@@ -163,8 +169,8 @@ class Event {
         rangeTag: _rangeTagFromString(
             (map['range_tag'] ?? map['rangeTag'])?.toString()),
         memo: map['memo'] as String?,
-        dDay: (map['d_day'] as num?)?.toInt() ??
-            (map['dDay'] as num?)?.toInt() ??
+        colorIndex: (map['color_index'] as num?)?.toInt() ??
+            (map['colorIndex'] as num?)?.toInt() ??
             0,
         createdAt: DateParser.parse(
             map['created_at'] ?? map['createdAt'] ?? DateTime.now()),
@@ -177,6 +183,7 @@ class Event {
   }
 
   /// INSERT용 Map (id 제외, user_id 포함)
+  /// P1-4: end_date는 항상 포함하여 null 명시 (Hive put 대체 시 기존 값이 남지 않도록)
   Map<String, dynamic> toInsertMap(String userId) {
     return {
       'user_id': userId,
@@ -184,9 +191,10 @@ class Event {
       'description': description,
       'event_type': _eventTypeToString(eventType),
       'start_date': DateParser.toIso8601(startDate),
-      if (endDate != null) 'end_date': DateParser.toIso8601(endDate!),
+      'end_date': endDate != null ? DateParser.toIso8601(endDate!) : null,
       'all_day': allDay,
       'color': color,
+      'color_index': colorIndex,
       'location': location,
       'recurrence_rule': recurrenceRule,
       'range_tag': _rangeTagToString(rangeTag),
@@ -195,15 +203,17 @@ class Event {
   }
 
   /// UPDATE용 Map (id, user_id 제외)
+  /// P1-4: end_date는 항상 포함하여 null 명시
   Map<String, dynamic> toUpdateMap() {
     return {
       'title': title,
       'description': description,
       'event_type': _eventTypeToString(eventType),
       'start_date': DateParser.toIso8601(startDate),
-      if (endDate != null) 'end_date': DateParser.toIso8601(endDate!),
+      'end_date': endDate != null ? DateParser.toIso8601(endDate!) : null,
       'all_day': allDay,
       'color': color,
+      'color_index': colorIndex,
       'location': location,
       'recurrence_rule': recurrenceRule,
       'range_tag': _rangeTagToString(rangeTag),
@@ -234,7 +244,7 @@ class Event {
     bool clearRangeTag = false,
     String? memo,
     bool clearMemo = false,
-    int? dDay,
+    int? colorIndex,
   }) {
     return Event(
       id: id,
@@ -252,7 +262,7 @@ class Event {
           : (recurrenceRule ?? this.recurrenceRule),
       rangeTag: clearRangeTag ? null : (rangeTag ?? this.rangeTag),
       memo: clearMemo ? null : (memo ?? this.memo),
-      dDay: dDay ?? this.dDay,
+      colorIndex: colorIndex ?? this.colorIndex,
       createdAt: createdAt,
     );
   }

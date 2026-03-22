@@ -9,6 +9,7 @@ import '../../../../shared/enums/mandalart_cell_type.dart';
 import '../../providers/goal_provider.dart';
 import 'mandalart_cell.dart';
 import '../../../../core/theme/animation_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 
 /// 만다라트 9x9 그리드 위젯
@@ -56,7 +57,8 @@ class _MandalartGridWidgetState extends ConsumerState<MandalartGridWidget>
 
   @override
   Widget build(BuildContext context) {
-    final tasks = ref.watch(tasksByGoalStreamProvider(widget.goalId)).valueOrNull ?? [];
+    // 동기 Provider이므로 직접 사용한다
+    final tasks = ref.watch(tasksByGoalStreamProvider(widget.goalId));
 
     return AnimatedScale(
       scale: 1.0,
@@ -66,21 +68,21 @@ class _MandalartGridWidgetState extends ConsumerState<MandalartGridWidget>
         borderRadius: BorderRadius.circular(AppRadius.xxl),
         child: InteractiveViewer(
           transformationController: _transformationController,
-          minScale: 0.5,
-          maxScale: 3.0,
+          minScale: AppLayout.interactiveMinScale,
+          maxScale: AppLayout.interactiveMaxScale,
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 9,
+              crossAxisCount: AppLayout.mandalartGridSize,
               childAspectRatio: 1.0,
-              mainAxisSpacing: 2,
-              crossAxisSpacing: 2,
+              mainAxisSpacing: AppLayout.gridCellSpacing,
+              crossAxisSpacing: AppLayout.gridCellSpacing,
             ),
-            itemCount: 81,
+            itemCount: AppLayout.mandalartCellCount,
             itemBuilder: (context, index) {
-              final row = index ~/ 9;
-              final col = index % 9;
+              final row = index ~/ AppLayout.mandalartGridSize;
+              final col = index % AppLayout.mandalartGridSize;
               final cell = widget.grid.cells.firstWhere(
                 (c) => c.row == row && c.col == col,
                 orElse: () => MandalartCell(

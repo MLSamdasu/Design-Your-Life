@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/auth/auth_provider.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/providers/global_providers.dart';
 import '../../core/theme/animation_tokens.dart';
 import '../../core/theme/color_tokens.dart';
@@ -17,6 +18,7 @@ import '../../core/theme/theme_colors.dart';
 import '../../core/theme/typography_tokens.dart';
 import '../models/tag.dart';
 import '../providers/tag_provider.dart';
+import 'app_snack_bar.dart';
 
 /// 태그 다중 선택 칩 위젯
 /// selectedTagIds: 현재 선택된 태그 ID Set
@@ -66,21 +68,17 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
   /// 새 태그 생성 후 자동 선택
   Future<void> _createAndSelectTag() async {
     final name = _newTagController.text.trim();
-    if (name.isEmpty || name.length > 20) return;
+    if (name.isEmpty || name.length > Tag.nameMaxLength) return;
 
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
+    // 로컬 퍼스트: 인증 없이도 태그를 생성할 수 있다
+    final userId = ref.read(currentUserIdProvider) ?? AppConstants.localUserId;
 
     // 사용자 태그 수 한도 확인
-    final currentTags = ref.read(userTagsProvider).value ?? [];
+    // userTagsProvider는 동기 Provider이므로 직접 사용한다
+    final currentTags = ref.read(userTagsProvider);
     if (currentTags.length >= Tag.maxTagsPerUser) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('태그는 최대 ${Tag.maxTagsPerUser}개까지 생성할 수 있습니다'),
-            backgroundColor: ColorTokens.error,
-          ),
-        );
+        AppSnackBar.showError(context, '태그는 최대 ${Tag.maxTagsPerUser}개까지 생성할 수 있습니다');
       }
       return;
     }
@@ -114,18 +112,15 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('태그 생성에 실패했습니다'),
-          ),
-        );
+        AppSnackBar.showError(context, '태그 생성에 실패했습니다');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final tagsAsync = ref.watch(userTagsProvider);
+    // userTagsProvider는 동기 Provider이므로 직접 사용한다
+    final tags = ref.watch(userTagsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,12 +146,8 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
         ),
         const SizedBox(height: AppSpacing.mdLg),
 
-        // 태그 칩 목록 + "+" 버튼
-        tagsAsync.when(
-          data: (tags) => _buildChips(tags),
-          loading: () => _buildLoadingChips(),
-          error: (_, __) => _buildErrorText(),
-        ),
+        // 태그 칩 목록 + "+" 버튼 — 동기 Provider이므로 직접 렌더링
+        _buildChips(tags),
 
         // 새 태그 인라인 생성 폼
         if (_isCreating) ...[
@@ -192,10 +183,13 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
 
           return GestureDetector(
             onTap: () => _toggleTag(tag.id),
+            behavior: HitTestBehavior.opaque,
             child: AnimatedContainer(
               duration: AppAnimation.normal,
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+              // WCAG 2.1 터치 타겟 44px 이상 확보 (vertical 16px + text ~14px + 16px = 46px)
+              constraints: const BoxConstraints(minHeight: AppLayout.minTouchTarget),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
               decoration: BoxDecoration(
                 // 선택 시 태그 색상 배경, 미선택 시 테마 인식 반투명 배경
                 color: isSelected
@@ -206,7 +200,7 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
                   color: isSelected
                       ? tagColor
                       : context.themeColors.borderMedium,
-                  width: isSelected ? 1.5 : 1,
+                  width: isSelected ? AppLayout.borderMedium : AppLayout.borderThin,
                 ),
               ),
               child: Row(
@@ -219,7 +213,7 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
                     decoration: BoxDecoration(
                       // 선택 시: 흰색(컬러 배경 위 대비), 미선택 시: 태그 색상
                       color: isSelected
-                          ? Colors.white
+                          ? ColorTokens.white
                           : tagColor,
                       shape: BoxShape.circle,
                     ),
@@ -233,11 +227,11 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
                       style: AppTypography.captionLg.copyWith(
                         // 선택 시: 흰색(컬러 배경 위 대비), 미선택 시: 테마 텍스트
                         color: isSelected
-                            ? Colors.white
+                            ? ColorTokens.white
                             : context.themeColors.textPrimaryWithAlpha(0.8),
                         fontWeight: isSelected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
+                            ? AppTypography.weightBold
+                            : AppTypography.weightMedium,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -253,14 +247,17 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
         if (!_isCreating)
           GestureDetector(
             onTap: () => setState(() => _isCreating = true),
+            behavior: HitTestBehavior.opaque,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-              // 새 태그 버튼: 배경 테마에 맞는 악센트 색상으로 표시한다
+              // WCAG 2.1 터치 타겟 44px 이상 확보
+              constraints: const BoxConstraints(minHeight: AppLayout.minTouchTarget),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              // 새 태그 버튼: 테마 인식 텍스트 색상으로 배경과 충분한 대비를 확보한다
               decoration: BoxDecoration(
-                color: context.themeColors.accentWithAlpha(0.15),
+                color: context.themeColors.overlayLight,
                 borderRadius: BorderRadius.circular(AppRadius.huge),
                 border: Border.all(
-                  color: context.themeColors.accentWithAlpha(0.40),
+                  color: context.themeColors.borderMedium,
                 ),
               ),
               child: Row(
@@ -269,13 +266,13 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
                   Icon(
                     Icons.add_rounded,
                     size: AppLayout.iconSm,
-                    color: context.themeColors.accent,
+                    color: context.themeColors.textPrimaryWithAlpha(0.8),
                   ),
                   const SizedBox(width: AppSpacing.xs),
                   Text(
                     '새 태그',
                     style: AppTypography.captionLg.copyWith(
-                      color: context.themeColors.accent,
+                      color: context.themeColors.textPrimaryWithAlpha(0.8),
                     ),
                   ),
                 ],
@@ -286,33 +283,6 @@ class _TagChipSelectorState extends ConsumerState<TagChipSelector> {
     );
   }
 
-  /// 로딩 상태 스켈레톤 칩
-  Widget _buildLoadingChips() {
-    return Wrap(
-      spacing: AppSpacing.md,
-      runSpacing: AppSpacing.md,
-      children: List.generate(3, (i) {
-        return Container(
-          width: 60 + (i * 10.0),
-          height: 30,
-          decoration: BoxDecoration(
-            color: context.themeColors.overlayLight,
-            borderRadius: BorderRadius.circular(AppRadius.huge),
-          ),
-        );
-      }),
-    );
-  }
-
-  /// 에러 상태 텍스트
-  Widget _buildErrorText() {
-    return Text(
-      '태그를 불러오지 못했습니다',
-      style: AppTypography.captionMd.copyWith(
-        color: ColorTokens.error.withValues(alpha: 0.7),
-      ),
-    );
-  }
 }
 
 // ─── 인라인 태그 생성 폼 ────────────────────────────────────────────────────
@@ -353,11 +323,11 @@ class _TagCreateInlineForm extends StatelessWidget {
           TextField(
             controller: controller,
             autofocus: true,
-            maxLength: 20,
+            maxLength: Tag.nameMaxLength,
             style: AppTypography.bodyLg.copyWith(color: tc.textPrimary),
             cursorColor: tc.textPrimary,
             decoration: InputDecoration(
-              hintText: '태그 이름 (최대 20자)',
+              hintText: '태그 이름 (최대 ${Tag.nameMaxLength}자)',
               hintStyle: AppTypography.bodyLg.copyWith(
                 color: tc.hintColor,
               ),
@@ -381,24 +351,41 @@ class _TagCreateInlineForm extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
+              // WCAG 2.1 터치 타겟 44px 이상 확보
               GestureDetector(
                 onTap: onCancel,
-                child: Text(
-                  '취소',
-                  style: AppTypography.captionLg.copyWith(
-                    color: tc.textPrimaryWithAlpha(0.55),
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: AppLayout.minTouchTarget,
+                    minHeight: AppLayout.minTouchTarget,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '취소',
+                    style: AppTypography.captionLg.copyWith(
+                      color: tc.textPrimaryWithAlpha(0.55),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.xl),
+              const SizedBox(width: AppSpacing.md),
               GestureDetector(
                 onTap: onConfirm,
-                child: Text(
-                  '추가',
-                  style: AppTypography.captionLg.copyWith(
-                    // 배경 테마에 맞는 악센트 텍스트 색상을 사용한다
-                    color: context.themeColors.accent,
-                    fontWeight: FontWeight.w700,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: AppLayout.minTouchTarget,
+                    minHeight: AppLayout.minTouchTarget,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    '추가',
+                    style: AppTypography.captionLg.copyWith(
+                      // WCAG 대비: 글래스 배경 위에서 테마 텍스트 색상으로 고대비 확보
+                      color: context.themeColors.textPrimaryWithAlpha(0.85),
+                      fontWeight: AppTypography.weightBold,
+                    ),
                   ),
                 ),
               ),
@@ -424,24 +411,34 @@ class _TagColorPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    // Wrap으로 변경하여 좁은 화면에서도 오버플로우를 방지한다
+    return Wrap(
+      spacing: AppSpacing.xs,
+      runSpacing: AppSpacing.xs,
       children: List.generate(8, (i) {
         final color = ColorTokens.eventColor(i);
         final isSelected = i == selectedIndex;
+        // WCAG 2.1 터치 타겟 44px 이상 확보: GestureDetector 영역을 확장한다
         return GestureDetector(
           onTap: () => onSelected(i),
-          child: AnimatedContainer(
-            duration: AppAnimation.fast,
-            curve: Curves.easeOutCubic,
-            margin: const EdgeInsets.only(right: AppSpacing.md),
-            width: isSelected ? AppLayout.iconXxl : AppLayout.iconXl,
-            height: isSelected ? AppLayout.iconXxl : AppLayout.iconXl,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-              border: isSelected
-                  ? Border.all(color: context.themeColors.textPrimary, width: 2)
-                  : null,
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            width: AppLayout.minTouchTarget,
+            height: AppLayout.minTouchTarget,
+            child: Center(
+              child: AnimatedContainer(
+                duration: AppAnimation.fast,
+                curve: Curves.easeOutCubic,
+                width: isSelected ? AppLayout.iconXxl : AppLayout.iconXl,
+                height: isSelected ? AppLayout.iconXxl : AppLayout.iconXl,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: isSelected
+                      ? Border.all(color: context.themeColors.textPrimary, width: AppLayout.borderThick)
+                      : null,
+                ),
+              ),
             ),
           ),
         );

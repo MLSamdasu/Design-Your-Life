@@ -16,6 +16,7 @@ import 'widgets/event_create_dialog.dart';
 import '../../../core/theme/animation_tokens.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
+import '../../../shared/widgets/app_snack_bar.dart';
 
 /// 캘린더 화면 메인 컨테이너
 /// 다른 화면과 동일한 레이아웃 패턴 (SafeArea + FAB + AnimatedSwitcher) 적용
@@ -74,13 +75,17 @@ class CalendarScreen extends ConsumerWidget {
 
   /// FAB - 일정 추가 버튼
   Widget _buildFab(BuildContext context, DateTime selectedDate) {
-    return FloatingActionButton(
-      onPressed: () => _openEventDialog(context, selectedDate),
-      backgroundColor: ColorTokens.main,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.xxl)),
-      child: const Icon(Icons.add_rounded, size: AppLayout.iconHuge),
+    // FAB 하단 여백 (사이드 네비게이션 레이아웃 기준)
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppLayout.bottomNavArea),
+      child: FloatingActionButton(
+        onPressed: () => _openEventDialog(context, selectedDate),
+        backgroundColor: ColorTokens.main,
+        foregroundColor: ColorTokens.white,
+        elevation: AppLayout.elevationNone,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.fab)),
+        child: const Icon(Icons.add_rounded, size: AppLayout.iconHuge),
+      ),
     );
   }
 
@@ -97,12 +102,7 @@ class CalendarScreen extends ConsumerWidget {
     } catch (e) {
       // 일정 생성 중 예기치 않은 오류 발생 시 사용자에게 알린다
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('일정 추가에 실패했습니다'),
-            backgroundColor: ColorTokens.infoHintBg,
-          ),
-        );
+        AppSnackBar.showError(context, '일정 추가에 실패했습니다');
       }
     }
   }

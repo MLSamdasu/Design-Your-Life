@@ -5,9 +5,15 @@
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 /// AdMob 광고 상수 (C0)
 /// 테스트 광고 ID와 프로덕션 광고 ID를 플랫폼별로 관리한다
+/// iOS/Android에서만 광고를 표시하고, 데스크톱(macOS/Windows)에서는 광고를 비활성화한다
 abstract final class AdConstants {
+  /// 광고 지원 플랫폼 여부 (iOS/Android만 true)
+  /// 데스크톱(macOS/Windows)에서는 광고를 표시하지 않는다
+  static bool get isAdSupported => Platform.isAndroid || Platform.isIOS;
   // ─── Google 공식 테스트 광고 단위 ID ────────────────────────────────────────
   // 참고: https://developers.google.com/admob/android/test-ads
   // 참고: https://developers.google.com/admob/ios/test-ads
@@ -48,15 +54,18 @@ abstract final class AdConstants {
       'YOUR_IOS_REWARDED_AD_UNIT_ID';
 
   // ─── 개발 모드 플래그 ─────────────────────────────────────────────────────
-  // 프로덕션 배포 시 false로 변경한다
 
-  /// 테스트 광고 사용 여부 (개발 중 true, 프로덕션 배포 시 false)
-  static const bool useTestAds = true;
+  /// 테스트 광고 사용 여부
+  /// 릴리스 빌드에서는 자동으로 프로덕션 광고 ID를 사용한다
+  /// 수동 토글이 필요 없어 배포 시 실수를 방지한다
+  static bool get useTestAds => kDebugMode;
 
   // ─── 플랫폼별 광고 단위 ID 접근자 ──────────────────────────────────────────
 
   /// 현재 플랫폼의 전면 광고 단위 ID를 반환한다
+  /// 데스크톱(macOS/Windows)에서는 AdMob을 지원하지 않으므로 빈 문자열을 반환한다
   static String get interstitialAdUnitId {
+    if (!isAdSupported) return '';
     if (useTestAds) {
       return Platform.isAndroid
           ? _androidTestInterstitialId
@@ -68,7 +77,9 @@ abstract final class AdConstants {
   }
 
   /// 현재 플랫폼의 리워드 광고 단위 ID를 반환한다
+  /// 데스크톱(macOS/Windows)에서는 AdMob을 지원하지 않으므로 빈 문자열을 반환한다
   static String get rewardedAdUnitId {
+    if (!isAdSupported) return '';
     if (useTestAds) {
       return Platform.isAndroid
           ? _androidTestRewardedId

@@ -9,6 +9,7 @@ import '../../../shared/widgets/glass_input_field.dart';
 import 'onboarding_shared_widgets.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
+import '../../../core/theme/layout_tokens.dart';
 
 /// 이름 입력 단계 위젯
 /// 이름 텍스트 필드 + "시작하기" 버튼으로 구성된다
@@ -40,15 +41,15 @@ class NameInputStep extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.massive),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
             child: Container(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.all(AppLayout.loginCardPadding),
               decoration: BoxDecoration(
                 color: context.themeColors.textPrimaryWithAlpha(0.15),
                 borderRadius: BorderRadius.circular(AppRadius.massive),
                 border: Border.all(
                   color: context.themeColors.textPrimaryWithAlpha(0.25),
-                  width: 1,
+                  width: AppLayout.borderThin,
                 ),
               ),
               child: Column(

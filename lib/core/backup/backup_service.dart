@@ -12,6 +12,7 @@ import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sig
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/drive/v3.dart' as drive;
 
+import '../auth/auth_service.dart';
 import '../cache/hive_cache_service.dart';
 import '../constants/app_constants.dart';
 
@@ -114,6 +115,9 @@ class BackupService {
   Future<BackupResult> backupAll({
     void Function(double progress)? onProgress,
   }) async {
+    // 인증 미지원 플랫폼(Windows, macOS 미설정)에서는 즉시 미인증 반환
+    if (!AuthService.isAuthSupported) return BackupResult.unauthenticated();
+
     // 1단계: 인증 상태 확인
     final currentUser = _googleSignIn.currentUser;
     if (currentUser == null) {
@@ -157,6 +161,7 @@ class BackupService {
       final dataHash = sha256.convert(utf8.encode(dataJsonString)).toString();
       final jsonString = jsonEncode({
         'version': 2,
+        'app_version': '1.0.0',
         'createdAt': DateTime.now().toIso8601String(),
         'checksum': dataHash,
         'data': backupData,
@@ -170,12 +175,12 @@ class BackupService {
         return BackupResult.unauthenticated();
       }
 
-      // 기존 백업 파일이 있으면 삭제한다 (덮어쓰기)
-      await _deleteExistingBackup(driveApi);
-
       onProgress?.call(0.8);
 
-      // 새 백업 파일 업로드
+      // 새 백업 파일을 먼저 업로드한다 (업로드-우선 전략)
+      // 기존 파일을 먼저 삭제하면 업로드 실패 시 백업이 모두 소실되므로,
+      // 새 파일을 먼저 올린 뒤 기존 파일을 삭제한다.
+      // Drive API는 동일 이름 파일 복수 허용 → 복원 시 files.first로 최신 파일을 찾는다.
       final fileMetadata = drive.File()
         ..name = _backupFileName
         ..parents = ['appDataFolder'];
@@ -189,6 +194,12 @@ class BackupService {
         fileMetadata,
         uploadMedia: media,
       );
+
+      onProgress?.call(0.9);
+
+      // 업로드 성공 후 기존 백업 파일을 삭제한다
+      // 삭제 실패 시 중복 파일이 남지만 데이터 소실보다 안전하다
+      await _deleteOldBackups(driveApi);
 
       onProgress?.call(0.95);
 
@@ -216,6 +227,9 @@ class BackupService {
   Future<BackupResult> restoreFromCloud({
     void Function(double progress)? onProgress,
   }) async {
+    // 인증 미지원 플랫폼(Windows, macOS 미설정)에서는 즉시 미인증 반환
+    if (!AuthService.isAuthSupported) return BackupResult.unauthenticated();
+
     // 인증 상태 확인
     final currentUser = _googleSignIn.currentUser;
     if (currentUser == null) {
@@ -339,7 +353,8 @@ class BackupService {
       // 2단계: 파싱 성공 후 로컬 데이터를 교체한다
       // 박스별로 try-catch하여 일부 실패해도 나머지 박스는 복원을 계속한다
       final failedBoxes = <String>[];
-      final totalBoxes = parsedData.length;
+      // parsedData가 비어있을 때 0으로 나누는 것을 방지한다
+      final totalBoxes = parsedData.isEmpty ? 1 : parsedData.length;
       var processedBoxes = 0;
       for (final entry in parsedData.entries) {
         try {
@@ -377,25 +392,30 @@ class BackupService {
   }
 
   // ─── 내부 헬퍼 ───────────────────────────────────────────────────────────
-  /// 기존 백업 파일을 삭제한다 (새 백업 전 정리)
-  Future<void> _deleteExistingBackup(drive.DriveApi driveApi) async {
+  /// 새 백업 업로드 성공 후 기존(이전) 백업 파일들을 삭제한다
+  /// 최신 파일 1개를 남기고 나머지를 정리한다
+  /// 삭제 실패 시에도 새 백업은 이미 업로드되었으므로 데이터 소실이 없다
+  Future<void> _deleteOldBackups(drive.DriveApi driveApi) async {
     try {
       final fileList = await driveApi.files.list(
         spaces: 'appDataFolder',
         q: "name = '$_backupFileName'",
+        orderBy: 'modifiedTime desc',
         $fields: 'files(id)',
       );
 
       final files = fileList.files;
-      if (files != null) {
-        for (final file in files) {
-          if (file.id != null) {
-            await driveApi.files.delete(file.id!);
+      if (files != null && files.length > 1) {
+        // 최신 파일(인덱스 0)을 제외하고 나머지 기존 파일을 삭제한다
+        for (int i = 1; i < files.length; i++) {
+          final fileId = files[i].id;
+          if (fileId != null) {
+            await driveApi.files.delete(fileId);
           }
         }
       }
     } catch (e, st) {
-      // 기존 파일 삭제 실패는 백업 업로드를 막지 않지만 진단을 위해 로깅한다
+      // 기존 파일 삭제 실패는 새 백업에 영향을 주지 않는다 (중복 파일만 남음)
       developer.log(
         '[BackupService] 기존 백업 삭제 실패 (무시): $e',
         name: 'backup',

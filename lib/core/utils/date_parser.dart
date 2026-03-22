@@ -2,6 +2,8 @@
 // ISO 8601 문자열 기반의 날짜 파싱을 제공한다.
 // 모든 모델의 fromMap/toMap에서 이 헬퍼를 사용한다.
 
+import 'package:flutter/foundation.dart';
+
 /// REST API 날짜 파싱 헬퍼
 /// ISO 8601 문자열, 밀리초 타임스탬프, DateTime 객체를 일관되게 처리한다
 abstract class DateParser {
@@ -9,6 +11,11 @@ abstract class DateParser {
   /// 지원 형식: ISO 8601 문자열, 밀리초 타임스탬프(int), DateTime 객체
   static DateTime parse(dynamic value) {
     if (value == null) {
+      // 디버그 모드에서만 경고를 출력하여 데이터 품질 이슈를 조기에 발견한다
+      assert(() {
+        debugPrint('[DateParser] null 값이 전달되어 DateTime.now()로 대체됨');
+        return true;
+      }());
       return DateTime.now();
     }
     if (value is DateTime) {

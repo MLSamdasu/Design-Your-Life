@@ -11,6 +11,7 @@ import 'routine_form_widgets.dart';
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 
 /// 루틴 생성 결과 데이터 클래스
 class RoutineCreateResult {
@@ -29,17 +30,20 @@ class RoutineCreateResult {
   });
 }
 
-/// 루틴 생성 다이얼로그
+/// 루틴 생성/수정 다이얼로그
 /// AN-06: Scale(0.9→1.0) + Fade 250ms easeOutCubic
 class RoutineCreateDialog extends StatefulWidget {
-  const RoutineCreateDialog({super.key});
+  /// 수정 모드 시 기존 루틴 데이터 (폼 초기값으로 사용)
+  final RoutineCreateResult? initialData;
+
+  const RoutineCreateDialog({super.key, this.initialData});
 
   /// 다이얼로그를 표시하고 결과를 반환한다
-  static Future<RoutineCreateResult?> show(BuildContext context) {
+  static Future<RoutineCreateResult?> show(BuildContext context, {RoutineCreateResult? initialData}) {
     return showGeneralDialog<RoutineCreateResult>(
       context: context,
       barrierDismissible: true,
-      barrierLabel: '루틴 생성',
+      barrierLabel: initialData != null ? '루틴 수정' : '루틴 생성',
       barrierColor: ColorTokens.barrierBase.withValues(alpha: 0.5),
       transitionDuration: AppAnimation.standard,
       transitionBuilder: (ctx, anim, _, child) {
@@ -48,12 +52,12 @@ class RoutineCreateDialog extends StatefulWidget {
         return FadeTransition(
           opacity: curved,
           child: ScaleTransition(
-            scale: Tween(begin: 0.9, end: 1.0).animate(curved),
+            scale: Tween(begin: AppLayout.dialogScaleStart, end: 1.0).animate(curved),
             child: child,
           ),
         );
       },
-      pageBuilder: (ctx, _, __) => const RoutineCreateDialog(),
+      pageBuilder: (ctx, _, __) => RoutineCreateDialog(initialData: initialData),
     );
   }
 
@@ -68,6 +72,23 @@ class _RoutineCreateDialogState extends State<RoutineCreateDialog> {
   TimeOfDay _end = const TimeOfDay(hour: 8, minute: 0);
   int _colorIdx = 0;
 
+  /// 중복 제출 방지 플래그
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // 수정 모드: 기존 데이터로 폼을 초기화한다
+    final data = widget.initialData;
+    if (data != null) {
+      _nameCtrl.text = data.name;
+      _days.addAll(data.repeatDays);
+      _start = data.startTime;
+      _end = data.endTime;
+      _colorIdx = data.colorIndex;
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -80,27 +101,57 @@ class _RoutineCreateDialogState extends State<RoutineCreateDialog> {
 
   Future<void> _pickStart() async {
     final picked = await showTimePicker(
-        context: context, initialTime: _start, helpText: '시작 시간 선택');
+      context: context,
+      initialTime: _start,
+      helpText: '시작 시간 선택',
+      // 테마 인식 TimePicker: 모든 테마에서 가독성 보장
+      builder: _buildPickerTheme,
+    );
     if (picked == null) return;
     setState(() {
       _start = picked;
       // 시작 >= 종료인 경우 종료를 1시간 뒤로 자동 조정한다
-      final sm = picked.hour * 60 + picked.minute;
-      final em = _end.hour * 60 + _end.minute;
+      final sm = picked.hour * AppLayout.minutesPerHour + picked.minute;
+      final em = _end.hour * AppLayout.minutesPerHour + _end.minute;
       if (sm >= em) {
-        _end = TimeOfDay(hour: (picked.hour + 1) % 24, minute: picked.minute);
+        _end = TimeOfDay(hour: (picked.hour + 1) % AppLayout.hoursInDay, minute: picked.minute);
       }
     });
   }
 
   Future<void> _pickEnd() async {
     final picked = await showTimePicker(
-        context: context, initialTime: _end, helpText: '종료 시간 선택');
+      context: context,
+      initialTime: _end,
+      helpText: '종료 시간 선택',
+      // 테마 인식 TimePicker: 모든 테마에서 가독성 보장
+      builder: _buildPickerTheme,
+    );
     if (picked != null) setState(() => _end = picked);
   }
 
+  /// TimePicker 다이얼로그에 테마 인식 배경색을 적용한다
+  /// 어두운 배경 테마(Glassmorphism/Neon)에서도 가독성을 보장한다
+  Widget _buildPickerTheme(BuildContext context, Widget? child) {
+    final dialogBg = context.themeColors.dialogSurface;
+    final isOnDark = context.themeColors.isOnDarkBackground;
+    return Theme(
+      data: (isOnDark ? ThemeData.dark() : ThemeData.light()).copyWith(
+        colorScheme: (isOnDark
+                ? const ColorScheme.dark(primary: ColorTokens.main)
+                : const ColorScheme.light(primary: ColorTokens.main))
+            .copyWith(surface: dialogBg),
+      ),
+      child: MediaQuery(
+        data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
+        child: child!,
+      ),
+    );
+  }
+
   void _submit() {
-    if (!_canSubmit) return;
+    if (!_canSubmit || _isSaving) return;
+    setState(() => _isSaving = true);
     Navigator.of(context).pop(RoutineCreateResult(
       name: _nameCtrl.text.trim(),
       repeatDays: _days.toList()..sort(),
@@ -113,7 +164,7 @@ class _RoutineCreateDialogState extends State<RoutineCreateDialog> {
   @override
   Widget build(BuildContext context) {
     // 화면 높이의 85%를 최대 높이로 제한하여 오버플로우를 방지한다
-    final maxDialogHeight = MediaQuery.of(context).size.height * 0.85;
+    final maxDialogHeight = MediaQuery.of(context).size.height * AppLayout.dialogMaxHeightRatio;
 
     return Center(
       child: ConstrainedBox(
@@ -123,7 +174,7 @@ class _RoutineCreateDialogState extends State<RoutineCreateDialog> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.massive),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              filter: ImageFilter.blur(sigmaX: AppLayout.modalBlurSigma, sigmaY: AppLayout.modalBlurSigma),
               child: Material(
                 type: MaterialType.transparency,
                 child: Container(
@@ -195,7 +246,7 @@ class _RoutineCreateDialogState extends State<RoutineCreateDialog> {
     return Row(
       children: [
         Text(
-          '새 루틴 만들기',
+          widget.initialData != null ? '루틴 수정' : '새 루틴 만들기',
           style: AppTypography.titleLg.copyWith(color: context.themeColors.textPrimary),
         ),
         const Spacer(),
@@ -204,7 +255,7 @@ class _RoutineCreateDialogState extends State<RoutineCreateDialog> {
           child: Icon(
             Icons.close_rounded,
             color: context.themeColors.textPrimaryWithAlpha(0.6),
-            size: 22,
+            size: AppLayout.iconNav,
           ),
         ),
       ],

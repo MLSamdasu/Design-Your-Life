@@ -2,6 +2,8 @@
 // Hive tagsBox에 태그를 저장/조회한다.
 // 인증 없이도 태그 기능이 정상 동작한다.
 
+import 'package:uuid/uuid.dart';
+
 import '../../core/cache/hive_cache_service.dart';
 import '../../core/constants/app_constants.dart';
 import '../models/tag.dart';
@@ -21,11 +23,14 @@ class TagRepository {
     final all = _cache.getAll(AppConstants.tagsBox);
 
     // created_at 오름차순 정렬 (먼저 생성된 태그가 상단에 위치)
+    // 백업 복원 시 snake_case 키가 유입될 수 있으므로 양쪽 모두 확인한다
     all.sort((a, b) {
-      final aTime =
-          DateTime.tryParse(a['createdAt'] as String? ?? '') ?? DateTime(0);
-      final bTime =
-          DateTime.tryParse(b['createdAt'] as String? ?? '') ?? DateTime(0);
+      final aTime = DateTime.tryParse(
+              (a['createdAt'] ?? a['created_at']) as String? ?? '') ??
+          DateTime(0);
+      final bTime = DateTime.tryParse(
+              (b['createdAt'] ?? b['created_at']) as String? ?? '') ??
+          DateTime(0);
       return aTime.compareTo(bTime);
     });
 
@@ -36,10 +41,8 @@ class TagRepository {
   /// 새 태그를 Hive에 저장하고 저장된 Tag 객체를 반환한다
   /// ID는 클라이언트에서 타임스탬프 기반으로 생성한다
   Future<Tag> createTag(Tag tag) async {
-    // 태그 생성 시각을 ID로 사용한다 (로컬 퍼스트에서는 서버 ID 불필요)
-    final id = tag.id.isNotEmpty
-        ? tag.id
-        : DateTime.now().millisecondsSinceEpoch.toString();
+    // UUID v4로 고유 ID를 생성한다 (타임스탬프 기반 ID는 충돌 위험이 있다)
+    final id = tag.id.isNotEmpty ? tag.id : const Uuid().v4();
 
     final now = tag.createdAt;
     final newTag = Tag(

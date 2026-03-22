@@ -10,6 +10,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as gcal;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 
+import '../auth/auth_service.dart';
+
 /// Google Calendar 동기화 상태
 enum CalendarSyncStatus {
   /// 연동되지 않음 (스코프 미요청 또는 사용자 비활성화)
@@ -89,6 +91,8 @@ class GoogleCalendarService {
   /// 이미 승인된 스코프는 사용자 개입 없이 즉시 true를 반환한다.
   /// [반환값]: 스코프 승인 여부
   Future<bool> requestAccess() async {
+    // Google Sign-In 미지원 플랫폼(Windows 등)에서 크래시를 방지한다
+    if (!AuthService.isAuthSupported) return false;
     try {
       final granted = await _googleSignIn.requestScopes([_calendarReadScope]);
       return granted;
@@ -130,6 +134,8 @@ class GoogleCalendarService {
   /// [반환값]: Google Calendar 이벤트 목록
   /// [예외]: 인증 실패, 스코프 미승인, 네트워크 오류 시 예외 발생
   Future<List<GoogleCalendarEvent>> fetchEventsForMonth(DateTime month) async {
+    // Google Sign-In 미지원 플랫폼(Windows 등)에서 크래시를 방지한다
+    if (!AuthService.isAuthSupported) return [];
     // 1. extension_google_sign_in_as_googleapis_auth를 사용하여
     //    GoogleSignIn에서 인증된 HTTP 클라이언트를 가져온다
     final httpClient = await _googleSignIn.authenticatedClient();

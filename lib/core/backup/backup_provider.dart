@@ -20,10 +20,18 @@ final backupServiceProvider = Provider<BackupService>((ref) {
   );
 });
 
+// ─── 마지막 백업 시각 버전 카운터 ──────────────────────────────────────────
+/// P1-11: 백업 완료 시 버전을 증가시켜 lastBackupTimeProvider를 강제 갱신한다
+/// Provider 단독 invalidate로는 UI가 갱신되지 않는 문제를 해결한다
+final lastBackupVersionProvider = StateProvider<int>((ref) => 0);
+
 // ─── 마지막 백업 시각 Provider ─────────────────────────────────────────────
 /// 마지막 백업 시각 Provider
 /// BackupService의 lastBackupTime을 반환한다 (없으면 null)
+/// lastBackupVersionProvider를 감시하여 백업 완료 시 자동으로 재평가한다
 final lastBackupTimeProvider = Provider<DateTime?>((ref) {
+  // P1-11: 버전 카운터 변경 시 이 Provider가 재평가되어 최신 값을 반환한다
+  ref.watch(lastBackupVersionProvider);
   return ref.watch(backupServiceProvider).lastBackupTime;
 });
 

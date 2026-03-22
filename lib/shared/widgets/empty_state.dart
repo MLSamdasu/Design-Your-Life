@@ -25,7 +25,7 @@ class EmptyState extends StatefulWidget {
     this.subText,
     this.ctaLabel,
     this.onCtaTap,
-    this.minHeight = 120,
+    this.minHeight = AppLayout.donutLarge,
     super.key,
   });
 
@@ -78,7 +78,8 @@ class _EmptyStateState extends State<EmptyState>
               child: Icon(
                 widget.icon,
                 size: AppLayout.iconEmpty,
-                color: context.themeColors.textPrimaryWithAlpha(0.3),
+                // WCAG 대비 기준: 아이콘 최소 alpha 0.50
+                color: context.themeColors.textPrimaryWithAlpha(0.50),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -96,7 +97,8 @@ class _EmptyStateState extends State<EmptyState>
               Text(
                 widget.subText!,
                 style: AppTypography.captionMd.copyWith(
-                  color: context.themeColors.textPrimaryWithAlpha(0.4),
+                  // WCAG 대비 기준: 읽기 가능한 텍스트 최소 alpha 0.55
+                  color: context.themeColors.textPrimaryWithAlpha(0.55),
                 ),
                 textAlign: TextAlign.center,
               ),

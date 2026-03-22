@@ -3,6 +3,7 @@
 // 서버에 저장하지 않고 Goal/SubGoal/GoalTask 데이터에서 실시간 파생한다.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/layout_tokens.dart';
 import '../../../shared/models/mandalart_grid.dart';
 import '../services/mandalart_mapper.dart';
 import 'goal_provider.dart';
@@ -21,46 +22,31 @@ final zoomedSubGoalIndexProvider = StateProvider<int?>((ref) => null);
 
 /// 특정 목표 ID로 MandalartGrid를 생성하는 Provider
 /// Goal + SubGoal + GoalTask를 MandalartMapper로 변환한다
+/// 특정 목표 ID로 MandalartGrid를 생성하는 Provider
+/// Goal + SubGoal + GoalTask는 모두 동기 Provider이므로 AsyncValue 래핑이 불필요하다
 final mandalartGridProvider =
-    Provider.family<AsyncValue<MandalartGrid?>, String>((ref, goalId) {
-  // 목표 데이터 watch
-  final goalsAsync = ref.watch(goalsStreamProvider);
-  final subGoalsAsync = ref.watch(subGoalsStreamProvider(goalId));
-  final tasksAsync = ref.watch(tasksByGoalStreamProvider(goalId));
-
-  // 세 데이터 모두 로딩 중이면 로딩 상태 반환
-  if (goalsAsync.isLoading || subGoalsAsync.isLoading || tasksAsync.isLoading) {
-    return const AsyncLoading();
-  }
-
-  // 에러 발생 시 에러 상태 반환
-  final goalsError = goalsAsync.error;
-  if (goalsError != null) {
-    return AsyncError(goalsError, goalsAsync.stackTrace!);
-  }
-
-  final goals = goalsAsync.valueOrNull ?? [];
-  final subGoals = subGoalsAsync.valueOrNull ?? [];
-  final tasks = tasksAsync.valueOrNull ?? [];
+    Provider.family<MandalartGrid?, String>((ref, goalId) {
+  // 목표 데이터 watch — 모두 동기 Provider이므로 직접 사용한다
+  final goals = ref.watch(goalsStreamProvider);
+  final subGoals = ref.watch(subGoalsStreamProvider(goalId));
+  final tasks = ref.watch(tasksByGoalStreamProvider(goalId));
 
   // 해당 목표 찾기
   final goal = goals.where((g) => g.id == goalId).firstOrNull;
-  if (goal == null) return const AsyncData(null);
+  if (goal == null) return null;
 
   // MandalartMapper로 그리드 생성
-  final grid = MandalartMapper.map(
+  return MandalartMapper.map(
     goal: goal,
     subGoals: subGoals,
     tasks: tasks,
   );
-
-  return AsyncData(grid);
 });
 
-/// 현재 선택된 목표의 MandalartGrid Provider
-final currentMandalartGridProvider = Provider<AsyncValue<MandalartGrid?>>((ref) {
+/// 현재 선택된 목표의 MandalartGrid Provider — 동기 Provider
+final currentMandalartGridProvider = Provider<MandalartGrid?>((ref) {
   final selectedGoalId = ref.watch(selectedMandalartGoalIdProvider);
-  if (selectedGoalId == null) return const AsyncData(null);
+  if (selectedGoalId == null) return null;
 
   return ref.watch(mandalartGridProvider(selectedGoalId));
 });
@@ -75,20 +61,20 @@ final wizardCoreGoalProvider = StateProvider<String>((ref) => '');
 
 /// 위저드 세부 목표 8개 입력 Provider (index: 0~7)
 final wizardSubGoalInputsProvider =
-    StateProvider<List<String>>((ref) => List.filled(8, ''));
+    StateProvider<List<String>>((ref) => List.filled(AppLayout.mandalartSubGoalCount, ''));
 
 /// 위저드 실천 과제 입력 Provider (subGoalIndex: 0~7, taskIndex: 0~7)
 final wizardTaskInputsProvider =
     StateProvider<Map<int, List<String>>>((ref) => {
-      for (int i = 0; i < 8; i++) i: List.filled(8, ''),
+      for (int i = 0; i < AppLayout.mandalartSubGoalCount; i++) i: List.filled(AppLayout.mandalartSubGoalCount, ''),
     });
 
 /// 위저드 상태를 초기화한다
 void resetWizard(WidgetRef ref) {
   ref.read(wizardStepProvider.notifier).state = 1;
   ref.read(wizardCoreGoalProvider.notifier).state = '';
-  ref.read(wizardSubGoalInputsProvider.notifier).state = List.filled(8, '');
+  ref.read(wizardSubGoalInputsProvider.notifier).state = List.filled(AppLayout.mandalartSubGoalCount, '');
   ref.read(wizardTaskInputsProvider.notifier).state = {
-    for (int i = 0; i < 8; i++) i: List.filled(8, ''),
+    for (int i = 0; i < AppLayout.mandalartSubGoalCount; i++) i: List.filled(AppLayout.mandalartSubGoalCount, ''),
   };
 }

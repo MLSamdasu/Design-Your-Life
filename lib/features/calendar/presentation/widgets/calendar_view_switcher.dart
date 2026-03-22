@@ -54,7 +54,7 @@ class CalendarViewSwitcher extends ConsumerWidget {
                   color: isActive
                       ? context.themeColors.textPrimary
                       : context.themeColors.textPrimaryWithAlpha(0.55),
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                  fontWeight: isActive ? AppTypography.weightBold : AppTypography.weightRegular,
                 ),
               ),
             ),

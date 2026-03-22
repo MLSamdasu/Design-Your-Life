@@ -61,6 +61,8 @@ class SubGoalRepository {
         _cache.get(AppConstants.subGoalsBox, subGoal.id) ?? {};
     final updated = Map<String, dynamic>.from(existing)
       ..addAll(subGoal.toUpdateMap());
+    // toUpdateMap()에 goal_id가 포함되지 않으므로, 명시적으로 보존하여 고아 데이터를 방지한다
+    updated['goal_id'] = goalId;
     await _cache.put(AppConstants.subGoalsBox, subGoal.id, updated);
   }
 

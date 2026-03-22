@@ -24,6 +24,7 @@ import '../../../core/theme/animation_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
 import '../../../shared/widgets/global_action_bar.dart';
+import '../../../shared/widgets/app_snack_bar.dart';
 
 /// 자연어 빠른 입력 처리 함수 (F20)
 /// 파싱 결과에서 날짜/시간/제목/태그를 추출하여 투두를 즉시 생성한다
@@ -48,8 +49,8 @@ Future<void> _handleQuickInput(
   // 파싱된 #태그 이름을 기존 태그 객체로 변환한다 (이름 기준 매칭)
   List<Map<String, dynamic>> matchedTags = const [];
   if (parsed.hasTags) {
-    final tagsAsync = ref.read(userTagsProvider);
-    final allTags = tagsAsync.valueOrNull ?? [];
+    // userTagsProvider는 동기 Provider이므로 직접 사용한다
+    final allTags = ref.read(userTagsProvider);
     matchedTags = parsed.tagNames
         .map((name) {
           // 태그 이름이 정확히 일치하는 태그를 찾는다 (대소문자 무시)
@@ -84,12 +85,7 @@ Future<void> _handleQuickInput(
   } catch (e) {
     // API 호출 실패 시 사용자에게 오류를 알린다
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('할 일 추가에 실패했습니다'),
-          backgroundColor: ColorTokens.infoHintBg,
-        ),
-      );
+      AppSnackBar.showError(context, '할 일 추가에 실패했습니다');
     }
   }
 }
@@ -285,7 +281,8 @@ class _AddTodoFab extends ConsumerWidget {
   /// 투두 생성 다이얼로그를 열고 결과를 서버에 저장한다
   /// 저장 실패 시 SnackBar로 사용자에게 피드백한다
   Future<void> _openCreateDialog(BuildContext context, WidgetRef ref) async {
-    final result = await TodoCreateDialog.show(context);
+    // P1-16: 현재 선택된 날짜를 초기값으로 전달한다
+    final result = await TodoCreateDialog.show(context, initialDate: selectedDate);
     if (result == null) return;
 
     final generateId = ref.read(generateTodoIdProvider);
@@ -308,7 +305,8 @@ class _AddTodoFab extends ConsumerWidget {
         Todo(
           id: generateId(),
           title: result.title,
-          date: selectedDate,
+          // P1-16: 다이얼로그에서 선택한 날짜를 사용한다 (폴백: selectedDate)
+          date: result.date ?? selectedDate,
           // 시작/종료 시간을 모두 설정한다
           startTime: result.startTime,
           endTime: result.endTime,
@@ -323,12 +321,7 @@ class _AddTodoFab extends ConsumerWidget {
     } catch (e) {
       // API 호출 실패 시 사용자에게 오류를 알린다
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('할 일 추가에 실패했습니다'),
-            backgroundColor: ColorTokens.infoHintBg,
-          ),
-        );
+        AppSnackBar.showError(context, '할 일 추가에 실패했습니다');
       }
     }
   }

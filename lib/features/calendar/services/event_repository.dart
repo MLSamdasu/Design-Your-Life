@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/cache/hive_cache_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/date_utils.dart';
 import '../../../shared/models/event.dart';
 
 /// 이벤트 저장소 (로컬 퍼스트 아키텍처)
@@ -23,6 +24,13 @@ class EventRepository {
 
   // ─── 조회 ──────────────────────────────────────────────────────────────────
 
+  /// 특정 이벤트를 ID로 조회한다 (편집 모드에서 사용)
+  Event? getEventById(String eventId) {
+    final map = _cache.get(_boxName, eventId);
+    if (map == null) return null;
+    return Event.fromMap(map);
+  }
+
   /// 특정 월의 이벤트 목록을 로컬 Hive에서 조회한다
   /// start_date 필드가 해당 월 범위 내에 있는 이벤트만 반환한다
   List<Event> getEventsForMonth(int year, int month) {
@@ -32,10 +40,8 @@ class EventRepository {
     final endDate = DateTime(year, month + 1, 0, 23, 59, 59);
 
     // "YYYY-MM-DD" 경계 문자열 (문자열 비교로 날짜 범위를 판단한다)
-    final startStr =
-        '${startDate.year.toString().padLeft(4, '0')}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
-    final endStr =
-        '${endDate.year.toString().padLeft(4, '0')}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+    final startStr = AppDateUtils.toDateString(startDate);
+    final endStr = AppDateUtils.toDateString(endDate);
 
     // 전체 박스를 스캔하여 해당 월의 이벤트만 필터링한다
     final items = _cache.query(
@@ -61,19 +67,19 @@ class EventRepository {
 
   /// 새 이벤트를 로컬 Hive에 생성한다
   /// 클라이언트에서 UUID v4를 생성하여 ID로 사용한다
-  Event createEvent(Event event) {
+  Future<Event> createEvent(Event event) async {
     // 로컬에서 고유 ID를 생성한다
     final id = _uuid.v4();
     final now = DateTime.now();
 
     // INSERT용 맵을 생성하고 로컬 전용 필드를 추가한다
-    final map = event.toInsertMap('local_user')
+    final map = event.toInsertMap(AppConstants.localUserId)
       ..['id'] = id
       ..['created_at'] = now.toIso8601String()
       ..['updated_at'] = now.toIso8601String();
 
-    // Hive에 저장한다
-    _cache.put(_boxName, id, map);
+    // Hive에 저장 완료를 대기한다
+    await _cache.put(_boxName, id, map);
 
     return Event.fromMap(map);
   }
@@ -82,7 +88,7 @@ class EventRepository {
 
   /// 이벤트를 수정한다
   /// 기존 id와 created_at을 유지하고 나머지 필드를 업데이트한다
-  Event? updateEvent(String eventId, Event event) {
+  Future<Event?> updateEvent(String eventId, Event event) async {
     final existing = _cache.get(_boxName, eventId);
     // 해당 ID의 항목이 없으면 null을 반환한다
     if (existing == null) return null;
@@ -90,18 +96,19 @@ class EventRepository {
     // UPDATE용 맵에 메타 필드를 추가한다
     final updatedMap = event.toUpdateMap()
       ..['id'] = eventId
-      ..['user_id'] = existing['user_id'] ?? 'local_user'
+      ..['user_id'] = existing['user_id'] ?? AppConstants.localUserId
       ..['created_at'] = existing['created_at']
       ..['updated_at'] = DateTime.now().toIso8601String();
 
-    _cache.put(_boxName, eventId, updatedMap);
+    // Hive에 저장 완료를 대기한다
+    await _cache.put(_boxName, eventId, updatedMap);
     return Event.fromMap(updatedMap);
   }
 
   // ─── 삭제 ──────────────────────────────────────────────────────────────────
 
   /// 이벤트를 로컬 Hive에서 삭제한다
-  void deleteEvent(String eventId) {
-    _cache.deleteById(_boxName, eventId);
+  Future<void> deleteEvent(String eventId) async {
+    await _cache.deleteById(_boxName, eventId);
   }
 }

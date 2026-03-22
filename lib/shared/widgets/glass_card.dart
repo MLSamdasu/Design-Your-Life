@@ -140,29 +140,42 @@ class GlassCard extends ConsumerWidget {
         child: Container(
           decoration: decoration,
           padding: _padding,
-          child: child,
+          // Material 위젯을 제공하여 InkWell, Switch, PopupMenuButton 등
+          // Material 조상이 필요한 자식 위젯의 크래시를 방지한다
+          child: Material(
+            type: MaterialType.transparency,
+            child: child,
+          ),
         ),
       );
     }
 
     // 블러가 활성화된 프리셋(glassmorphism, neon):
-    // ClipRRect → BackdropFilter → Container 순서로 감싼다
-    // ClipRRect 없이 BackdropFilter 사용 시 전체 화면에 블러가 적용되어 성능 저하 발생
-    return Container(
-      margin: margin,
-      width: width,
-      height: height,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: sigma,
-            sigmaY: sigma,
-          ),
-          child: Container(
-            decoration: decoration,
-            padding: _padding,
-            child: child,
+    // RepaintBoundary → ClipRRect → BackdropFilter → Container 순서로 감싼다
+    // RepaintBoundary로 감싸 BackdropFilter 리페인트가 상위 위젯으로 전파되는 것을 차단한다
+    // 스크롤 중 불필요한 BackdropFilter 재합성을 방지하여 투명도 깜빡임을 해소한다
+    return RepaintBoundary(
+      child: Container(
+        margin: margin,
+        width: width,
+        height: height,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_borderRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(
+              sigmaX: sigma,
+              sigmaY: sigma,
+            ),
+            child: Container(
+              decoration: decoration,
+              padding: _padding,
+              // Material 위젯을 제공하여 InkWell, Switch, PopupMenuButton 등
+              // Material 조상이 필요한 자식 위젯의 크래시를 방지한다
+              child: Material(
+                type: MaterialType.transparency,
+                child: child,
+              ),
+            ),
           ),
         ),
       ),

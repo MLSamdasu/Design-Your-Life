@@ -6,6 +6,8 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../error/error_handler.dart';
+import '../providers/data_store_providers.dart';
 import 'auth_service.dart';
 
 // ─── AuthService Provider ─────────────────────────────────────────────────
@@ -20,13 +22,21 @@ final authServiceProvider = Provider<AuthService>((ref) {
 /// onCurrentUserChanged 스트림을 구독하여 자동으로 인증 상태를 갱신한다
 class AuthStateNotifier extends StateNotifier<AsyncValue<AuthState>> {
   final AuthService _authService;
+  final Ref _ref;
   StreamSubscription<GoogleSignInAccount?>? _authSubscription;
 
-  AuthStateNotifier(this._authService)
+  AuthStateNotifier(this._authService, this._ref)
       : super(const AsyncLoading()) {
     // Google Sign-In 인증 상태 변경 스트림을 구독한다
-    _authSubscription =
-        _authService.onCurrentUserChanged.listen(_handleAuthEvent);
+    // Windows 등 미지원 플랫폼에서는 빈 스트림이 반환되므로 안전하지만,
+    // 예상치 못한 플랫폼 예외에 대비해 try-catch로 이중 보호한다
+    try {
+      _authSubscription =
+          _authService.onCurrentUserChanged.listen(_handleAuthEvent);
+    } catch (_) {
+      // 스트림 구독 실패 시 미인증 상태로 안전하게 초기화한다
+      state = const AsyncData(AuthState.unauthenticated());
+    }
   }
 
   /// Google Sign-In 인증 이벤트를 처리하여 상태를 갱신한다
@@ -56,22 +66,55 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<AuthState>> {
   }
 
   /// Google OAuth 로그인을 수행한다
+  /// 예외 발생 시 미인증 상태를 유지하고 호출자에게 예외를 전파한다
   Future<AuthState> signInWithGoogle() async {
-    final authState = await _authService.signInWithGoogle();
-    state = AsyncData(authState);
-    return authState;
+    try {
+      final authState = await _authService.signInWithGoogle();
+      state = AsyncData(authState);
+      return authState;
+    } catch (e, stack) {
+      // 로그인 실패 시 미인증 상태를 유지하여 일관된 상태를 보장한다
+      state = const AsyncData(AuthState.unauthenticated());
+      ErrorHandler.logServiceError('AuthStateNotifier:signInWithGoogle', e, stack);
+      rethrow;
+    }
   }
 
   /// 로그아웃을 수행한다
+  /// 상태를 먼저 미인증으로 전환하여 UI 일관성을 보장한 뒤 signOut을 시도한다
   Future<void> logout() async {
-    await _authService.signOut();
+    // 상태를 먼저 미인증으로 전환하여 UI가 즉시 반영되도록 한다
     state = const AsyncData(AuthState.unauthenticated());
+    try {
+      await _authService.signOut();
+    } catch (e, stack) {
+      // signOut 실패 시에도 미인증 상태를 유지한다 (이미 전환 완료)
+      ErrorHandler.logServiceError('AuthStateNotifier:logout', e, stack);
+    }
   }
 
   /// 계정 연결을 해제한다
+  /// Hive clearAll → init 사이에 Provider 리빌드가 Hive 박스에 접근하면
+  /// HiveError가 발생하므로, 먼저 인증 상태를 미인증으로 전환하여
+  /// 라우터가 데이터 화면을 언마운트하게 한 뒤 삭제를 수행한다
   Future<void> deleteAccount() async {
-    await _authService.deleteAccount();
+    // 1) 인증 상태를 먼저 미인증으로 전환하여 데이터 화면을 언마운트한다
     state = const AsyncData(AuthState.unauthenticated());
+
+    // 2) 상태 전환 후 다음 마이크로태스크에서 위젯 트리가 리빌드되도록 한 틱 대기
+    await Future<void>.delayed(Duration.zero);
+
+    // 3) 데이터 화면이 제거된 상태에서 안전하게 계정 삭제 + Hive 초기화를 수행한다
+    try {
+      await _authService.deleteAccount();
+      // 4) clearAll → init 후 빈 박스가 열렸지만 Provider의 버전 카운터가 그대로이므로
+      //    모든 버전을 강제 갱신하여 Provider가 빈 데이터를 다시 읽도록 한다
+      bumpAllDataVersions(_ref);
+    } catch (e, stack) {
+      // 삭제 실패를 로깅하고 호출자가 에러를 처리할 수 있도록 전파한다
+      ErrorHandler.logServiceError('AuthStateNotifier:deleteAccount', e, stack);
+      rethrow;
+    }
   }
 
   /// 인증 상태를 강제로 미인증으로 설정한다 (에러 발생 시)
@@ -93,7 +136,7 @@ final authStateProvider =
     StateNotifierProvider<AuthStateNotifier, AsyncValue<AuthState>>((ref) {
   final authService = ref.watch(authServiceProvider);
 
-  return AuthStateNotifier(authService);
+  return AuthStateNotifier(authService, ref);
 });
 
 // ─── 하위 호환 Provider (기존 StreamProvider 대체) ───────────────────────

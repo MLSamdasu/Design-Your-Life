@@ -16,17 +16,26 @@ import '../../../core/theme/color_tokens.dart';
 import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/typography_tokens.dart';
 import '../../../shared/widgets/glass_card.dart';
+import '../../../shared/providers/tutorial_provider.dart';
 import 'settings_cards.dart';
+import 'settings_nav_card.dart';
 import 'settings_theme_card.dart';
 import 'widgets/cloud_backup_card.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
+import '../../../shared/widgets/app_snack_bar.dart';
 import '../../../core/theme/layout_tokens.dart';
 
 /// 설정 화면 (F6)
 /// 계정 정보 / 다크 모드 토글 / 로그아웃 / 계정 삭제를 제공한다
+/// DraggableScrollableSheet 내부에서 사용 시 반드시 scrollController를 전달해야
+/// 시트의 드래그 제스처와 콘텐츠 스크롤이 정상적으로 연동된다
 class SettingsScreen extends ConsumerWidget {
-  const SettingsScreen({super.key});
+  /// DraggableScrollableSheet에서 전달받은 스크롤 컨트롤러
+  /// null이면 SingleChildScrollView가 자체 컨트롤러를 생성한다
+  final ScrollController? scrollController;
+
+  const SettingsScreen({super.key, this.scrollController});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,7 +46,10 @@ class SettingsScreen extends ConsumerWidget {
       backgroundColor: ColorTokens.transparent,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+          // DraggableScrollableSheet의 컨트롤러를 연결하여
+          // 시트 드래그와 콘텐츠 스크롤 제스처가 올바르게 협력하도록 한다
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, AppSpacing.pageVertical, AppSpacing.pageHorizontal, AppSpacing.bottomScrollPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -57,8 +69,16 @@ class SettingsScreen extends ConsumerWidget {
               const SettingsThemeCard(),
               const SizedBox(height: AppSpacing.xl),
 
+              // 네비게이션 바 위치/높낮이 설정 카드
+              const SettingsNavCard(),
+              const SizedBox(height: AppSpacing.xl),
+
               // 데이터 관리 카드 (태그 관리)
               _SettingsDataCard(),
+              const SizedBox(height: AppSpacing.xl),
+
+              // 튜토리얼 보기 카드 (앱 사용법 안내를 다시 볼 수 있다)
+              _SettingsTutorialCard(),
               const SizedBox(height: AppSpacing.xl),
 
               // 클라우드 백업 카드 (로컬 퍼스트: 로그인 시 백업/복원 활성화)
@@ -134,8 +154,8 @@ class _GoogleCalendarSyncTile extends ConsumerWidget {
       children: [
         // Google 'G' 아이콘 뱃지
         Container(
-          width: 20,
-          height: 20,
+          width: AppLayout.iconXl,
+          height: AppLayout.iconXl,
           decoration: BoxDecoration(
             color: ColorTokens.googleBrand.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -146,7 +166,7 @@ class _GoogleCalendarSyncTile extends ConsumerWidget {
               // captionMd: 11px Regular 기반에 볼드 적용 (Google 브랜드 마크)
               style: AppTypography.captionMd.copyWith(
                 color: ColorTokens.googleBrand,
-                fontWeight: FontWeight.w700,
+                fontWeight: AppTypography.weightBold,
               ),
             ),
           ),
@@ -211,11 +231,7 @@ class _GoogleCalendarSyncTile extends ConsumerWidget {
       if (!granted) {
         // 사용자가 권한을 거부한 경우 토글을 변경하지 않고 안내 메시지를 표시한다
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Google Calendar 접근 권한이 필요합니다'),
-            ),
-          );
+          AppSnackBar.showWarning(context, 'Google Calendar 접근 권한이 필요합니다');
         }
         return;
       }
@@ -272,6 +288,63 @@ class _DataSettingsTile extends StatelessWidget {
   }
 }
 
+// ─── 튜토리얼 보기 카드 ──────────────────────────────────────────────────────
+
+/// 튜토리얼 보기 카드
+/// 앱 사용법 안내(5탭 온보딩 가이드)를 설정에서 다시 볼 수 있도록 제공한다
+/// 탭 시 showTutorialProvider를 true로 변경하고, 설정 모달을 닫아 MainShell 튜토리얼을 표시한다
+class _SettingsTutorialCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GlassCard(
+      child: GestureDetector(
+        onTap: () {
+          // 튜토리얼 표시 요청
+          ref.read(showTutorialProvider.notifier).state = true;
+          // 설정 모달을 닫아야 MainShell의 튜토리얼 오버레이가 표시된다
+          Navigator.of(context).pop();
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Row(
+          children: [
+            Icon(
+              Icons.school_outlined,
+              color: context.themeColors.accent,
+              size: AppLayout.iconXl,
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '튜토리얼 보기',
+                    style: AppTypography.bodyLg.copyWith(
+                      color: context.themeColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    '앱 사용법 안내를 다시 볼 수 있어요',
+                    style: AppTypography.captionMd.copyWith(
+                      color: context.themeColors.textPrimaryWithAlpha(0.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: context.themeColors.textPrimaryWithAlpha(0.5),
+              size: AppLayout.iconLg,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ─── 상단 헤더 ──────────────────────────────────────────────────────────────
 
 /// 설정 화면 상단 헤더 (타이틀 + 닫기 버튼)
@@ -291,12 +364,12 @@ class _SettingsHeader extends StatelessWidget {
           onTap: () => Navigator.of(context).pop(),
           behavior: HitTestBehavior.opaque,
           child: SizedBox(
-            width: 44,
-            height: 44,
+            width: AppLayout.minTouchTarget,
+            height: AppLayout.minTouchTarget,
             child: Center(
               child: Container(
-                width: 32,
-                height: 32,
+                width: AppLayout.containerMd,
+                height: AppLayout.containerMd,
                 decoration: BoxDecoration(
                   color: context.themeColors.overlayMedium,
                   shape: BoxShape.circle,

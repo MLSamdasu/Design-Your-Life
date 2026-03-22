@@ -1,148 +1,140 @@
 // F6: 포모도로 타이머 메인 화면
-// GoRouter extra로 todoId/todoTitle을 받아 투두와 연결된 상태로 시작할 수 있다.
-// Glassmorphism 디자인: GlassCard, ColorTokens 사용
-// 타이머 화면은 StatefulShellRoute 바깥의 독립 라우트이다.
+// StatefulShellRoute 6번째 탭으로 메인 네비게이션에 포함된다.
+// SegmentedControl로 '타이머'/'통계' 서브탭을 전환한다.
+// 투두 연결은 timerStateProvider.linkTodo()로 사전 설정 후 탭 전환한다.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/theme/color_tokens.dart';
 import '../../../core/theme/typography_tokens.dart';
 import '../../../core/theme/theme_colors.dart';
+import '../../../shared/widgets/segmented_control.dart';
+import '../../../shared/widgets/global_action_bar.dart';
 import '../models/timer_log.dart';
 import '../models/timer_state.dart';
 import '../providers/timer_provider.dart';
+import '../providers/timer_stats_provider.dart';
 import 'widgets/timer_controls.dart';
 import 'widgets/timer_display.dart';
 import 'widgets/timer_log_list.dart';
 import 'widgets/timer_session_info.dart';
+import 'widgets/timer_stats_view.dart';
+import 'widgets/timer_settings_sheet.dart';
 import 'widgets/timer_todo_selector.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
+import '../../../core/theme/layout_tokens.dart';
+import '../../../shared/widgets/bottom_scroll_spacer.dart';
+
+/// 서브탭 레이블 목록 (타이머 / 통계)
+const _subTabLabels = ['타이머', '통계'];
 
 /// 포모도로 타이머 메인 화면
-/// GoRouter extra: {'todoId': String?, 'todoTitle': String?}
-class TimerScreen extends ConsumerStatefulWidget {
-  /// 연결할 투두 ID (GoRouter extra로 전달)
-  final String? todoId;
-
-  /// 연결할 투두 제목 (GoRouter extra로 전달)
-  final String? todoTitle;
-
-  const TimerScreen({
-    this.todoId,
-    this.todoTitle,
-    super.key,
-  });
+/// SegmentedControl로 타이머/통계 서브탭을 전환한다
+class TimerScreen extends ConsumerWidget {
+  const TimerScreen({super.key});
 
   @override
-  ConsumerState<TimerScreen> createState() => _TimerScreenState();
-}
-
-class _TimerScreenState extends ConsumerState<TimerScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // 투두가 전달된 경우 타이머 시작 전 미리 연결한다
-    if (widget.todoId != null && widget.todoTitle != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          ref.read(timerStateProvider.notifier).linkTodo(
-                todoId: widget.todoId!,
-                todoTitle: widget.todoTitle!,
-              );
-        }
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final timerState = ref.watch(timerStateProvider);
+    final subTab = ref.watch(timerSubTabProvider);
+    final sessionsBeforeLong = ref.watch(timerSessionsBeforeLongBreakProvider);
 
     return Scaffold(
       // 배경을 투명으로 설정하여 앱 그라디언트 배경이 보이게 한다
       backgroundColor: ColorTokens.transparent,
-      extendBodyBehindAppBar: true,
-      appBar: _buildAppBar(context, timerState),
       body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-          child: Column(
-            children: [
-              const SizedBox(height: AppSpacing.xl),
-
-              // 세션 정보 (집중/휴식 유형 + 회차)
-              Center(
-                child: TimerSessionInfo(timerState: timerState),
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 상단 헤더: 제목 + 집중 시간 뱃지 + 업적/설정 아이콘
+            _TimerHeader(timerState: timerState),
+            const SizedBox(height: AppSpacing.lg),
+            // 서브탭 스위처 (타이머 / 통계)
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xxl,
+                vertical: AppSpacing.md,
               ),
-
-              const SizedBox(height: AppSpacing.huge),
-
-              // 원형 타이머 디스플레이
-              Center(
-                child: TimerDisplay(timerState: timerState),
+              child: SegmentedControl<int>(
+                values: const [0, 1],
+                selected: subTab,
+                labelBuilder: (i) => _subTabLabels[i],
+                onChanged: (i) =>
+                    ref.read(timerSubTabProvider.notifier).state = i,
               ),
-
-              const SizedBox(height: AppSpacing.huge),
-
-              // 세션 완료 축하 메시지 (completed 상태에서만 표시)
-              if (timerState.phase == TimerPhase.completed) ...[
-                _buildCompletedBanner(timerState),
-                const SizedBox(height: AppSpacing.xxl),
-              ],
-
-              // 타이머 컨트롤 버튼
-              TimerControls(
-                onSelectTodo: () => TimerTodoSelector.show(context),
-              ),
-
-              const SizedBox(height: 28),
-
-              // 오늘의 타이머 기록 목록
-              const TimerLogList(),
-
-              // 하단 여백
-              const SizedBox(height: AppSpacing.xxxl),
-            ],
-          ),
+            ),
+            // 서브탭 콘텐츠
+            Expanded(
+              child: subTab == 0
+                  ? _TimerContent(
+                      timerState: timerState,
+                      sessionsBeforeLongBreak: sessionsBeforeLong,
+                    )
+                  : const TimerStatsView(),
+            ),
+          ],
         ),
       ),
     );
   }
+}
 
-  /// 앱바 구성 (뒤로가기 + 제목)
-  PreferredSizeWidget _buildAppBar(BuildContext context, TimerState timerState) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      // 커스텀 뒤로가기: 타이머 실행 중이면 경고 다이얼로그 표시
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_rounded, color: context.themeColors.textPrimary),
-        onPressed: () => _handleBack(context, timerState),
+/// 타이머 화면 상단 헤더
+/// 다른 탭 화면(습관, 목표 등)과 동일한 레이아웃 패턴:
+/// 좌측 제목 + 우측 GlobalActionBar
+class _TimerHeader extends ConsumerWidget {
+  final TimerState timerState;
+  const _TimerHeader({required this.timerState});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.pageHorizontal, AppSpacing.pageVertical,
+        AppSpacing.pageHorizontal, 0,
       ),
-      title: Text(
-        '포모도로 타이머',
-        style: AppTypography.titleLg.copyWith(color: context.themeColors.textPrimary),
+      child: Row(
+        children: [
+          // 화면 제목
+          Expanded(
+            child: Text(
+              '포모도로 타이머',
+              style: AppTypography.headingSm.copyWith(
+                color: context.themeColors.textPrimary,
+              ),
+            ),
+          ),
+          // 오늘 총 집중 시간 뱃지
+          _buildFocusMinutesBadge(context, ref),
+          const SizedBox(width: AppSpacing.md),
+          // P1-5: 타이머 설정 바텀시트 진입 버튼
+          GestureDetector(
+            onTap: () => TimerSettingsSheet.show(context),
+            child: Icon(
+              Icons.tune_rounded,
+              size: AppLayout.iconMd,
+              color: context.themeColors.textPrimaryWithAlpha(0.65),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          // 업적 + 설정 아이콘 버튼
+          const GlobalActionBar(),
+        ],
       ),
-      centerTitle: true,
-      // 오늘 총 집중 시간 표시
-      actions: [
-        _buildFocusMinutesBadge(),
-        const SizedBox(width: AppSpacing.md),
-      ],
     );
   }
 
-  /// 오늘 총 집중 시간 뱃지 (AppBar 우측)
-  Widget _buildFocusMinutesBadge() {
-    final minutes = ref.watch(todayFocusMinutesProvider);
+  /// 오늘 총 집중 시간 뱃지
+  Widget _buildFocusMinutesBadge(BuildContext context, WidgetRef ref) {
+    // P1-14: 이전 이름에서 변경 — selectedDate 기준으로 필터링한다
+    final minutes = ref.watch(selectedDateFocusMinutesProvider);
     if (minutes == 0) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.mdLg, vertical: AppSpacing.xs),
-      // 집중 시간 배지: 배경 테마에 맞는 악센트 색상으로 표시한다
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.mdLg, vertical: AppSpacing.xs),
       decoration: BoxDecoration(
         color: context.themeColors.accentWithAlpha(0.25),
         borderRadius: BorderRadius.circular(AppRadius.xl),
@@ -158,16 +150,73 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
       ),
     );
   }
+}
 
-  /// 세션 완료 축하 배너
-  Widget _buildCompletedBanner(TimerState state) {
-    final isFocus = state.sessionType == TimerSessionType.focus;
-    final message = isFocus ? '집중 완료! 수고했어요 🎉' : '휴식 완료! 다시 시작할까요?';
+/// 타이머 서브탭 콘텐츠 (기존 타이머 UI)
+class _TimerContent extends StatelessWidget {
+  final TimerState timerState;
+
+  /// 사용자가 설정한 긴 휴식 전 세션 횟수
+  final int sessionsBeforeLongBreak;
+
+  const _TimerContent({
+    required this.timerState,
+    required this.sessionsBeforeLongBreak,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
+      child: Column(
+        children: [
+          const SizedBox(height: AppSpacing.xl),
+          // 세션 정보 (집중/휴식 유형 + 회차)
+          Center(
+            child: TimerSessionInfo(
+              timerState: timerState,
+              sessionsBeforeLongBreak: sessionsBeforeLongBreak,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.huge),
+          // 원형 타이머 디스플레이
+          Center(child: TimerDisplay(timerState: timerState)),
+          const SizedBox(height: AppSpacing.huge),
+          // 세션 완료 축하 메시지
+          if (timerState.phase == TimerPhase.completed) ...[
+            _CompletedBanner(timerState: timerState),
+            const SizedBox(height: AppSpacing.xxl),
+          ],
+          // 타이머 컨트롤 버튼
+          TimerControls(
+            onSelectTodo: () => TimerTodoSelector.show(context),
+          ),
+          const SizedBox(height: AppSpacing.huge),
+          // 오늘의 타이머 기록 목록
+          const TimerLogList(),
+          const BottomScrollSpacer(),
+        ],
+      ),
+    );
+  }
+}
+
+/// 세션 완료 축하 배너
+class _CompletedBanner extends StatelessWidget {
+  final TimerState timerState;
+  const _CompletedBanner({required this.timerState});
+
+  @override
+  Widget build(BuildContext context) {
+    final isFocus = timerState.sessionType == TimerSessionType.focus;
+    final message =
+        isFocus ? '집중 완료! 수고했어요 🎉' : '휴식 완료! 다시 시작할까요?';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.lg),
-      // 세션 완료 배너: 집중 완료 시 배경 테마 악센트 색상, 휴식 완료 시 성공 색상을 사용한다
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xxl, vertical: AppSpacing.lg),
       decoration: BoxDecoration(
         color: isFocus
             ? context.themeColors.accentWithAlpha(0.20)
@@ -183,80 +232,9 @@ class _TimerScreenState extends ConsumerState<TimerScreen> {
         message,
         textAlign: TextAlign.center,
         style: AppTypography.bodyMd.copyWith(
-                    color: context.themeColors.textPrimary,
-          fontWeight: FontWeight.w600,
+          color: context.themeColors.textPrimary,
+          fontWeight: AppTypography.weightSemiBold,
         ),
-      ),
-    );
-  }
-
-  /// 뒤로가기 처리
-  /// 타이머 실행 중이면 확인 다이얼로그를 표시한다
-  Future<void> _handleBack(BuildContext context, TimerState timerState) async {
-    if (timerState.phase == TimerPhase.running) {
-      // 실행 중 뒤로가기 시 일시정지 후 확인 요청
-      ref.read(timerStateProvider.notifier).pause();
-      final confirmed = await _showLeaveConfirmDialog(context);
-      // async 갭 이후 위젯이 언마운트되면 조기 반환한다
-      if (!mounted) return;
-      if (confirmed == true) {
-        ref.read(timerStateProvider.notifier).reset();
-        _navigateBack();
-      } else {
-        // 취소 시 타이머 재개
-        ref.read(timerStateProvider.notifier).resume();
-      }
-    } else {
-      _navigateBack();
-    }
-  }
-
-  /// mounted 상태가 보장된 컨텍스트에서 뒤로가기를 수행한다
-  void _navigateBack() {
-    if (mounted) {
-      // context.pop()을 동기 메서드로 분리하여 async 갭 문제를 해결한다
-      context.pop();
-    }
-  }
-
-  /// 타이머 실행 중 나가기 확인 다이얼로그
-  Future<bool?> _showLeaveConfirmDialog(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      // 테마 인식 다이얼로그 배경: 모든 테마에서 텍스트 가독성 보장
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.themeColors.dialogSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.huge)),
-        title: Text(
-          '타이머를 종료할까요?',
-          style: AppTypography.titleLg.copyWith(color: context.themeColors.textPrimary),
-        ),
-        content: Text(
-          '현재 세션이 취소되며 기록이 저장되지 않아요.',
-          style: AppTypography.bodyLg.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.70),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              '계속 집중',
-              style: AppTypography.bodyMd.copyWith(
-                color: context.themeColors.accent,
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              '나가기',
-              style: AppTypography.bodyMd.copyWith(
-                color: ColorTokens.errorLight,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

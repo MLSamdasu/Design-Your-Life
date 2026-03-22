@@ -21,11 +21,14 @@ class AchievementRepository {
     final all = _cache.getAll(AppConstants.achievementsBox);
 
     // unlockedAt 내림차순 정렬 (최근 달성 업적이 상단에 위치)
+    // 백업 복원 시 snake_case 키가 유입될 수 있으므로 양쪽 모두 확인한다
     all.sort((a, b) {
-      final aTime =
-          DateTime.tryParse(a['unlockedAt'] as String? ?? '') ?? DateTime(0);
-      final bTime =
-          DateTime.tryParse(b['unlockedAt'] as String? ?? '') ?? DateTime(0);
+      final aTime = DateTime.tryParse(
+              (a['unlockedAt'] ?? a['unlocked_at']) as String? ?? '') ??
+          DateTime(0);
+      final bTime = DateTime.tryParse(
+              (b['unlockedAt'] ?? b['unlocked_at']) as String? ?? '') ??
+          DateTime(0);
       // 내림차순이므로 b - a 순서로 비교한다
       return bTime.compareTo(aTime);
     });
@@ -72,17 +75,18 @@ class AchievementRepository {
 
   // ─── 내부 직렬화 헬퍼 ────────────────────────────────────────────────────
   /// Achievement → Hive 저장용 Map 변환
+  /// snake_case 키를 사용하여 다른 Repository와 포맷을 통일한다
   Map<String, dynamic> _toHiveMap(Achievement achievement) {
     return {
       'id': achievement.id,
-      'userId': achievement.userId,
+      'user_id': achievement.userId,
       'type': achievement.type,
       'title': achievement.title,
       'description': achievement.description,
-      'iconName': achievement.iconName,
-      'xpReward': achievement.xpReward,
-      'unlockedAt': achievement.unlockedAt.toIso8601String(),
-      'createdAt': achievement.createdAt.toIso8601String(),
+      'icon_name': achievement.iconName,
+      'xp_reward': achievement.xpReward,
+      'unlocked_at': achievement.unlockedAt.toIso8601String(),
+      'created_at': achievement.createdAt.toIso8601String(),
     };
   }
 

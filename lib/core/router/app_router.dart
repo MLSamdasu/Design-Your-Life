@@ -1,6 +1,6 @@
 // C0.4: GoRouter 설정
 // 인증 상태를 감시하여 인증 가드(redirect)를 포함한 GoRouter를 생성한다.
-// StatefulShellRoute.indexedStack으로 5탭 상태 보존을 구현한다.
+// StatefulShellRoute.indexedStack으로 6탭 상태 보존을 구현한다.
 // SRP 분리: Shell/BottomNav/NavItem → shared/widgets/main_shell.dart
 //           Auth 화면 → features/auth/presentation/
 // IN: AuthState (C0.3의 OUT), route_paths 상수
@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_provider.dart';
+import '../theme/animation_tokens.dart';
 import 'not_found_screen.dart';
 import 'route_paths.dart';
 
@@ -19,7 +20,7 @@ import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/onboarding_screen.dart';
 
-// 메인 5탭 화면
+// 메인 6탭 화면
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/calendar/presentation/calendar_screen.dart';
 import '../../features/todo/presentation/todo_screen.dart';
@@ -101,8 +102,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 400),
-          reverseTransitionDuration: const Duration(milliseconds: 350),
+          transitionDuration: AppAnimation.slower,
+          reverseTransitionDuration: AppAnimation.slow,
         ),
       ),
 
@@ -126,8 +127,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             );
           },
-          transitionDuration: const Duration(milliseconds: 400),
-          reverseTransitionDuration: const Duration(milliseconds: 350),
+          transitionDuration: AppAnimation.slower,
+          reverseTransitionDuration: AppAnimation.slow,
         ),
       ),
 
@@ -154,37 +155,9 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             );
           },
-          transitionDuration: const Duration(milliseconds: 400),
-          reverseTransitionDuration: const Duration(milliseconds: 350),
+          transitionDuration: AppAnimation.slower,
+          reverseTransitionDuration: AppAnimation.slow,
         ),
-      ),
-
-      // AN-APPLE: 포모도로 타이머 화면 (F6)
-      // CupertinoPageTransition 스타일 오른쪽에서 슬라이드 인 (네비게이션 푸시)
-      GoRoute(
-        path: RoutePaths.timer,
-        pageBuilder: (context, state) {
-          // GoRouter extra에서 투두 연결 정보를 추출한다
-          final extra = state.extra as Map<String, dynamic>?;
-          return CustomTransitionPage(
-            key: state.pageKey,
-            child: TimerScreen(
-              todoId: extra?['todoId'] as String?,
-              todoTitle: extra?['todoTitle'] as String?,
-            ),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              // Apple iOS 네비게이션 푸시 스타일: 오른쪽에서 슬라이드 인 + 이전 화면 왼쪽으로 밀림
-              return CupertinoPageTransition(
-                primaryRouteAnimation: animation,
-                secondaryRouteAnimation: secondaryAnimation,
-                linearTransition: false,
-                child: child,
-              );
-            },
-            transitionDuration: const Duration(milliseconds: 350),
-            reverseTransitionDuration: const Duration(milliseconds: 350),
-          );
-        },
       ),
 
       // AN-APPLE: 업적/배지 화면 (F8)
@@ -202,8 +175,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 350),
-          reverseTransitionDuration: const Duration(milliseconds: 350),
+          transitionDuration: AppAnimation.slow,
+          reverseTransitionDuration: AppAnimation.slow,
         ),
       ),
 
@@ -222,12 +195,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               child: child,
             );
           },
-          transitionDuration: const Duration(milliseconds: 350),
-          reverseTransitionDuration: const Duration(milliseconds: 350),
+          transitionDuration: AppAnimation.slow,
+          reverseTransitionDuration: AppAnimation.slow,
         ),
       ),
 
-      // 메인 5탭 Shell (StatefulShellRoute.indexedStack)
+      // 메인 6탭 Shell (StatefulShellRoute.indexedStack)
       // 탭 전환 시 각 탭의 상태(스크롤 위치, 선택된 날짜)를 보존한다
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -280,6 +253,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: RoutePaths.goal,
                 builder: (context, state) => const GoalScreen(),
+              ),
+            ],
+          ),
+
+          // 탭 5: 포모도로 타이머 (F6)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.timer,
+                builder: (context, state) => const TimerScreen(),
               ),
             ],
           ),

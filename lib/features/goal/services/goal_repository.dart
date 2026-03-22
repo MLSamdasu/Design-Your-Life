@@ -59,7 +59,7 @@ class GoalRepository {
   Future<Goal> createGoal(Goal goal) async {
     final id = const Uuid().v4();
     final now = DateTime.now().toIso8601String();
-    final map = goal.toInsertMap('local_user')
+    final map = goal.toInsertMap(AppConstants.localUserId)
       ..['id'] = id
       ..['created_at'] = now
       ..['updated_at'] = now;
@@ -70,10 +70,12 @@ class GoalRepository {
   // ─── 수정 ────────────────────────────────────────────────────────────────
 
   /// 목표 정보를 로컬에서 수정한다
+  /// P2-03: existing이 없을 때 id가 누락되지 않도록 방어 코드 추가
   Future<Goal> updateGoal(String goalId, Goal goal) async {
     final existing = _cache.get(AppConstants.goalsBox, goalId) ?? {};
     final updated = Map<String, dynamic>.from(existing)
       ..addAll(goal.toUpdateMap())
+      ..['id'] = goalId
       ..['updated_at'] = DateTime.now().toIso8601String();
     await _cache.put(AppConstants.goalsBox, goalId, updated);
     return Goal.fromMap(updated);

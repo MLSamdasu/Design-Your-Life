@@ -7,7 +7,13 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../features/calendar/providers/calendar_provider.dart';
 import '../../features/calendar/providers/event_provider.dart';
+import '../../features/timer/models/timer_log.dart';
+import '../../shared/models/event.dart' show EventType;
+import '../../shared/models/habit_log.dart';
+import '../../shared/models/routine.dart';
 import '../error/error_handler.dart';
+import '../providers/data_store_providers.dart';
+import '../utils/date_utils.dart';
 import '../auth/auth_provider.dart';
 import '../providers/global_providers.dart';
 import 'google_calendar_service.dart';
@@ -15,13 +21,12 @@ import 'google_event_mapper.dart';
 
 // ─── GoogleSignIn Provider ─────────────────────────────────────────────────
 
-/// Calendar 전용 GoogleSignIn 인스턴스 Provider
-/// AuthService의 _googleSignIn은 private이므로 Calendar 전용으로 별도 생성한다.
-/// 동일한 Google 계정 세션을 공유하므로 중복 로그인이 발생하지 않는다.
+/// GoogleSignIn 인스턴스 Provider (AuthService 인스턴스를 공유)
+/// 별도 인스턴스를 생성하면 토큰/스코프 불일치가 발생할 수 있으므로
+/// AuthService가 관리하는 단일 GoogleSignIn 인스턴스를 재사용한다
 final googleSignInProvider = Provider<GoogleSignIn>((ref) {
-  // Calendar 읽기 전용 스코프를 미리 등록하지 않는다.
-  // requestAccess() 호출 시 점진적으로 스코프를 요청한다.
-  return GoogleSignIn();
+  final authService = ref.watch(authServiceProvider);
+  return authService.googleSignIn;
 });
 
 // ─── GoogleCalendarService Provider ────────────────────────────────────────
@@ -105,12 +110,14 @@ final googleCalendarEventsProvider =
 // ─── 병합된 이벤트 Provider (일별) ──────────────────────────────────────────
 
 /// 앱 이벤트 + Google Calendar 이벤트를 병합한 일별 Provider
-/// DailyView, WeeklyView에서 이 Provider를 watch하여 모든 이벤트를 표시한다.
+/// DailyView에서 이 Provider를 watch하여 선택된 날짜의 모든 이벤트를 표시한다.
 /// 시간순으로 정렬되며, 시간 없는 이벤트는 맨 뒤에 위치한다.
 final mergedEventsForDayProvider = Provider<List<CalendarEvent>>((ref) {
   final appEvents = ref.watch(eventsForDayProvider);
   final googleEventsAsync = ref.watch(googleCalendarEventsProvider);
   final selectedDate = ref.watch(selectedCalendarDateProvider);
+  // 타이머 세션을 타임라인에 표시하기 위해 추가한다
+  final timerEvents = ref.watch(timerLogsForCalendarDayProvider);
 
   // Google 이벤트 로딩 실패 또는 비활성화 시 빈 목록 사용
   final googleEvents = googleEventsAsync.valueOrNull ?? const [];
@@ -128,8 +135,71 @@ final mergedEventsForDayProvider = Provider<List<CalendarEvent>>((ref) {
     return sameDay;
   }).toList();
 
-  // 앱 이벤트 + Google 이벤트를 병합하여 시간순으로 정렬한다
-  final merged = [...appEvents, ...filteredGoogleEvents];
+  // 앱 이벤트 + Google 이벤트 + 타이머 세션을 병합하여 시간순으로 정렬한다
+  final merged = [...appEvents, ...filteredGoogleEvents, ...timerEvents];
+  merged.sort((a, b) {
+    // 시간 없는 이벤트(종일)는 맨 뒤로 정렬 (hour=24 가정)
+    final aTime = (a.startHour ?? 24) * 60 + (a.startMinute ?? 0);
+    final bTime = (b.startHour ?? 24) * 60 + (b.startMinute ?? 0);
+    return aTime.compareTo(bTime);
+  });
+
+  return merged;
+});
+
+// ─── 병합된 이벤트 Provider (월별) ──────────────────────────────────────────
+
+/// 앱 이벤트 + Google Calendar 이벤트 + 타이머 세션을 병합한 월별 Provider
+/// WeeklyView에서 주 단위로 이벤트를 필터링할 때 사용한다.
+/// eventsForMonthProvider(앱+투두) + googleCalendarEventsProvider(Google)
+/// + 타이머 세션(allTimerLogsRawProvider)을 합친다.
+final mergedEventsForMonthProvider = Provider<List<CalendarEvent>>((ref) {
+  // eventsForMonthProvider는 동기 Provider이므로 직접 사용한다
+  final appEvents = ref.watch(eventsForMonthProvider);
+  final googleEventsAsync = ref.watch(googleCalendarEventsProvider);
+  final focusedMonth = ref.watch(focusedCalendarMonthProvider);
+  final allTimerLogsRaw = ref.watch(allTimerLogsRawProvider);
+  // Google 이벤트 (비활성화 또는 로딩 실패 시 빈 목록)
+  final googleEvents = googleEventsAsync.valueOrNull ?? const [];
+
+  // 타이머 세션을 CalendarEvent로 변환한다 (해당 월 + 집중 세션만)
+  final monthStr =
+      '${focusedMonth.year}-${focusedMonth.month.toString().padLeft(2, '0')}';
+  final timerEvents = <CalendarEvent>[];
+  for (final logMap in allTimerLogsRaw) {
+    final log = TimerLog.fromMap(logMap);
+    // 집중 세션만 표시한다 (휴식은 제외)
+    if (log.type != TimerSessionType.focus) continue;
+    // 해당 월의 로그만 필터링한다
+    final logDateStr = log.startTime.toIso8601String();
+    if (!logDateStr.startsWith(monthStr)) continue;
+
+    final durationMinutes = log.durationSeconds ~/ 60;
+    final endTotalMinutes =
+        log.startTime.hour * 60 + log.startTime.minute + durationMinutes;
+    final endHour = (endTotalMinutes ~/ 60).clamp(0, 23);
+    final endMinute = endTotalMinutes % 60;
+
+    timerEvents.add(CalendarEvent(
+      id: 'timer_${log.id}',
+      title: log.todoTitle ?? '집중 세션',
+      startDate: DateTime(
+        log.startTime.year,
+        log.startTime.month,
+        log.startTime.day,
+      ),
+      startHour: log.startTime.hour,
+      startMinute: log.startTime.minute,
+      endHour: endHour,
+      endMinute: endMinute,
+      colorIndex: 3, // 운동/건강 초록 계열 — 타이머 세션에 적합
+      type: EventType.normal.name,
+      source: 'timer',
+    ));
+  }
+
+  // 병합하여 시간순으로 정렬한다
+  final merged = [...appEvents, ...googleEvents, ...timerEvents];
   merged.sort((a, b) {
     // 시간 없는 이벤트(종일)는 맨 뒤로 정렬 (hour=24 가정)
     final aTime = (a.startHour ?? 24) * 60 + (a.startMinute ?? 0);
@@ -151,14 +221,67 @@ final mergedEventsByDateMapProvider = Provider<Map<String, bool>>((ref) {
   // Google 이벤트 목록
   final googleEventsAsync = ref.watch(googleCalendarEventsProvider);
   final googleEvents = googleEventsAsync.valueOrNull ?? const [];
+  // 활성 루틴 목록 (월간 dot 표시용)
+  final allRoutinesRaw = ref.watch(allRoutinesRawProvider);
+  final focusedMonth = ref.watch(focusedCalendarMonthProvider);
+  // 습관 로그 (완료된 날짜 dot 표시용)
+  final allHabitLogsRaw = ref.watch(allHabitLogsRawProvider);
 
   // 앱 이벤트 맵을 기반으로 Google 이벤트 날짜를 추가한다
+  // P1-9: 다중일 Google 이벤트의 중간 날짜에도 dot을 표시한다
   final merged = Map<String, bool>.from(appMap);
   for (final event in googleEvents) {
-    final key =
-        '${event.startDate.year}-${event.startDate.month}-${event.startDate.day}';
-    merged[key] = true;
+    final startDay = DateTime(
+      event.startDate.year, event.startDate.month, event.startDate.day,
+    );
+    merged[AppDateUtils.toDateString(startDay)] = true;
+    if (event.endDate != null) {
+      final endDay = DateTime(
+        event.endDate!.year, event.endDate!.month, event.endDate!.day,
+      );
+      var cursor = startDay.add(const Duration(days: 1));
+      while (!cursor.isAfter(endDay)) {
+        merged[AppDateUtils.toDateString(cursor)] = true;
+        cursor = cursor.add(const Duration(days: 1));
+      }
+    }
   }
+
+  // 활성 루틴의 해당 월 날짜를 추가한다
+  final activeRoutines = allRoutinesRaw
+      .map((map) => Routine.fromMap(map))
+      .where((r) => r.isActive)
+      .toList();
+
+  if (activeRoutines.isNotEmpty) {
+    // 포커스된 월의 모든 날짜를 순회하며 루틴 요일과 매칭한다
+    final firstDay = DateTime(focusedMonth.year, focusedMonth.month, 1);
+    final lastDay = DateTime(focusedMonth.year, focusedMonth.month + 1, 0);
+
+    for (var day = firstDay;
+        !day.isAfter(lastDay);
+        day = day.add(const Duration(days: 1))) {
+      final weekday = day.weekday;
+      final hasRoutine =
+          activeRoutines.any((r) => r.repeatDays.contains(weekday));
+      if (hasRoutine) {
+        final key = AppDateUtils.toDateString(day);
+        merged[key] = true;
+      }
+    }
+  }
+
+  // 습관 로그(완료된 날짜)를 추가한다
+  for (final logMap in allHabitLogsRaw) {
+    final log = HabitLog.fromMap(logMap);
+    if (log.isCompleted &&
+        log.date.year == focusedMonth.year &&
+        log.date.month == focusedMonth.month) {
+      final logDateStr = AppDateUtils.toDateString(log.date);
+      merged[logDateStr] = true;
+    }
+  }
+
   return merged;
 });
 

@@ -137,7 +137,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           'Design Your Life',
                           style: AppTypography.displayMd.copyWith(
                     color: context.themeColors.textPrimary,
-                            letterSpacing: -0.8,
+                            letterSpacing: AppLayout.letterSpacingTight,
                           ),
                           textAlign: TextAlign.center,
                         ),

@@ -57,7 +57,7 @@ class TimerState {
     this.sessionStartTime,
   });
 
-  /// 초기 상태 팩토리 생성자
+  /// 초기 상태 팩토리 생성자 (기본 25분 집중)
   /// 앱 시작 또는 리셋 시 이 상태로 복귀한다
   /// 중복 상수 제거: TimerEngine.focusDurationSeconds를 단일 출처로 사용한다
   factory TimerState.idle() {
@@ -67,6 +67,18 @@ class TimerState {
       sessionType: TimerSessionType.focus,
       totalSeconds: focusDuration,
       remainingSeconds: focusDuration,
+      completedSessions: 0,
+    );
+  }
+
+  /// 사용자 설정 집중 시간으로 초기화하는 팩토리 생성자
+  /// focusSeconds: 사용자가 설정한 집중 시간(초)
+  factory TimerState.idleWith({required int focusSeconds}) {
+    return TimerState(
+      phase: TimerPhase.idle,
+      sessionType: TimerSessionType.focus,
+      totalSeconds: focusSeconds,
+      remainingSeconds: focusSeconds,
       completedSessions: 0,
     );
   }

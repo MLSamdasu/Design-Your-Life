@@ -85,6 +85,7 @@ abstract class TodoFilter {
   }
 
   /// 완료 투두는 하단으로, 같은 완료 상태 내에서는 시간 순 정렬한다
+  /// P1-1: startTime의 실제 시간값(hour, minute)을 비교하여 올바른 시간순 정렬을 수행한다
   static List<Todo> sortTodos(List<Todo> todos) {
     final sorted = List<Todo>.from(todos);
     sorted.sort((a, b) {
@@ -95,6 +96,12 @@ abstract class TodoFilter {
       // 시간 있는 것 먼저
       if (a.time != null && b.time == null) return -1;
       if (a.time == null && b.time != null) return 1;
+      // 둘 다 시간이 있으면 실제 시간값(hour*60+minute)으로 비교한다
+      if (a.time != null && b.time != null) {
+        final aMinutes = a.time!.hour * 60 + a.time!.minute;
+        final bMinutes = b.time!.hour * 60 + b.time!.minute;
+        if (aMinutes != bMinutes) return aMinutes.compareTo(bMinutes);
+      }
       // 동일 조건이면 생성 시간 순
       return a.createdAt.compareTo(b.createdAt);
     });

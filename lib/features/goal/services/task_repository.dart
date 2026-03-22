@@ -66,6 +66,19 @@ class TaskRepository {
     return GoalTask.fromMap(map);
   }
 
+  // ─── 수정 ────────────────────────────────────────────────────────────────
+
+  /// 실천 할일 정보를 로컬에서 수정한다
+  Future<GoalTask> updateTask(String goalId, String taskId, GoalTask task) async {
+    final existing = _cache.get(AppConstants.goalTasksBox, taskId) ?? {};
+    final updated = Map<String, dynamic>.from(existing)
+      ..addAll(task.toUpdateMap());
+    // toUpdateMap()에 sub_goal_id가 포함되지 않으므로, 명시적으로 보존하여 고아 데이터를 방지한다
+    updated['sub_goal_id'] = task.subGoalId;
+    await _cache.put(AppConstants.goalTasksBox, taskId, updated);
+    return GoalTask.fromMap(updated);
+  }
+
   // ─── 완료 상태 토글 ──────────────────────────────────────────────────────
 
   /// 실천 할일 완료 상태를 로컬에서 토글한다

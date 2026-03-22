@@ -12,7 +12,7 @@ import '../../../../shared/widgets/glass_card.dart';
 import '../../../../shared/widgets/donut_chart.dart';
 import '../../../../shared/widgets/habit_pill.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_indicator.dart';
+import '../../../habit/providers/habit_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 
@@ -22,60 +22,17 @@ class HabitSummaryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final habitsAsync = ref.watch(todayHabitsProvider);
+    // 동기 Provider: 직접 값을 사용한다
+    final summary = ref.watch(todayHabitsProvider);
 
     return GlassCard(
       variant: GlassCardVariant.defaultCard,
-      child: habitsAsync.when(
-        loading: () => _buildSkeleton(),
-        error: (_, __) => _buildError(),
-        data: (summary) => _buildContent(context, summary),
-      ),
-    );
-  }
-
-  /// 로딩 스켈레톤 UI
-  Widget _buildSkeleton() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            const LoadingSkeleton(width: 90, height: 90, borderRadius: 45),
-            const SizedBox(width: AppSpacing.xl),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  LoadingSkeleton(width: 100, height: 16, borderRadius: 8),
-                  const SizedBox(height: AppSpacing.md),
-                  LoadingSkeleton(width: 70, height: 12, borderRadius: 6),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        ...List.generate(3, (i) => Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.mdLg),
-          child: LoadingSkeleton(height: 44, borderRadius: 16),
-        )),
-      ],
-    );
-  }
-
-  /// 에러 상태 UI
-  Widget _buildError() {
-    return EmptyState(
-      icon: Icons.sync_problem_rounded,
-      mainText: '데이터를 불러오지 못했어요',
-      minHeight: 120,
+      child: _buildContent(context, ref, summary),
     );
   }
 
   /// 실제 콘텐츠
-  Widget _buildContent(BuildContext context, HabitSummary summary) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, HabitSummary summary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -153,7 +110,12 @@ class HabitSummaryCard extends ConsumerWidget {
                 name: item.name,
                 isCompleted: item.isCompleted,
                 streak: item.streak,
-                // 홈 미리보기에서는 토글 비활성화
+                // 홈 미리보기에서도 습관 토글을 지원한다
+                onToggle: () => ref.read(toggleHabitProvider)(
+                  item.id,
+                  DateTime.now(),
+                  !item.isCompleted,
+                ),
               ),
             );
           }),

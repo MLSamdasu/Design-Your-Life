@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/auth/auth_provider.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/providers/global_providers.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/glassmorphism.dart';
@@ -17,6 +18,7 @@ import '../../../../shared/models/tag.dart';
 import '../../../../shared/providers/tag_provider.dart';
 import '../../../../shared/widgets/glass_card.dart';
 import '../../../../core/theme/animation_tokens.dart';
+import '../../../../shared/widgets/app_snack_bar.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
@@ -28,7 +30,8 @@ class TagManagementScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tagsAsync = ref.watch(userTagsProvider);
+    // userTagsProvider는 동기 Provider이므로 직접 사용한다
+    final tags = ref.watch(userTagsProvider);
 
     return Scaffold(
       backgroundColor: ColorTokens.transparent,
@@ -42,28 +45,12 @@ class TagManagementScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // 태그 목록 콘텐츠
+            // 태그 목록 콘텐츠 — 동기 Provider이므로 직접 렌더링한다
             Expanded(
-              child: tagsAsync.when(
-                data: (tags) => _TagListContent(
-                  tags: tags,
-                  onEdit: (tag) => _showTagFormSheet(context, ref, tag: tag),
-                  onDelete: (tag) => _confirmDelete(context, ref, tag),
-                ),
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: context.themeColors.textPrimary,
-                    strokeWidth: 2,
-                  ),
-                ),
-                error: (_, __) => Center(
-                  child: Text(
-                    '태그를 불러오지 못했습니다',
-                    style: AppTypography.bodyLg.copyWith(
-                      color: context.themeColors.textPrimaryWithAlpha(0.6),
-                    ),
-                  ),
-                ),
+              child: _TagListContent(
+                tags: tags,
+                onEdit: (tag) => _showTagFormSheet(context, ref, tag: tag),
+                onDelete: (tag) => _confirmDelete(context, ref, tag),
               ),
             ),
           ],
@@ -79,17 +66,13 @@ class TagManagementScreen extends ConsumerWidget {
     required Tag? tag,
   }) async {
     // async gap 이전에 태그 수 확인
-    final currentTags = ref.read(userTagsProvider).value ?? [];
+    // userTagsProvider는 동기 Provider이므로 직접 사용한다
+    final currentTags = ref.read(userTagsProvider);
 
     // 새 태그 생성 시 최대 한도 확인
     if (tag == null && currentTags.length >= Tag.maxTagsPerUser) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('태그는 최대 ${Tag.maxTagsPerUser}개까지 생성할 수 있습니다'),
-          backgroundColor: ColorTokens.infoHintBg,
-        ),
-      );
+      AppSnackBar.showInfo(context, '태그는 최대 ${Tag.maxTagsPerUser}개까지 생성할 수 있습니다');
       return;
     }
 
@@ -156,11 +139,10 @@ class TagManagementScreen extends ConsumerWidget {
     final deleteTag = ref.read(deleteTagProvider);
     try {
       await deleteTag(tag.id);
+      // 태그 삭제 시 deleteTagProvider가 버전 카운터를 증가시켜 모든 파생 Provider가 자동 갱신된다
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('태그 삭제에 실패했습니다')),
-      );
+      AppSnackBar.showError(context, '태그 삭제에 실패했습니다');
     }
   }
 }
@@ -176,7 +158,7 @@ class _TagManagementHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, AppSpacing.pageVertical, AppSpacing.pageHorizontal, 0),
       child: Row(
         children: [
           // 뒤로가기 버튼
@@ -184,8 +166,8 @@ class _TagManagementHeader extends StatelessWidget {
             onTap: () => context.pop(),
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
-              width: 44,
-              height: 44,
+              width: AppLayout.minTouchTarget,
+              height: AppLayout.minTouchTarget,
               child: Center(
                 child: Icon(
                   Icons.arrow_back_ios_new_rounded,
@@ -207,12 +189,12 @@ class _TagManagementHeader extends StatelessWidget {
             onTap: onAddTap,
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
-              width: 44,
-              height: 44,
+              width: AppLayout.minTouchTarget,
+              height: AppLayout.minTouchTarget,
               child: Center(
                 child: Container(
-                  width: 32,
-                  height: 32,
+                  width: AppLayout.containerMd,
+                  height: AppLayout.containerMd,
                   // 추가 아이콘 배경: 배경 테마에 맞는 악센트 색상을 사용한다
                   decoration: BoxDecoration(
                     color: context.themeColors.accentWithAlpha(0.25),
@@ -254,7 +236,7 @@ class _TagListContent extends StatelessWidget {
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, 0, AppSpacing.pageHorizontal, AppSpacing.bottomScrollPadding),
       children: [
         // 태그 수 표시 (한도 안내)
         Padding(
@@ -262,7 +244,8 @@ class _TagListContent extends StatelessWidget {
           child: Text(
             '${tags.length} / ${Tag.maxTagsPerUser}개',
             style: AppTypography.captionMd.copyWith(
-              color: context.themeColors.textPrimaryWithAlpha(0.5),
+              // WCAG: 태그 수 텍스트 알파 0.55 이상으로 가독성 보장
+              color: context.themeColors.textPrimaryWithAlpha(0.55),
             ),
           ),
         ),
@@ -286,7 +269,7 @@ class _TagListContent extends StatelessWidget {
                     Divider(
                       color: context.themeColors.textPrimaryWithAlpha(0.08),
                       height: 1,
-                      indent: 56,
+                      indent: AppLayout.tagDividerIndent,
                     ),
                 ],
               );
@@ -323,8 +306,8 @@ class _TagListItem extends ConsumerWidget {
         children: [
           // 색상 도트
           Container(
-            width: 14,
-            height: 14,
+            width: AppLayout.iconSm,
+            height: AppLayout.iconSm,
             decoration: BoxDecoration(
               color: tagColor,
               shape: BoxShape.circle,
@@ -336,6 +319,7 @@ class _TagListItem extends ConsumerWidget {
             child: Text(
               tag.name,
               style: AppTypography.bodyLg.copyWith(color: context.themeColors.textPrimary),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -344,12 +328,13 @@ class _TagListItem extends ConsumerWidget {
             onTap: onEdit,
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
-              width: 36,
-              height: 36,
+              width: AppLayout.containerLg,
+              height: AppLayout.containerLg,
               child: Center(
                 child: Icon(
+                  // WCAG: 편집 아이콘 알파 0.50 이상으로 가독성 보장
                   Icons.edit_outlined,
-                  color: context.themeColors.textPrimaryWithAlpha(0.5),
+                  color: context.themeColors.textPrimaryWithAlpha(0.50),
                   size: AppLayout.iconLg,
                 ),
               ),
@@ -360,8 +345,8 @@ class _TagListItem extends ConsumerWidget {
             onTap: onDelete,
             behavior: HitTestBehavior.opaque,
             child: SizedBox(
-              width: 36,
-              height: 36,
+              width: AppLayout.containerLg,
+              height: AppLayout.containerLg,
               child: Center(
                 child: Icon(
                   Icons.delete_outline_rounded,
@@ -389,21 +374,24 @@ class _TagEmptyState extends StatelessWidget {
         children: [
           Icon(
             Icons.label_outline_rounded,
-            size: 64,
-            color: context.themeColors.textPrimaryWithAlpha(0.25),
+            size: AppLayout.iconEmptyXl,
+            // WCAG: 빈 상태 아이콘 알파 0.50 이상으로 가독성 보장
+            color: context.themeColors.textPrimaryWithAlpha(0.50),
           ),
           const SizedBox(height: AppSpacing.xl),
           Text(
             '아직 태그가 없습니다',
+            // WCAG: 빈 상태 제목 알파 0.55 이상으로 가독성 보장
             style: AppTypography.titleMd.copyWith(
-              color: context.themeColors.textPrimaryWithAlpha(0.5),
+              color: context.themeColors.textPrimaryWithAlpha(0.55),
             ),
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             '+ 버튼을 눌러 첫 번째 태그를 만들어 보세요',
+            // WCAG: 빈 상태 설명 알파 0.55 이상으로 가독성 보장
             style: AppTypography.bodySm.copyWith(
-              color: context.themeColors.textPrimaryWithAlpha(0.35),
+              color: context.themeColors.textPrimaryWithAlpha(0.55),
             ),
           ),
         ],
@@ -468,11 +456,8 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
     if (!_validate()) return;
     setState(() => _isSaving = true);
 
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) {
-      setState(() => _isSaving = false);
-      return;
-    }
+    // 로컬 퍼스트: 인증 없이도 태그를 생성/수정할 수 있다
+    final userId = ref.read(currentUserIdProvider) ?? AppConstants.localUserId;
 
     final name = _nameController.text.trim();
 
@@ -502,12 +487,7 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_isEditMode ? '태그 수정에 실패했습니다' : '태그 생성에 실패했습니다'),
-            backgroundColor: ColorTokens.infoHintBg,
-          ),
-        );
+        AppSnackBar.showError(context, _isEditMode ? '태그 수정에 실패했습니다' : '태그 생성에 실패했습니다');
       }
     }
   }
@@ -517,15 +497,17 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.pill)),
       child: BackdropFilter(
         filter: ImageFilter.blur(
           sigmaX: GlassDecoration.elevatedBlurSigma,
           sigmaY: GlassDecoration.elevatedBlurSigma,
         ),
-        child: Container(
+        child: Material(
+          type: MaterialType.transparency,
+          child: Container(
           decoration: GlassDecoration.modal(),
-          padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+          padding: EdgeInsets.fromLTRB(AppSpacing.dialogPadding, AppSpacing.dialogPadding, AppSpacing.dialogPadding, AppSpacing.dialogPadding + bottomInset),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -533,8 +515,8 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
               // 핸들 바
               Center(
                 child: Container(
-                  width: 36,
-                  height: 4,
+                  width: AppLayout.handleBarWidth,
+                  height: AppLayout.handleBarHeight,
                   decoration: BoxDecoration(
                     color: context.themeColors.textPrimaryWithAlpha(0.3),
                     borderRadius: BorderRadius.circular(AppRadius.xs),
@@ -562,6 +544,7 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
               _buildSaveButton(),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -602,8 +585,9 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
             },
             decoration: InputDecoration(
               hintText: '태그 이름 (최대 20자)',
+              // WCAG: 힌트 텍스트 알파 0.55 이상으로 가독성 보장
               hintStyle: AppTypography.bodyLg.copyWith(
-                color: context.themeColors.textPrimaryWithAlpha(0.35),
+                color: context.themeColors.textPrimaryWithAlpha(0.55),
               ),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -642,32 +626,42 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
           ),
         ),
         const SizedBox(height: AppSpacing.mdLg),
-        Row(
+        // Wrap 사용으로 좁은 화면에서도 오버플로우 없이 색상 원을 배치한다
+        Wrap(
+          spacing: AppSpacing.mdLg,
+          runSpacing: AppSpacing.md,
           children: List.generate(8, (i) {
             final color = ColorTokens.eventColor(i);
             final isSelected = i == _selectedColorIndex;
+            // WCAG 2.1: 터치 타겟 최소 44px 보장 (시각적 크기는 유지)
             return GestureDetector(
               onTap: () => setState(() => _selectedColorIndex = i),
-              child: AnimatedContainer(
-                duration: AppAnimation.fast,
-                curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.only(right: AppSpacing.mdLg),
-                width: isSelected ? 28 : 24,
-                height: isSelected ? 28 : 24,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: isSelected
-                      ? Border.all(color: context.themeColors.textPrimary, width: 2.5)
-                      : null,
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.5),
-                            blurRadius: 8,
-                          )
-                        ]
-                      : null,
+              behavior: HitTestBehavior.opaque,
+              child: SizedBox(
+                width: AppLayout.minTouchTarget,
+                height: AppLayout.minTouchTarget,
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: AppAnimation.fast,
+                    curve: Curves.easeOutCubic,
+                    width: isSelected ? AppLayout.colorPickerSize : AppLayout.checkboxLg,
+                    height: isSelected ? AppLayout.colorPickerSize : AppLayout.checkboxLg,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected
+                          ? Border.all(color: context.themeColors.textPrimary, width: AppLayout.borderAccent)
+                          : null,
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.5),
+                                blurRadius: AppLayout.colorPickerShadowBlur,
+                              )
+                            ]
+                          : null,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -694,8 +688,8 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
               : [
                   BoxShadow(
                     color: ColorTokens.main.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    blurRadius: AppLayout.ctaShadowBlur,
+                    offset: const Offset(0, AppLayout.ctaShadowOffsetY),
                   ),
                 ],
         ),
@@ -703,7 +697,7 @@ class _TagFormSheetState extends ConsumerState<_TagFormSheet> {
           child: Text(
             _isSaving ? '저장 중...' : (_isEditMode ? '수정 완료' : '태그 추가'),
             // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-            style: AppTypography.titleMd.copyWith(color: Colors.white),
+            style: AppTypography.titleMd.copyWith(color: ColorTokens.white),
           ),
         ),
       ),

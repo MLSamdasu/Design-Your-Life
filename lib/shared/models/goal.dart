@@ -57,14 +57,14 @@ class Goal {
       return Goal(
         id: map['id']?.toString() ?? '',
         userId: (map['user_id'] ?? map['userId'] ?? '').toString(),
-        title: map['title'] as String,
+        title: (map['title'] as String?) ?? '',
         description: map['description'] as String?,
         period: GoalPeriod.values.firstWhere(
-          (e) => e.name == (map['period'] as String),
+          (e) => e.name == (map['period'] as String?),
           orElse: () => GoalPeriod.yearly,
         ),
-        year: map['year'] as int,
-        month: map['month'] as int?,
+        year: (map['year'] as num?)?.toInt() ?? DateTime.now().year,
+        month: (map['month'] as num?)?.toInt(),
         isCompleted: map['is_completed'] as bool? ??
             map['isCompleted'] as bool? ??
             false,
@@ -100,9 +100,10 @@ class Goal {
     };
   }
 
-  /// UPDATE용 Map (id, user_id 제외)
+  /// UPDATE용 Map (id, user_id 제외 — user_id는 Hive 복원 시 필요)
   Map<String, dynamic> toUpdateMap() {
     return {
+      'user_id': userId,
       'title': title,
       'description': description,
       'period': period.name,

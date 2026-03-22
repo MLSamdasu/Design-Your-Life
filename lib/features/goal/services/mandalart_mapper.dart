@@ -2,6 +2,7 @@
 // Goal(핵심 목표 1개) + List<SubGoal>(8개) + List<List<GoalTask>>(각 8개)를 받아
 // MandalartGrid (9x9 셀 데이터)로 변환한다.
 // MandalartGrid는 서버에 저장하지 않는 뷰 전용 객체다.
+import '../../../core/theme/layout_tokens.dart';
 import '../../../shared/models/goal.dart';
 import '../../../shared/models/sub_goal.dart';
 import '../../../shared/models/goal_task.dart';
@@ -51,8 +52,8 @@ abstract class MandalartMapper {
     required List<GoalTask> tasks,
   }) {
     // 81개 셀 초기화 (모두 빈 셀)
-    final cells = List.generate(9, (row) {
-      return List.generate(9, (col) {
+    final cells = List.generate(AppLayout.mandalartGridSize, (row) {
+      return List.generate(AppLayout.mandalartGridSize, (col) {
         return MandalartCell(
           row: row,
           col: col,
@@ -64,10 +65,11 @@ abstract class MandalartMapper {
       });
     });
 
-    // 핵심 목표 셀 설정 (중앙: row4, col4)
-    cells[4][4] = MandalartCell(
-      row: 4,
-      col: 4,
+    // 핵심 목표 셀 설정 (중앙: mandalartCenterIndex)
+    final center = AppLayout.mandalartCenterIndex;
+    cells[center][center] = MandalartCell(
+      row: center,
+      col: center,
       text: goal.title,
       type: MandalartCellType.core,
       isCompleted: goal.isCompleted,
@@ -76,7 +78,7 @@ abstract class MandalartMapper {
 
     // 세부목표 셀 설정 (8개)
     for (final subGoal in subGoals) {
-      final idx = subGoal.orderIndex.clamp(0, 7);
+      final idx = subGoal.orderIndex.clamp(0, AppLayout.mandalartSubGoalCount - 1);
       final pos = _subGoalPositions[idx];
 
       cells[pos.row][pos.col] = MandalartCell(
@@ -94,13 +96,13 @@ abstract class MandalartMapper {
           .toList();
 
       for (final task in subGoalTasks) {
-        final taskIdx = task.orderIndex.clamp(0, 7);
+        final taskIdx = task.orderIndex.clamp(0, AppLayout.mandalartSubGoalCount - 1);
         final offset = _taskOffsets[taskIdx];
         final taskRow = pos.row + offset.dr;
         final taskCol = pos.col + offset.dc;
 
         // 범위 내 셀에만 배치
-        if (taskRow >= 0 && taskRow < 9 && taskCol >= 0 && taskCol < 9) {
+        if (taskRow >= 0 && taskRow < AppLayout.mandalartGridSize && taskCol >= 0 && taskCol < AppLayout.mandalartGridSize) {
           cells[taskRow][taskCol] = MandalartCell(
             row: taskRow,
             col: taskCol,

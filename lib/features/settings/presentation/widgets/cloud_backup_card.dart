@@ -2,6 +2,7 @@
 // 설정 화면에서 Google Drive 백업/복원 기능을 제공한다.
 // 로그인 상태: 백업하기 + 복원하기 버튼 + 마지막 백업 시각 표시
 // 미로그인 상태: 로그인하여 백업 활성화 버튼 표시
+// 인증 미지원 플랫폼(Windows, macOS 미설정)에서는 안내 메시지를 표시한다.
 // 백업 실행 전 리워드 광고를 표시하고, 보상 확인 후 백업을 진행한다
 // SRP: 백업 UI를 settings_screen.dart에서 분리하여 단일 책임을 유지한다
 import 'package:flutter/material.dart';
@@ -11,8 +12,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/ads/ad_provider.dart';
 import '../../../../core/auth/auth_provider.dart';
+import '../../../../core/auth/auth_service.dart';
 import '../../../../core/backup/backup_provider.dart';
 import '../../../../core/backup/backup_service.dart';
+import '../../../../shared/widgets/app_snack_bar.dart';
 import '../../../../core/router/route_paths.dart';
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
@@ -22,6 +25,9 @@ import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
 
+// 복원 후 전체 데이터 갱신을 위한 Single Source of Truth 임포트
+import '../../../../core/providers/data_store_providers.dart';
+
 /// Google Drive 백업 카드 (F6)
 /// 로컬 퍼스트 아키텍처에서 사용자가 명시적으로 Google Drive 백업을 관리하는 UI
 class CloudBackupCard extends ConsumerWidget {
@@ -29,6 +35,42 @@ class CloudBackupCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 인증 미지원 플랫폼(Windows, macOS 미설정)에서는 안내 메시지를 표시한다
+    if (!AuthService.isAuthSupported) {
+      return GlassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Google Drive 백업',
+              style: AppTypography.titleMd.copyWith(
+                color: context.themeColors.textPrimaryWithAlpha(0.7),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: AppLayout.iconLg,
+                  color: context.themeColors.textPrimaryWithAlpha(0.5),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    '이 플랫폼에서는 Google Drive 백업이 지원되지 않습니다',
+                    style: AppTypography.bodyLg.copyWith(
+                      color: context.themeColors.textPrimaryWithAlpha(0.6),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    }
+
     final isAuthenticated = ref.watch(isAuthenticatedProvider);
     final isBackingUp = ref.watch(isBackingUpProvider);
     final isRestoring = ref.watch(isRestoringProvider);
@@ -93,6 +135,11 @@ class CloudBackupCard extends ConsumerWidget {
     ref.read(isBackingUpProvider.notifier).state = false;
     ref.read(backupProgressProvider.notifier).state = 0.0;
 
+    // P1-11: 백업 성공 후 버전 카운터를 증가시켜 마지막 백업 시각 UI를 갱신한다
+    if (result.isSuccess) {
+      ref.read(lastBackupVersionProvider.notifier).state++;
+    }
+
     if (!context.mounted) return;
 
     // 결과에 따라 피드백 메시지를 표시한다
@@ -120,8 +167,14 @@ class CloudBackupCard extends ConsumerWidget {
 
     ref.read(isRestoringProvider.notifier).state = false;
 
+    // 복원 성공 후 모든 버전 카운터를 증가시켜 전체 파생 Provider를 재평가한다
+    if (result.isSuccess) {
+      bumpAllDataVersions(ref);
+      ref.read(lastBackupVersionProvider.notifier).state++;
+    }
+
     if (!context.mounted) return;
-    _showResultSnackBar(context, result);
+    _showResultSnackBar(context, result, isRestore: true);
   }
 
   // ─── 복원 확인 다이얼로그 ────────────────────────────────────────────────
@@ -172,31 +225,24 @@ class CloudBackupCard extends ConsumerWidget {
 
   // ─── SnackBar 피드백 ─────────────────────────────────────────────────────
   /// 백업/복원 결과에 따라 SnackBar를 표시한다
-  void _showResultSnackBar(BuildContext context, BackupResult result) {
-    String message;
-    Color backgroundColor;
-
+  /// [isRestore]가 true이면 복원 성공 메시지를 표시한다
+  void _showResultSnackBar(
+    BuildContext context,
+    BackupResult result, {
+    bool isRestore = false,
+  }) {
     switch (result.status) {
       case BackupResultStatus.success:
-        message = '백업이 완료되었습니다';
-        backgroundColor = ColorTokens.success;
+        final message = isRestore ? '복원이 완료되었습니다' : '백업이 완료되었습니다';
+        AppSnackBar.showSuccess(context, message);
         break;
       case BackupResultStatus.unauthenticated:
-        message = '로그인이 필요합니다';
-        backgroundColor = ColorTokens.error;
+        AppSnackBar.showError(context, '로그인이 필요합니다');
         break;
       case BackupResultStatus.error:
-        message = result.errorMessage ?? '오류가 발생했습니다';
-        backgroundColor = ColorTokens.error;
+        AppSnackBar.showError(context, result.errorMessage ?? '오류가 발생했습니다');
         break;
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: backgroundColor,
-      ),
-    );
   }
 }
 
@@ -309,9 +355,10 @@ class _LastBackupInfo extends StatelessWidget {
     return Row(
       children: [
         Icon(
+          // WCAG: 히스토리 아이콘 알파 0.50 이상으로 가독성 보장
           Icons.history_rounded,
           size: AppLayout.iconMd,
-          color: context.themeColors.textPrimaryWithAlpha(0.5),
+          color: context.themeColors.textPrimaryWithAlpha(0.50),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -373,36 +420,38 @@ class _BackupActionButton extends StatelessWidget {
           children: [
             if (isLoading)
               SizedBox(
-                width: 16,
-                height: 16,
+                width: AppLayout.iconMd,
+                height: AppLayout.iconMd,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
+                  strokeWidth: AppLayout.spinnerStrokeWidth,
                   // 채워진 버튼: 항상 흰색, 아웃라인 버튼: 테마 악센트
                   color: isOutlined
                       ? context.themeColors.accent
-                      : Colors.white,
+                      : ColorTokens.white,
                 ),
               )
             else
               Icon(
                 icon,
                 size: AppLayout.iconMd,
+                // WCAG: 비활성 아이콘 알파 0.45 이상으로 가독성 보장
                 color: isOutlined
                     ? isDisabled
-                        ? context.themeColors.textPrimaryWithAlpha(0.3)
+                        ? context.themeColors.textPrimaryWithAlpha(0.45)
                         : context.themeColors.accent
-                    : Colors.white,
+                    : ColorTokens.white,
               ),
             const SizedBox(width: AppSpacing.sm),
             Text(
               label,
               style: AppTypography.bodySm.copyWith(
+                // WCAG: 비활성 텍스트 알파 0.45 이상으로 가독성 보장
                 color: isOutlined
                     ? isDisabled
-                        ? context.themeColors.textPrimaryWithAlpha(0.3)
+                        ? context.themeColors.textPrimaryWithAlpha(0.45)
                         : context.themeColors.accent
-                    : Colors.white,
-                fontWeight: FontWeight.w600,
+                    : ColorTokens.white,
+                fontWeight: AppTypography.weightSemiBold,
               ),
             ),
           ],
@@ -449,7 +498,7 @@ class _LoginPromptTile extends StatelessWidget {
                     '로그인하여 백업 활성화',
                     style: AppTypography.bodyLg.copyWith(
                       color: context.themeColors.accent,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: AppTypography.weightSemiBold,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),

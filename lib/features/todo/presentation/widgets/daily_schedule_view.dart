@@ -9,8 +9,12 @@ import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/models/todo.dart';
 import '../../../../shared/widgets/glassmorphic_card.dart';
+import '../../../../shared/providers/tag_provider.dart';
+import '../../../calendar/providers/event_provider.dart';
+import '../../../calendar/presentation/utils/event_dialog_utils.dart';
 import '../../providers/todo_provider.dart';
 import 'event_overlap_layout.dart';
+import 'todo_create_dialog.dart';
 import 'todo_stats_card.dart';
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
@@ -18,13 +22,13 @@ import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 
 /// 타임라인 상수: 1시간당 픽셀 높이
-const double _hourHeight = 60.0;
+const double _hourHeight = AppLayout.timelineHourHeight;
 
 /// 시간 라벨 컬럼 너비
-const double _timeColumnWidth = 44.0;
+const double _timeColumnWidth = AppLayout.timelineTimeColumnMd;
 
 /// 최소 블록 높이 (15분 미만 이벤트)
-const double _minBlockHeight = 24.0;
+const double _minBlockHeight = AppLayout.timelineMinBlockHeight;
 
 /// 하루 일정표 뷰 (서브탭 1)
 /// 좌측: 통계 패널 (고정) / 우측: 시간별 타임라인 (수직 스크롤)
@@ -55,7 +59,7 @@ class _DailyScheduleViewState extends ConsumerState<DailyScheduleView> {
   void _scrollToCurrentTime() {
     final now = DateTime.now();
     // 현재 시간의 Y 위치에서 약간 위로 여유를 두고 스크롤한다
-    final scrollOffset = (now.hour * _hourHeight) - 80;
+    final scrollOffset = (now.hour * _hourHeight) - AppLayout.scheduleAutoScrollOffset;
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         scrollOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
@@ -68,8 +72,21 @@ class _DailyScheduleViewState extends ConsumerState<DailyScheduleView> {
   @override
   Widget build(BuildContext context) {
     final stats = ref.watch(todoStatsProvider);
-    final todos = ref.watch(sortedTodosProvider);
-    final timedTodos = todos.where((t) => t.time != null).toList();
+    // P1-2: 태그 필터가 적용된 목록을 사용한다
+    final todos = ref.watch(filteredTodosProvider);
+    // 캘린더 이벤트를 투두 형태로 변환한 목록을 가져온다
+    final calendarEvents = ref.watch(calendarEventsForTimelineProvider);
+    // 루틴을 투두 형태로 변환한 목록을 가져온다
+    final routineEvents = ref.watch(routinesForTimelineProvider);
+    // 타이머 세션을 투두 형태로 변환한 목록을 가져온다
+    final timerEvents = ref.watch(timerLogsForTimelineProvider);
+    // 투두 + 캘린더 이벤트 + 루틴 + 타이머를 병합하여 타임라인에 표시한다
+    final timedTodos = [
+      ...todos.where((t) => t.time != null),
+      ...calendarEvents.where((t) => t.time != null),
+      ...routineEvents.where((t) => t.time != null),
+      ...timerEvents.where((t) => t.time != null),
+    ];
 
     // LayoutBuilder로 화면 너비에 따라 반응형으로 처리한다
     return Padding(
@@ -78,7 +95,7 @@ class _DailyScheduleViewState extends ConsumerState<DailyScheduleView> {
         builder: (context, constraints) {
           // 좌측 통계 패널 너비: 전체의 30%, 최소 120px, 최대 160px
           final leftWidth =
-              (constraints.maxWidth * 0.30).clamp(120.0, 160.0);
+              (constraints.maxWidth * AppLayout.scheduleStatsPanelRatio).clamp(AppLayout.scheduleStatsPanelMinWidth, AppLayout.scheduleStatsPanelMaxWidth);
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -154,11 +171,13 @@ class _TimelinePanel extends StatelessWidget {
         Expanded(
           child: SingleChildScrollView(
             controller: scrollController,
+            // 하단 여백: 23시를 스크롤 중앙에 배치하기 위한 공간
+            padding: const EdgeInsets.only(bottom: AppLayout.timelineBottomPadding),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 // 이벤트 배치에 사용할 가용 너비 (시간 라벨 제외)
                 final availableWidth =
-                    constraints.maxWidth - _timeColumnWidth - 8;
+                    constraints.maxWidth - _timeColumnWidth - AppLayout.timelineGutter;
 
                 return SizedBox(
                   height: totalHeight,
@@ -184,9 +203,9 @@ class _TimelinePanel extends StatelessWidget {
                         layouts,
                         availableWidth,
                       ),
-                      // 5. 이벤트 블록들 (최대 3개까지 표시)
+                      // 5. 이벤트 블록들 (최대 표시 개수까지만)
                       ...layouts
-                          .where((l) => l.overlapIndex < 3)
+                          .where((l) => l.overlapIndex < AppLayout.timelineMaxVisibleOverlaps)
                           .map((layout) => _buildEventBlock(
                                 layout,
                                 availableWidth,
@@ -217,16 +236,16 @@ class _TimelinePanel extends StatelessWidget {
       // 겹침 수에 따른 배경 불투명도
       double alpha;
       if (range.count <= 1) {
-        alpha = 0.03;
+        alpha = AppLayout.densityAlphaLow;
       } else if (range.count == 2) {
-        alpha = 0.06;
+        alpha = AppLayout.densityAlphaMedium;
       } else {
-        alpha = 0.10;
+        alpha = AppLayout.densityAlphaHigh;
       }
 
       return Positioned(
         top: top,
-        left: _timeColumnWidth + 8,
+        left: _timeColumnWidth + AppLayout.timelineGutter,
         width: availableWidth,
         height: height,
         child: Container(
@@ -248,15 +267,15 @@ class _TimelinePanel extends StatelessWidget {
     // totalOverlaps > 3이고 overlapIndex == 0인 아이템을 기준으로 뱃지를 배치한다
     final overflowGroups = <OverlapLayoutResult>[];
     for (final layout in layouts) {
-      if (layout.totalOverlaps > 3 && layout.overlapIndex == 0) {
+      if (layout.totalOverlaps > AppLayout.timelineMaxVisibleOverlaps && layout.overlapIndex == 0) {
         overflowGroups.add(layout);
       }
     }
 
     return overflowGroups.map((layout) {
-      final extraCount = layout.totalOverlaps - 3;
+      final extraCount = layout.totalOverlaps - AppLayout.timelineMaxVisibleOverlaps;
       return Positioned(
-        top: layout.top + 2,
+        top: layout.top + AppSpacing.xxs,
         right: AppSpacing.xs,
         child: _OverflowBadge(
           count: extraCount,
@@ -279,7 +298,7 @@ class _TimelinePanel extends StatelessWidget {
   ) {
     final blockWidth = availableWidth * layout.widthFraction;
     final leftOffset =
-        _timeColumnWidth + 8 + (availableWidth * layout.leftFraction);
+        _timeColumnWidth + AppLayout.timelineGutter + (availableWidth * layout.leftFraction);
 
     return Positioned(
       top: layout.top,
@@ -325,14 +344,14 @@ class _HourGridLine extends StatelessWidget {
                 color: isCurrentHour
                     ? context.themeColors.textPrimary
                     : context.themeColors.textPrimaryWithAlpha(0.4),
-                fontWeight: isCurrentHour ? FontWeight.w600 : FontWeight.w400,
+                fontWeight: isCurrentHour ? AppTypography.weightSemiBold : AppTypography.weightRegular,
               ),
             ),
           ),
           // 구분선
           Expanded(
             child: Container(
-              height: 1,
+              height: AppLayout.dividerHeight,
               margin: const EdgeInsets.only(top: AppSpacing.sm),
               color: context.themeColors.textPrimaryWithAlpha(0.08),
             ),
@@ -355,14 +374,14 @@ class _CurrentTimeIndicator extends StatelessWidget {
     final top = minuteOffset * (_hourHeight / 60.0);
 
     return Positioned(
-      top: top - 3,
+      top: top - AppLayout.timelineCurrentTimeOffset,
       left: _timeColumnWidth,
       right: 0,
       child: Row(
         children: [
           Container(
-            width: 6,
-            height: 6,
+            width: AppSpacing.sm,
+            height: AppSpacing.sm,
             decoration: BoxDecoration(
               color: ColorTokens.error,
               shape: BoxShape.circle,
@@ -370,7 +389,7 @@ class _CurrentTimeIndicator extends StatelessWidget {
           ),
           Expanded(
             child: Container(
-              height: 1.5,
+              height: AppLayout.lineHeightMedium,
               color: ColorTokens.error.withValues(alpha: 0.7),
             ),
           ),
@@ -380,9 +399,10 @@ class _CurrentTimeIndicator extends StatelessWidget {
   }
 }
 
-/// 겹침 인식 이벤트 블록 위젯
+/// 겹침 인식 이벤트 블록 위젯 (읽기 전용)
 /// 블록 높이와 겹침 상태에 따라 텍스트/스타일을 적응적으로 변경한다
-class _OverlapAwareBlock extends StatelessWidget {
+/// 체크박스/토글 없이 탭 시 상세 보기만 제공한다
+class _OverlapAwareBlock extends ConsumerWidget {
   final Todo todo;
 
   /// 겹침 그룹 내 순서 (0부터)
@@ -401,8 +421,27 @@ class _OverlapAwareBlock extends StatelessWidget {
     required this.blockHeight,
   });
 
+  /// 캘린더 출처 항목인지 확인한다 (id 접두사 'cal_')
+  bool get _isCalendarEvent => todo.id.startsWith('cal_');
+
+  /// 루틴 출처 항목인지 확인한다 (id 접두사 'routine_')
+  bool get _isRoutineEvent => todo.id.startsWith('routine_');
+
+  /// 타이머 세션 항목인지 확인한다 (id 접두사 'timer_')
+  bool get _isTimerEvent => todo.id.startsWith('timer_');
+
+  /// 항목 유형에 따른 아이콘을 반환한다 (일반 투두는 null)
+  IconData? get _typeIcon {
+    if (_isCalendarEvent) return Icons.event_rounded;
+    if (_isRoutineEvent) return Icons.repeat_rounded;
+    if (_isTimerEvent) return Icons.timer_rounded;
+    return null;
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // 완료 상태는 Todo 모델의 isCompleted를 직접 사용한다 (읽기 전용)
+    final isCompleted = todo.isCompleted;
     final color = ColorTokens.eventColor(todo.colorIndex);
     final effectiveHeight = max(blockHeight, _minBlockHeight);
     final isOverlapping = totalOverlaps > 1;
@@ -410,147 +449,438 @@ class _OverlapAwareBlock extends StatelessWidget {
     // 겹침 위치에 따른 배경 불투명도 (뒤쪽이 낮고 앞쪽이 높다)
     final double bgAlpha;
     if (!isOverlapping) {
-      bgAlpha = 0.25;
+      bgAlpha = 0.15;
     } else {
-      bgAlpha = 0.20 + (overlapIndex * 0.05);
+      bgAlpha = 0.12 + (overlapIndex * 0.04);
     }
-
-    // 겹침 위치에 따른 좌측 컬러 바 너비 (겹칠수록 두꺼워진다)
-    final leftBarWidth = isOverlapping ? 2.0 + (overlapIndex * 0.5) : 3.0;
 
     // 2번째 이상 겹침 카드에 깊이감 그림자 추가
     final shadows = overlapIndex > 0
         ? [
             BoxShadow(
-              color: ColorTokens.shadowBase.withValues(alpha: 0.12),
-              blurRadius: 4,
-              offset: const Offset(-2, 1),
+              color: ColorTokens.shadowBase.withValues(alpha: AppLayout.overlapShadowAlpha),
+              blurRadius: AppLayout.overlapShadowBlur,
+              offset: const Offset(-AppSpacing.xxs, AppLayout.borderThin),
             ),
           ]
         : <BoxShadow>[];
 
+    // 완료 상태에 따른 불투명도 (완료 시 50% 투명도로 시각적 구분)
+    final blockOpacity = isCompleted ? 0.5 : 1.0;
+
+    // 좌측 컬러 바 너비: 4px 고정 (모던 타임라인 UI 패턴)
+    const colorBarWidth = 4.0;
+
     return GestureDetector(
-      onTap: () {
-        // 투두 상세 보기 또는 편집으로 연결할 수 있다
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: bgAlpha),
-          borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border(
-            left: BorderSide(color: color, width: leftBarWidth),
+      onTap: () => _handleTap(context, ref),
+      child: AnimatedOpacity(
+        opacity: blockOpacity,
+        duration: AppAnimation.slow,
+        curve: Curves.easeInOut,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: bgAlpha),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            boxShadow: shadows,
           ),
-          boxShadow: shadows,
+          child: Row(
+            children: [
+              // 좌측 컬러 바: 이벤트 색상 100% 불투명도
+              Container(
+                width: colorBarWidth,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(AppRadius.lg),
+                    bottomLeft: Radius.circular(AppRadius.lg),
+                  ),
+                ),
+              ),
+              // 콘텐츠 영역: 패딩 포함
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.md,
+                  ),
+                  child: _buildAdaptiveContent(context, effectiveHeight, isCompleted),
+                ),
+              ),
+            ],
+          ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xs),
-        child: _buildAdaptiveContent(context, effectiveHeight, color),
       ),
     );
   }
 
-  /// 블록 높이와 겹침 상태에 따라 적응적 콘텐츠를 생성한다
+  /// 탭 시 유형별 상세 모달을 표시한다 (모든 유형 공통 바텀시트)
+  void _handleTap(BuildContext context, WidgetRef ref) {
+    _showDetailsModal(context, ref);
+  }
+
+  /// 유형 라벨을 반환한다 (투두/캘린더/루틴/타이머)
+  String get _typeLabel {
+    if (_isCalendarEvent) return '캘린더';
+    if (_isRoutineEvent) return '루틴';
+    if (_isTimerEvent) return '타이머';
+    return '투두';
+  }
+
+  /// 편집 가능 여부를 반환한다 (투두, 캘린더만 편집 가능)
+  bool get _isEditable => !_isRoutineEvent && !_isTimerEvent;
+
+  /// 자동 생성 항목의 안내 메시지를 반환한다
+  String? get _autoGeneratedMessage {
+    if (_isRoutineEvent) return '자동 생성된 루틴입니다';
+    if (_isTimerEvent) return '포모도로 타이머 기록입니다';
+    return null;
+  }
+
+  /// 모든 유형에 공통으로 사용되는 상세 모달 바텀시트를 표시한다
+  void _showDetailsModal(BuildContext context, WidgetRef ref) {
+    final color = ColorTokens.eventColor(todo.colorIndex);
+    final startStr = _formatTime(todo.startTime);
+    final endStr = _formatTime(todo.endTime);
+    final timeRangeStr = endStr != null ? '$startStr ~ $endStr' : (startStr ?? '');
+    final durationStr = _formatDuration(todo.startTime, todo.endTime);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: ColorTokens.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.all(AppSpacing.xxl),
+        decoration: BoxDecoration(
+          color: context.themeColors.dialogSurface,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.huge),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 컬러 바 + 타이틀 + 유형 뱃지
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    todo.title,
+                    style: AppTypography.titleMd.copyWith(
+                      color: context.themeColors.textPrimary,
+                    ),
+                  ),
+                ),
+                // 유형 뱃지
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.xxs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
+                  ),
+                  child: Text(
+                    _typeLabel,
+                    style: AppTypography.captionMd.copyWith(
+                      color: color,
+                      fontWeight: AppTypography.weightSemiBold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            // 시간 범위 정보
+            if (timeRangeStr.isNotEmpty) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time_rounded,
+                    size: 16,
+                    color: context.themeColors.textPrimaryWithAlpha(0.6),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    timeRangeStr,
+                    style: AppTypography.bodyMd.copyWith(
+                      color: context.themeColors.textPrimaryWithAlpha(0.8),
+                    ),
+                  ),
+                  if (durationStr != null) ...[
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      '($durationStr)',
+                      style: AppTypography.captionMd.copyWith(
+                        color: context.themeColors.textPrimaryWithAlpha(0.5),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            // 메모가 있는 경우 표시
+            if (todo.memo != null && todo.memo!.isNotEmpty) ...[
+              Text(
+                todo.memo!,
+                style: AppTypography.bodyMd.copyWith(
+                  color: context.themeColors.textPrimaryWithAlpha(0.7),
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            // 자동 생성 항목 안내 메시지 (루틴/타이머)
+            if (_autoGeneratedMessage != null) ...[
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline_rounded,
+                    size: 16,
+                    color: context.themeColors.textPrimaryWithAlpha(0.5),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    _autoGeneratedMessage!,
+                    style: AppTypography.captionMd.copyWith(
+                      color: context.themeColors.textPrimaryWithAlpha(0.5),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            // 편집 버튼 (투두, 캘린더만)
+            if (_isEditable) ...[
+              const SizedBox(height: AppSpacing.sm),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton.icon(
+                  onPressed: () {
+                    // 바텀시트를 먼저 닫고 편집 다이얼로그를 연다
+                    Navigator.of(ctx).pop();
+                    _openEditDialog(context, ref);
+                  },
+                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  label: const Text('편집'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: color,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.mdLg,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 유형에 따른 편집 다이얼로그를 연다
+  void _openEditDialog(BuildContext context, WidgetRef ref) {
+    if (_isCalendarEvent) {
+      // 캘린더 이벤트: cal_ 접두사를 제거하고 원본 이벤트를 조회한다
+      final rawId = todo.id.replaceFirst('cal_', '');
+      // 반복 인스턴스 ID 처리: {uuid}_{yyyymmdd} → 원본 uuid 추출
+      String baseEventId = rawId;
+      if (baseEventId.length > 36 && baseEventId.contains('_')) {
+        final lastUnderscoreIdx = baseEventId.lastIndexOf('_');
+        final candidate = baseEventId.substring(0, lastUnderscoreIdx);
+        if (candidate.length == 36) {
+          baseEventId = candidate;
+        }
+      }
+      final repository = ref.read(eventRepositoryProvider);
+      final event = repository.getEventById(baseEventId);
+      if (event == null) return;
+      showEventEditDialog(context: context, ref: ref, event: event);
+    } else {
+      // 일반 투두: 수정 다이얼로그를 열고 결과를 저장한다
+      _openTodoEditDialog(context, ref);
+    }
+  }
+
+  /// 투두 수정 다이얼로그를 열고 결과를 반영한다
+  Future<void> _openTodoEditDialog(BuildContext context, WidgetRef ref) async {
+    final result = await TodoCreateDialog.showEdit(
+      context,
+      existingTodo: todo,
+    );
+    if (result == null) return;
+
+    // 선택된 태그 ID를 Tag 객체 정보가 포함된 Map 목록으로 변환한다
+    final List<Map<String, dynamic>> tagMaps = result.tagIds.map((tagId) {
+      final tag = ref.read(tagByIdProvider(tagId));
+      if (tag == null) return null;
+      return <String, dynamic>{
+        'id': tag.id,
+        'name': tag.name,
+        'color_index': tag.colorIndex,
+      };
+    }).whereType<Map<String, dynamic>>().toList();
+
+    final updateTodo = ref.read(updateTodoProvider);
+    await updateTodo(
+      todo.id,
+      todo.copyWith(
+        title: result.title,
+        // P1-16: 다이얼로그에서 변경된 날짜를 반영한다
+        date: result.date,
+        startTime: result.startTime,
+        clearStartTime: result.startTime == null,
+        endTime: result.endTime,
+        clearEndTime: result.endTime == null,
+        color: result.colorIndex.toString(),
+        memo: result.memo,
+        clearMemo: result.memo == null,
+        tags: tagMaps,
+      ),
+    );
+  }
+
+  /// 블록 높이에 따라 적응적 콘텐츠를 생성한다
   ///
-  /// | 높이       | 제목      | 시간 표시           |
-  /// |------------|-----------|---------------------|
-  /// | >= 60px    | 2줄       | "HH:MM - HH:MM"    |
-  /// | 40~59px    | 1줄       | "HH:MM" 인라인      |
-  /// | 30~39px    | 1줄       | 숨김 (툴팁)         |
-  /// | < 30px     | 6자 + ... | 숨김                |
+  /// | 높이       | 내용                                         |
+  /// |------------|----------------------------------------------|
+  /// | >= 60px    | 유형 아이콘 + 제목 1줄 + "09:00 ~ 10:30" + 소요시간 |
+  /// | 40~59px    | 유형 아이콘 + 제목 1줄 (시간은 위치에서 확인)    |
+  /// | 30~39px    | 제목 1줄 (툴팁으로 전체 정보)                  |
+  /// | < 30px     | 축약 제목 (툴팁)                              |
   Widget _buildAdaptiveContent(
     BuildContext context,
     double height,
-    Color eventColor,
+    bool isCompleted,
   ) {
     final isOverlapping = totalOverlaps > 1;
-    // 겹침 시 폰트를 한 단계 작게 한다
     final titleStyle = isOverlapping
         ? AppTypography.captionMd
-        : AppTypography.captionLg;
-    final timeStyle = AppTypography.captionSm;
+        : AppTypography.bodyMd;
 
-    final textColor = todo.isCompleted
+    final textColor = isCompleted
         ? context.themeColors.textPrimaryWithAlpha(0.5)
         : context.themeColors.textPrimary;
-    final decoration =
-        todo.isCompleted ? TextDecoration.lineThrough : null;
+    // 취소선은 AnimatedStrikethrough 위젯이 외부에서 처리하므로 텍스트에 적용하지 않는다
+    final typeIcon = _typeIcon;
 
-    // 시간 문자열 생성
+    // 시간 문자열 생성 ("09:00 ~ 10:30" 형식)
     final startStr = _formatTime(todo.startTime);
     final endStr = _formatTime(todo.endTime);
-    final timeRangeStr = endStr != null ? '$startStr - $endStr' : startStr;
+    final timeRangeStr = endStr != null ? '$startStr ~ $endStr' : startStr;
+    final durationStr = _formatDuration(todo.startTime, todo.endTime);
 
-    if (height >= 60) {
-      // 큰 블록: 제목 2줄 + 시간 범위 표시
+    if (height >= AppLayout.eventBlockLargeThreshold) {
+      // 큰 블록 (1시간 이상): 제목 + 시간 범위 + 소요시간
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            todo.title,
-            style: titleStyle.copyWith(
-              color: textColor,
-              decoration: decoration,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          // 유형 아이콘 + 제목
+          Row(
+            children: [
+              if (typeIcon != null) ...[
+                Icon(
+                  typeIcon,
+                  size: 12,
+                  color: context.themeColors.textPrimaryWithAlpha(0.5),
+                ),
+                const SizedBox(width: AppSpacing.xxs),
+              ],
+              Expanded(
+                child: Text(
+                  todo.title,
+                  style: titleStyle.copyWith(
+                    color: textColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
+          // 시간 범위
           if (timeRangeStr != null) ...[
             const SizedBox(height: AppSpacing.xxs),
-            Text(
-              timeRangeStr,
-              style: timeStyle.copyWith(
-                color: context.themeColors.textPrimaryWithAlpha(0.5),
-              ),
-              maxLines: 1,
+            Row(
+              children: [
+                Text(
+                  timeRangeStr,
+                  style: AppTypography.captionSm.copyWith(
+                    color: context.themeColors.textPrimaryWithAlpha(0.6),
+                  ),
+                  maxLines: 1,
+                ),
+                // 소요시간 (공간이 있을 때만)
+                if (durationStr != null && !isOverlapping) ...[
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    durationStr,
+                    style: AppTypography.captionSm.copyWith(
+                      color: context.themeColors.textPrimaryWithAlpha(0.4),
+                    ),
+                    maxLines: 1,
+                  ),
+                ],
+              ],
             ),
           ],
         ],
       );
-    } else if (height >= 40) {
-      // 중간 블록: 제목 1줄 + 시간 인라인
-      // 겹침 시에는 시간을 숨긴다 (공간 부족)
+    } else if (height >= AppLayout.eventBlockMediumThreshold) {
+      // 중간 블록 (40~59px): 유형 아이콘 + 제목만 (시간은 타임라인 위치로 확인)
       return Row(
         children: [
+          if (typeIcon != null) ...[
+            Icon(
+              typeIcon,
+              size: 12,
+              color: context.themeColors.textPrimaryWithAlpha(0.5),
+            ),
+            const SizedBox(width: AppSpacing.xxs),
+          ],
           Expanded(
             child: Text(
               todo.title,
               style: titleStyle.copyWith(
                 color: textColor,
-                decoration: decoration,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (!isOverlapping && startStr != null) ...[
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              startStr,
-              style: timeStyle.copyWith(
-                color: context.themeColors.textPrimaryWithAlpha(0.4),
-              ),
-            ),
-          ],
         ],
       );
-    } else if (height >= 30) {
-      // 작은 블록: 제목 1줄만
+    } else if (height >= AppLayout.eventBlockSmallThreshold) {
+      // 작은 블록 (30~39px): 제목만 + 툴팁
       return Tooltip(
         message: '${todo.title} ($timeRangeStr)',
         child: Text(
           todo.title,
-          style: titleStyle.copyWith(
+          style: (isOverlapping ? AppTypography.captionSm : AppTypography.captionMd).copyWith(
             color: textColor,
-            decoration: decoration,
           ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
       );
     } else {
-      // 매우 작은 블록: 6자 축약
-      final shortTitle = todo.title.length > 6
-          ? '${todo.title.substring(0, 6)}...'
+      // 매우 작은 블록: 축약 제목 + 툴팁
+      final shortTitle = todo.title.length > AppLayout.eventBlockTruncateLength
+          ? '${todo.title.substring(0, AppLayout.eventBlockTruncateLength)}...'
           : todo.title;
       return Tooltip(
         message: '${todo.title} ($timeRangeStr)',
@@ -558,7 +888,6 @@ class _OverlapAwareBlock extends StatelessWidget {
           shortTitle,
           style: AppTypography.captionSm.copyWith(
             color: textColor,
-            decoration: decoration,
           ),
           maxLines: 1,
           overflow: TextOverflow.clip,
@@ -573,6 +902,21 @@ class _OverlapAwareBlock extends StatelessWidget {
     final h = time.hour.toString().padLeft(2, '0');
     final m = time.minute.toString().padLeft(2, '0');
     return '$h:$m';
+  }
+
+  /// 시작~종료 시간의 소요시간을 한글 문자열로 반환한다
+  /// 예: "1시간 30분", "45분"
+  String? _formatDuration(TimeOfDay? start, TimeOfDay? end) {
+    if (start == null || end == null) return null;
+    final startMinutes = start.hour * 60 + start.minute;
+    final endMinutes = end.hour * 60 + end.minute;
+    final diff = endMinutes - startMinutes;
+    if (diff <= 0) return null;
+    final hours = diff ~/ 60;
+    final minutes = diff % 60;
+    if (hours > 0 && minutes > 0) return '$hours시간 $minutes분';
+    if (hours > 0) return '$hours시간';
+    return '$minutes분';
   }
 }
 
@@ -601,9 +945,9 @@ class _OverflowBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: [
             BoxShadow(
-              color: ColorTokens.main.withValues(alpha: 0.3),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
+              color: ColorTokens.main.withValues(alpha: AppLayout.badgeShadowAlpha),
+              blurRadius: AppLayout.overlapShadowBlur,
+              offset: const Offset(0, AppSpacing.xxs),
             ),
           ],
         ),
@@ -611,8 +955,8 @@ class _OverflowBadge extends StatelessWidget {
           '+$count',
           style: AppTypography.captionLg.copyWith(
             // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
+            color: ColorTokens.white,
+            fontWeight: AppTypography.weightSemiBold,
           ),
         ),
       ),
@@ -623,14 +967,13 @@ class _OverflowBadge extends StatelessWidget {
   void _showOverflowSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: ColorTokens.transparent,
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(AppSpacing.xxl),
         decoration: BoxDecoration(
-          color: context.themeColors.textPrimaryWithAlpha(0.95).withValues(
-                alpha: 1.0,
-              ),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          // 다이얼로그 서피스 색상을 사용하여 텍스트 가시성을 보장한다
+          color: context.themeColors.dialogSurface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.huge)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -659,7 +1002,7 @@ class _OverflowBadge extends StatelessWidget {
                   color: color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AppRadius.lgXl),
                   border: Border(
-                    left: BorderSide(color: color, width: 3),
+                    left: BorderSide(color: color, width: AppSpacing.xxs),
                   ),
                 ),
                 child: Row(

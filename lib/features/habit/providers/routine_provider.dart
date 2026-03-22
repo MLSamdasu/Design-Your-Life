@@ -1,9 +1,8 @@
-// F4: 루틴 Riverpod Provider
-// routinesProvider: 루틴 목록 (FutureProvider)
-// activeRoutinesProvider: 활성 루틴 목록. F2(캘린더)가 watch한다.
-// 로컬 퍼스트 아키텍처: Hive 로컬 박스에서 데이터를 조회한다.
+// F4: 루틴 Riverpod Provider (Single Source of Truth 아키텍처)
+// allRoutinesRawProvider에서 파생하여 CRUD 시 자동 동기화된다.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/auth/auth_provider.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../core/providers/data_store_providers.dart';
 import '../../../core/providers/global_providers.dart';
 import '../../../shared/models/routine.dart';
 import '../services/routine_repository.dart';
@@ -17,80 +16,100 @@ final routineRepositoryProvider = Provider<RoutineRepository>((ref) {
   return RoutineRepository(cache: cache);
 });
 
-// ─── 루틴 목록 Provider ───────────────────────────────────────────────────
+// ─── 루틴 목록 Provider (Single Source of Truth에서 파생) ──────────────────
 
-/// 전체 루틴 목록 Provider (FutureProvider)
-/// 로컬 Hive에서 동기적으로 읽되 FutureProvider 인터페이스를 유지한다
-final routinesProvider = FutureProvider<List<Routine>>((ref) async {
-  final userId = ref.watch(currentUserIdProvider);
-  final repository = ref.watch(routineRepositoryProvider);
-
-  if (userId == null) return const [];
-  // 로컬 퍼스트: Hive에서 동기 조회한다
-  return repository.getRoutines();
+/// 전체 루틴 목록 Provider (동기 Provider)
+/// allRoutinesRawProvider(Single Source of Truth)에서 파생한다
+/// Hive 조회는 모두 동기 연산이므로 FutureProvider가 불필요하다.
+final routinesProvider = Provider<List<Routine>>((ref) {
+  final allRoutines = ref.watch(allRoutinesRawProvider);
+  return allRoutines.map((r) => Routine.fromMap(r)).toList();
 });
 
-/// 활성 루틴만 Provider (FutureProvider)
-/// F2(캘린더)에서 타임라인 연동에 사용한다
-final activeRoutinesProvider = FutureProvider<List<Routine>>((ref) async {
-  final userId = ref.watch(currentUserIdProvider);
-  final repository = ref.watch(routineRepositoryProvider);
-
-  if (userId == null) return const [];
-  // 로컬 퍼스트: Hive에서 is_active 필터링하여 동기 조회한다
-  return repository.getActiveRoutines();
+/// 활성 루틴만 Provider (동기 Provider)
+/// allRoutinesRawProvider(Single Source of Truth)에서 파생한다
+/// Hive 조회는 모두 동기 연산이므로 FutureProvider가 불필요하다.
+final activeRoutinesProvider = Provider<List<Routine>>((ref) {
+  final allRoutines = ref.watch(allRoutinesRawProvider);
+  return allRoutines
+      .where((r) => r['is_active'] == true || r['isActive'] == true)
+      .map((r) => Routine.fromMap(r))
+      .toList();
 });
 
 // ─── 루틴 CRUD 액션 Provider ────────────────────────────────────────────────
 
 /// 새 루틴 생성 액션
 final createRoutineProvider = Provider<Future<void> Function(Routine)>((ref) {
-  final userId = ref.watch(currentUserIdProvider);
   final repository = ref.watch(routineRepositoryProvider);
 
   return (Routine routine) async {
-    if (userId == null) return;
-    await repository.createRoutine(routine);
-    // 생성 후 루틴 목록을 다시 로드한다
-    ref.invalidate(routinesProvider);
-    ref.invalidate(activeRoutinesProvider);
+    try {
+      await repository.createRoutine(routine);
+      // 버전 카운터 증가 → 홈/캘린더/습관 탭 모두 자동 갱신
+      ref.read(routineDataVersionProvider.notifier).state++;
+    } catch (e, st) {
+      Error.throwWithStackTrace(e, st);
+    }
   };
 });
 
 /// 루틴 활성/비활성 토글 액션
 final toggleRoutineActiveProvider =
     Provider<Future<void> Function(String, bool)>((ref) {
-  final userId = ref.watch(currentUserIdProvider);
   final repository = ref.watch(routineRepositoryProvider);
 
   return (String routineId, bool isActive) async {
-    if (userId == null) return;
-    await repository.toggleRoutineActive(routineId, isActive);
-    // 토글 후 루틴 목록을 다시 로드한다
-    ref.invalidate(routinesProvider);
-    ref.invalidate(activeRoutinesProvider);
+    try {
+      await repository.toggleRoutineActive(routineId, isActive);
+      // 버전 카운터 증가 → 모든 파생 Provider 자동 갱신
+      ref.read(routineDataVersionProvider.notifier).state++;
+    } catch (e, st) {
+      Error.throwWithStackTrace(e, st);
+    }
+  };
+});
+
+/// 루틴 수정 액션
+final updateRoutineProvider =
+    Provider<Future<void> Function(String, Routine)>((ref) {
+  final repository = ref.watch(routineRepositoryProvider);
+
+  return (String routineId, Routine routine) async {
+    try {
+      await repository.updateRoutine(routineId, routine);
+      // 버전 카운터 증가 → 모든 파생 Provider 자동 갱신
+      ref.read(routineDataVersionProvider.notifier).state++;
+    } catch (e, st) {
+      Error.throwWithStackTrace(e, st);
+    }
   };
 });
 
 /// 루틴 삭제 액션
 final deleteRoutineProvider =
     Provider<Future<void> Function(String)>((ref) {
-  final userId = ref.watch(currentUserIdProvider);
   final repository = ref.watch(routineRepositoryProvider);
 
   return (String routineId) async {
-    if (userId == null) return;
-    await repository.deleteRoutine(routineId);
-    // 삭제 후 루틴 목록을 다시 로드한다
-    ref.invalidate(routinesProvider);
-    ref.invalidate(activeRoutinesProvider);
-  };
-});
-
-/// 새 루틴 ID 생성 헬퍼
-/// REST API에서는 서버가 ID를 할당하므로 클라이언트에서 임시 ID를 생성한다
-final generateRoutineIdProvider = Provider<String Function()>((ref) {
-  return () {
-    return DateTime.now().millisecondsSinceEpoch.toString();
+    try {
+      // 루틴 삭제 전 관련 RoutineLog를 먼저 정리한다 (고아 데이터 방지)
+      final cache = ref.read(hiveCacheServiceProvider);
+      final allLogs = cache.getAll(AppConstants.routineLogsBox);
+      for (final log in allLogs) {
+        if ((log['routine_id'] ?? log['routineId']) == routineId) {
+          final logId = log['id']?.toString();
+          if (logId != null && logId.isNotEmpty) {
+            await cache.delete(AppConstants.routineLogsBox, logId);
+          }
+        }
+      }
+      await repository.deleteRoutine(routineId);
+      // 버전 카운터 증가 → 모든 파생 Provider 자동 갱신
+      ref.read(routineDataVersionProvider.notifier).state++;
+      ref.read(routineLogDataVersionProvider.notifier).state++;
+    } catch (e, st) {
+      Error.throwWithStackTrace(e, st);
+    }
   };
 });

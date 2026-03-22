@@ -8,6 +8,7 @@ import '../../../core/theme/theme_colors.dart';
 import 'onboarding_shared_widgets.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
+import '../../../core/theme/layout_tokens.dart';
 
 /// 개인정보 처리 동의 단계 위젯
 /// 필수 동의 체크박스 + 개인정보 처리방침 링크 + 다음 버튼
@@ -37,15 +38,15 @@ class ConsentStep extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.massive),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
             child: Container(
-              padding: const EdgeInsets.all(28),
+              padding: const EdgeInsets.all(AppLayout.loginCardPadding),
               decoration: BoxDecoration(
                 color: context.themeColors.textPrimaryWithAlpha(0.15),
                 borderRadius: BorderRadius.circular(AppRadius.massive),
                 border: Border.all(
                   color: context.themeColors.textPrimaryWithAlpha(0.25),
-                  width: 1,
+                  width: AppLayout.borderThin,
                 ),
               ),
               child: Column(
@@ -90,7 +91,7 @@ class ConsentStep extends StatelessWidget {
                                     text: '[필수] ',
                                     style: TextStyle(
                                       color: context.themeColors.accent,
-                                      fontWeight: FontWeight.w700,
+                                      fontWeight: AppTypography.weightBold,
                                     ),
                                   ),
                                   TextSpan(
@@ -153,7 +154,7 @@ class ConsentContent extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  width: 70,
+                  width: AppLayout.consentLabelWidth,
                   child: Text(
                     item.$1,
                     style: AppTypography.captionLg.copyWith(

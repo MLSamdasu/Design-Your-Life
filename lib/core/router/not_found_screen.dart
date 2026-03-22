@@ -4,6 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/color_tokens.dart';
+import '../theme/layout_tokens.dart';
+import '../theme/radius_tokens.dart';
+import '../theme/spacing_tokens.dart';
 import '../theme/typography_tokens.dart';
 import '../../core/theme/theme_colors.dart';
 import 'route_paths.dart';
@@ -19,28 +22,28 @@ class NotFoundScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Glassmorphism 배경색 (gradientMid 기반)
-      backgroundColor: ColorTokens.gradientMid,
+      // 투명 배경: _AppBackground의 테마 그래디언트가 비치도록 한다
+      backgroundColor: ColorTokens.transparent,
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(AppSpacing.huge),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // 에러 아이콘
               Icon(
                 Icons.link_off_rounded,
-                size: 64,
+                size: AppLayout.iconEmptyLg + AppSpacing.md,
                 color: context.themeColors.textPrimaryWithAlpha(0.7),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xxxl),
               // 404 제목
               Text(
                 '페이지를 찾을 수 없어요',
                 style: AppTypography.headingSm.copyWith(color: context.themeColors.textPrimary),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.md),
               // 설명 텍스트
               Text(
                 '요청한 페이지가 존재하지 않거나 이동되었어요.',
@@ -49,7 +52,7 @@ class NotFoundScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.huge),
               // 홈으로 이동 버튼
               ElevatedButton(
                 onPressed: () => context.go(RoutePaths.home),
@@ -57,11 +60,11 @@ class NotFoundScreen extends StatelessWidget {
                   backgroundColor: context.themeColors.textPrimaryWithAlpha(0.2),
                   foregroundColor: context.themeColors.textPrimary,
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 14,
+                    horizontal: AppSpacing.xxxl,
+                    vertical: AppSpacing.lgXl,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.xl),
                     side: BorderSide(
                       color: context.themeColors.textPrimaryWithAlpha(0.3),
                     ),
@@ -71,8 +74,8 @@ class NotFoundScreen extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.home_rounded, size: 18),
-                    const SizedBox(width: 8),
+                    Icon(Icons.home_rounded, size: AppLayout.iconLg),
+                    const SizedBox(width: AppSpacing.md),
                     Text(
                       '홈으로 돌아가기',
                       style: AppTypography.titleMd.copyWith(

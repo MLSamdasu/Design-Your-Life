@@ -4,6 +4,8 @@
 // Write-Through + Read-from-Cache 패턴을 구현한다.
 // 모든 Box는 HiveInitializer에서 <dynamic>으로 열리므로,
 // 여기서도 반드시 <dynamic>으로 접근해야 타입 불일치 오류를 방지한다.
+import 'dart:developer' as developer;
+
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../constants/app_constants.dart';
@@ -13,38 +15,44 @@ import '../constants/app_constants.dart';
 /// Write-Through 패턴: API 쓰기 성공 후 캐시 갱신
 /// Read-from-Cache 패턴: 캐시 우선 반환 + 백그라운드 서버 동기화
 class HiveCacheService {
+  /// 동일 box+id에 대한 동시 비동기 업데이트를 직렬화하기 위한 락 맵
+  /// Flutter는 싱글 이솔레이트이지만, async gap 사이에 인터리빙이 발생할 수 있다
+  final Map<String, Future<void>> _locks = {};
+
+  // ─── 안전한 Box 접근 헬퍼 ──────────────────────────────────────────────────
+  /// Hive.box() 호출을 감싸서 박스가 열리지 않았거나 닫힌 경우를 처리한다
+  /// 실패 시 developer.log로 기록하고 명확한 에러 메시지로 다시 던진다
+  Box<dynamic> _box(String boxName) {
+    try {
+      return Hive.box<dynamic>(boxName);
+    } catch (e) {
+      developer.log(
+        'Hive 박스 접근 실패: $boxName — $e',
+        name: 'HiveCacheService',
+        error: e,
+      );
+      throw HiveError(
+        'Hive 박스 "$boxName"에 접근할 수 없습니다. '
+        '박스가 열려 있는지 확인하세요: $e',
+      );
+    }
+  }
+
   // ─── 설정 값 읽기/쓰기 ───────────────────────────────────────────────────
   /// 앱 설정 값 저장 (테마 모드, 마지막 탭 등)
   /// value는 Hive가 지원하는 기본 타입(String, int, bool, double, DateTime)만 허용한다
   Future<void> saveSetting(String key, Object value) async {
-    // HiveInitializer가 <dynamic>으로 열었으므로 동일 타입으로 접근한다
-    final box = Hive.box<dynamic>(AppConstants.settingsBox);
+    final box = _box(AppConstants.settingsBox);
     await box.put(key, value);
   }
 
   /// 앱 설정 값 읽기
   T? readSetting<T>(String key) {
-    final box = Hive.box<dynamic>(AppConstants.settingsBox);
+    final box = _box(AppConstants.settingsBox);
     final value = box.get(key);
     // 타입 안전 반환: 캐스팅 실패 시 null 반환
     if (value is T) return value;
     return null;
-  }
-
-  // ─── 동기화 메타데이터 ────────────────────────────────────────────────────
-  /// 마지막 동기화 시각 저장
-  Future<void> saveLastSyncTime(String boxName, DateTime time) async {
-    final box = Hive.box<dynamic>(AppConstants.syncMetaBox);
-    await box.put('lastSync_$boxName', time.toIso8601String());
-  }
-
-  /// 마지막 동기화 시각 읽기
-  DateTime? readLastSyncTime(String boxName) {
-    final box = Hive.box<dynamic>(AppConstants.syncMetaBox);
-    final raw = box.get('lastSync_$boxName');
-    // dynamic에서 String으로 안전하게 캐스팅한다
-    if (raw is! String) return null;
-    return DateTime.tryParse(raw);
   }
 
   // ─── 일반 데이터 캐시 ────────────────────────────────────────────────────
@@ -52,57 +60,53 @@ class HiveCacheService {
   /// 동시에 해당 키의 타임스탬프를 syncMetaBox에 기록한다
   Future<void> put(
       String boxName, String key, Map<String, dynamic> data) async {
-    final box = Hive.box<dynamic>(boxName);
+    final box = _box(boxName);
     await box.put(key, data);
     // 캐시 갱신 시각을 기록하여 불필요한 재캐싱을 방지한다
     await _saveCacheTimestamp(boxName, key);
   }
 
   /// 캐시 박스에서 JSON 데이터를 읽는다
+  /// 깊은 복사를 수행하여 Hive 내부 객체 참조를 차단한다
   Map<String, dynamic>? get(String boxName, String key) {
-    final box = Hive.box<dynamic>(boxName);
+    final box = _box(boxName);
     final data = box.get(key);
     // dynamic에서 Map으로 안전하게 캐스팅한다
     if (data is! Map) return null;
-    // Map<dynamic, dynamic>을 Map<String, dynamic>으로 변환
-    return data.map((k, v) => MapEntry(k.toString(), v));
+    // Map<dynamic, dynamic>을 Map<String, dynamic>으로 깊은 복사한다
+    // 중첩 Map/List가 Hive 내부 객체를 직접 참조하면 외부 수정이 캐시를 오염시킬 수 있다
+    return _deepCopyMap(data);
   }
 
-  /// 캐시 박스에 리스트 데이터를 저장한다
-  /// 동시에 해당 키의 타임스탬프를 syncMetaBox에 기록한다
-  Future<void> putList(
-      String boxName, String key, List<Map<String, dynamic>> items) async {
-    final box = Hive.box<dynamic>(boxName);
-    await box.put(key, items);
-    // 캐시 갱신 시각을 기록하여 불필요한 재캐싱을 방지한다
-    await _saveCacheTimestamp(boxName, key);
+  /// Map을 재귀적으로 깊은 복사한다
+  /// Hive 내부 데이터와의 참조 공유를 완전히 차단한다
+  static Map<String, dynamic> _deepCopyMap(Map<dynamic, dynamic> source) {
+    return source.map((k, v) => MapEntry(k.toString(), _deepCopyValue(v)));
   }
 
-  /// 캐시 박스에서 리스트 데이터를 읽는다
-  List<Map<String, dynamic>>? getList(String boxName, String key) {
-    final box = Hive.box<dynamic>(boxName);
-    final data = box.get(key);
-    // dynamic에서 List로 안전하게 캐스팅한다
-    if (data is! List) return null;
-    // 각 요소를 Map<String, dynamic>으로 안전하게 변환
-    return data
-        .whereType<Map<dynamic, dynamic>>()
-        .map((e) => e.map((k, v) => MapEntry(k.toString(), v)))
-        .toList();
+  /// 값을 재귀적으로 깊은 복사한다
+  static dynamic _deepCopyValue(dynamic value) {
+    if (value is Map) {
+      return _deepCopyMap(value);
+    } else if (value is List) {
+      return value.map(_deepCopyValue).toList();
+    }
+    // 기본 타입(String, int, double, bool, DateTime, null)은 불변이므로 그대로 반환
+    return value;
   }
 
   /// 특정 키의 캐시 항목을 삭제한다
   Future<void> delete(String boxName, String key) async {
-    final box = Hive.box<dynamic>(boxName);
+    final box = _box(boxName);
     await box.delete(key);
     // 타임스탬프도 함께 삭제한다
-    final metaBox = Hive.box<dynamic>(AppConstants.syncMetaBox);
+    final metaBox = _box(AppConstants.syncMetaBox);
     await metaBox.delete('ts_${boxName}_$key');
   }
 
   /// 박스 내 모든 캐시를 초기화한다
   Future<void> clearBox(String boxName) async {
-    final box = Hive.box<dynamic>(boxName);
+    final box = _box(boxName);
     await box.clear();
   }
 
@@ -113,13 +117,14 @@ class HiveCacheService {
   /// 특정 박스의 모든 항목을 리스트로 반환한다
   /// 로컬 퍼스트 아키텍처에서 전체 목록 조회 시 사용한다
   List<Map<String, dynamic>> getAll(String boxName) {
-    final box = Hive.box<dynamic>(boxName);
+    final box = _box(boxName);
     final result = <Map<String, dynamic>>[];
     for (final key in box.keys) {
       final data = box.get(key);
       // Map 타입만 처리한다 (리스트 캐시 키나 타임스탬프 메타 키는 제외)
+      // 깊은 복사로 Hive 내부 참조를 차단한다
       if (data is Map) {
-        result.add(data.map((k, v) => MapEntry(k.toString(), v)));
+        result.add(_deepCopyMap(data));
       }
     }
     return result;
@@ -137,20 +142,30 @@ class HiveCacheService {
 
   /// 항목을 ID 기반으로 업데이트한다
   /// 기존 데이터에 새 데이터를 머지(merge)하여 저장한다
+  /// 동일 box+id에 대한 동시 호출을 락으로 직렬화하여 데이터 손실을 방지한다
   Future<void> update(
       String boxName, String id, Map<String, dynamic> data) async {
-    final box = Hive.box<dynamic>(boxName);
-    final existing = box.get(id);
-    // 기존 항목이 없으면 새로 삽입한다
-    if (existing is Map) {
-      final merged = existing.map((k, v) => MapEntry(k.toString(), v));
-      merged.addAll(data);
-      await box.put(id, merged);
-    } else {
-      // 기존 항목이 없을 경우 새로 삽입한다
-      await box.put(id, data);
+    final lockKey = '${boxName}_$id';
+    // 이전 작업이 끝날 때까지 대기한 뒤 새 작업을 체이닝한다
+    final previous = _locks[lockKey] ?? Future<void>.value();
+    final completer = _locks[lockKey] = previous.then((_) async {
+      final box = _box(boxName);
+      final existing = box.get(id);
+      // 기존 항목이 있으면 머지, 없으면 새로 삽입한다
+      if (existing is Map) {
+        final merged = existing.map((k, v) => MapEntry(k.toString(), v));
+        merged.addAll(data);
+        await box.put(id, merged);
+      } else {
+        await box.put(id, data);
+      }
+      await _saveCacheTimestamp(boxName, id);
+    });
+    await completer;
+    // 체인의 마지막 작업이면 락을 정리하여 메모리 누수를 방지한다
+    if (_locks[lockKey] == completer) {
+      _locks.remove(lockKey);
     }
-    await _saveCacheTimestamp(boxName, id);
   }
 
   /// 항목을 ID 기반으로 삭제한다
@@ -159,43 +174,12 @@ class HiveCacheService {
     await delete(boxName, id);
   }
 
-  // ─── 타임스탬프 기반 캐시 갱신 최적화 ──────────────────────────────────────
-  /// 서버에서 가져온 데이터의 수정 시각과 캐시 시각을 비교하여
-  /// 변경이 없으면 재캐싱을 건너뛴다 (불필요한 디스크 I/O 방지)
-  bool shouldUpdateCache(String boxName, String key, DateTime serverUpdatedAt) {
-    final cachedAt = _readCacheTimestamp(boxName, key);
-    if (cachedAt == null) return true; // 캐시 없음 → 갱신 필요
-    // 서버 데이터가 캐시보다 새로운 경우에만 갱신한다
-    return serverUpdatedAt.isAfter(cachedAt);
-  }
-
-  /// 캐시 타임스탬프를 저장한다 (put/putList 시 자동 호출)
+  /// 캐시 타임스탬프를 저장한다 (put 시 자동 호출)
   Future<void> _saveCacheTimestamp(String boxName, String key) async {
-    final metaBox = Hive.box<dynamic>(AppConstants.syncMetaBox);
+    final metaBox = _box(AppConstants.syncMetaBox);
     await metaBox.put(
       'ts_${boxName}_$key',
       DateTime.now().toIso8601String(),
     );
   }
-
-  /// 캐시 타임스탬프를 읽는다
-  DateTime? _readCacheTimestamp(String boxName, String key) {
-    final metaBox = Hive.box<dynamic>(AppConstants.syncMetaBox);
-    final raw = metaBox.get('ts_${boxName}_$key');
-    if (raw is! String) return null;
-    return DateTime.tryParse(raw);
-  }
-
-  // ─── 캐시 키 생성 헬퍼 ──────────────────────────────────────────────────
-  /// 이벤트 캐시 키 (월별)
-  static String eventsKey(DateTime month) =>
-      'events_${month.year}-${month.month.toString().padLeft(2, '0')}';
-
-  /// 투두 캐시 키 (일별)
-  static String todosKey(DateTime date) =>
-      'todos_${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-
-  /// 습관 로그 캐시 키 (월별)
-  static String habitLogsKey(DateTime month) =>
-      'logs_${month.year}-${month.month.toString().padLeft(2, '0')}';
 }

@@ -2,6 +2,7 @@
 // Hive habitLogsBox에 저장되는 습관 체크 기록 모델이다.
 // 필드: id, habit_id, user_id, log_date, is_completed, completed_at
 import '../../core/utils/date_parser.dart';
+import '../../core/utils/date_utils.dart';
 import '../../core/error/app_exception.dart';
 
 /// 습관 일별 체크 기록 모델
@@ -30,7 +31,8 @@ class HabitLog {
       return HabitLog(
         id: map['id']?.toString() ?? '',
         // habit_id 필드 (bigint)
-        habitId: (map['habit_id'] ?? map['habitId']).toString(),
+        // null 안전: 양쪽 키가 모두 null이면 빈 문자열로 처리한다
+        habitId: (map['habit_id'] ?? map['habitId'] ?? '').toString(),
         // log_date 필드 (date)
         date: DateParser.parse(
             map['log_date'] ?? map['logDate'] ?? map['date']),
@@ -51,13 +53,14 @@ class HabitLog {
   }
 
   /// INSERT용 Map (체크 생성 시)
+  /// 인스턴스의 isCompleted, checkedAt 값을 그대로 사용한다 (하드코딩 금지)
   Map<String, dynamic> toInsertMap(String userId) {
     return {
       'user_id': userId,
-      'habit_id': int.tryParse(habitId) ?? habitId,
-      'log_date': '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}',
-      'is_completed': true,
-      'completed_at': DateTime.now().toIso8601String(),
+      'habit_id': habitId,
+      'log_date': AppDateUtils.toDateString(date),
+      'is_completed': isCompleted,
+      'completed_at': checkedAt.toIso8601String(),
     };
   }
 

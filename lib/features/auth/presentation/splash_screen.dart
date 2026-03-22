@@ -14,6 +14,7 @@ import '../../../core/auth/auth_provider.dart';
 import '../../../core/theme/animation_tokens.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
+import '../../../core/theme/layout_tokens.dart';
 
 /// 스플래시 화면
 /// JWT 세션 복원 상태를 감시하며 로딩 인디케이터를 표시한다.
@@ -113,7 +114,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     },
                     child: _LogoIcon(),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: AppSpacing.huge),
 
                   // 앱 이름
                   Text(
@@ -121,7 +122,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     // displayLg 토큰 사용 (34px, ExtraBold)
                     style: AppTypography.displayLg.copyWith(
                     color: context.themeColors.textPrimary,
-                      letterSpacing: -1.0,
+                      letterSpacing: AppLayout.letterSpacingTighter,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -138,10 +139,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
                   // 로딩 인디케이터 (Auth 초기화 대기 중)
                   SizedBox(
-                    width: 24,
-                    height: 24,
+                    width: AppLayout.iconXxl,
+                    height: AppLayout.iconXxl,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
+                      strokeWidth: AppLayout.borderAccent,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         context.themeColors.textPrimaryWithAlpha(0.70),
                       ),
@@ -165,24 +166,24 @@ class _LogoIcon extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.pill),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
         child: Container(
-          width: 96,
-          height: 96,
+          width: AppLayout.splashLogoSize,
+          height: AppLayout.splashLogoSize,
           decoration: BoxDecoration(
             // Glass 효과: 흰색 반투명 배경
             color: context.themeColors.textPrimaryWithAlpha(0.20),
             borderRadius: BorderRadius.circular(AppRadius.pill),
             border: Border.all(
               color: context.themeColors.textPrimaryWithAlpha(0.35),
-              width: 1.5,
+              width: AppLayout.borderMedium,
             ),
             boxShadow: [
               BoxShadow(
                 // gray900 토큰 사용 (Tinted Grey 그림자)
                 color: ColorTokens.gray900.withValues(alpha: 0.20),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
+                blurRadius: AppLayout.modalBlurSigma,
+                offset: const Offset(0, AppSpacing.md),
               ),
             ],
           ),
@@ -191,7 +192,7 @@ class _LogoIcon extends StatelessWidget {
               '✦',
               // emojiLg 토큰 사용 (22px)
               style: AppTypography.emojiLg.copyWith(
-                fontSize: 38,
+                fontSize: AppLayout.emojiSplash,
                 color: context.themeColors.textPrimary,
               ),
             ),

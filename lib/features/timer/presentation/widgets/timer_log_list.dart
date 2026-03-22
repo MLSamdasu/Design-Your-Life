@@ -1,5 +1,5 @@
 // F6: 오늘의 타이머 기록 목록 위젯
-// todayTimerLogsProvider에서 오늘의 타이머 로그를 실시간으로 표시한다.
+// selectedDateTimerLogsProvider에서 선택된 날짜의 타이머 로그를 실시간으로 표시한다.
 // 각 로그는 시간 범위, 지속 시간, 투두 이름, 세션 유형을 보여준다.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,7 +10,6 @@ import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/widgets/empty_state.dart';
 import '../../../../shared/widgets/glass_card.dart';
-import '../../../../shared/widgets/loading_indicator.dart';
 import '../../../../shared/widgets/section_title.dart';
 import '../../services/timer_engine.dart';
 import '../../models/timer_log.dart';
@@ -25,7 +24,8 @@ class TimerLogList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final logsAsync = ref.watch(todayTimerLogsProvider);
+    // selectedDateTimerLogsProvider는 동기 Provider이므로 직접 사용한다
+    final logs = ref.watch(selectedDateTimerLogsProvider);
 
     return GlassCard(
       variant: GlassCardVariant.defaultCard,
@@ -37,54 +37,31 @@ class TimerLogList extends ConsumerWidget {
           const SectionTitle(title: '오늘의 집중 기록'),
           const SizedBox(height: AppSpacing.lg),
 
-          // 기록 목록
-          logsAsync.when(
-            loading: () => _buildLoading(),
-            error: (_, __) => _buildError(),
-            data: (logs) => _buildLogList(logs),
-          ),
+          // 동기 Provider이므로 직접 렌더링한다
+          _buildLogList(logs),
         ],
       ),
     );
   }
 
-  /// 로딩 스켈레톤 UI
-  Widget _buildLoading() {
-    return Column(
-      children: List.generate(
-        3,
-        (i) => Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.md),
-          child: LoadingSkeleton(height: 48, borderRadius: 8),
-        ),
-      ),
-    );
-  }
-
-  /// 오류 상태 UI
-  Widget _buildError() {
-    return const EmptyState(
-      icon: Icons.sync_problem_rounded,
-      mainText: '기록을 불러오지 못했어요',
-      minHeight: 80,
-    );
-  }
-
   /// 기록 목록 UI
+  /// ListView.builder로 지연 빌드하여 로그 수가 많을 때 성능을 개선한다
   Widget _buildLogList(List<TimerLog> logs) {
     if (logs.isEmpty) {
       return const EmptyState(
         icon: Icons.timer_outlined,
         mainText: '오늘의 집중 기록이 없어요',
         subText: '타이머를 시작하면 기록이 쌓여요',
-        minHeight: 80,
+        minHeight: AppLayout.containerXl,
       );
     }
 
-    return Column(
-      children: logs
-          .map((log) => _TimerLogItem(log: log))
-          .toList(),
+    // 부모가 Column이므로 shrinkWrap + NeverScrollableScrollPhysics 사용
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: logs.length,
+      itemBuilder: (context, index) => _TimerLogItem(log: logs[index]),
     );
   }
 }
@@ -119,8 +96,8 @@ class _TimerLogItem extends StatelessWidget {
         children: [
           // 세션 유형 아이콘
           Container(
-            width: 32,
-            height: 32,
+            width: AppLayout.containerMd,
+            height: AppLayout.containerMd,
             decoration: BoxDecoration(
               color: typeColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -179,7 +156,7 @@ class _TimerLogItem extends StatelessWidget {
             const SizedBox(width: AppSpacing.md),
             Flexible(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xxs),
                 // 투두 이름 뱃지: 배경 테마에 맞는 악센트 색상으로 표시한다
                 decoration: BoxDecoration(
                   color: context.themeColors.accentWithAlpha(0.15),
@@ -190,7 +167,8 @@ class _TimerLogItem extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTypography.captionMd.copyWith(
-                    color: context.themeColors.accent,
+                    // WCAG 대비: accent 배경 위에서 테마 텍스트 색상으로 고대비 확보
+                    color: context.themeColors.textPrimaryWithAlpha(0.85),
                   ),
                 ),
               ),

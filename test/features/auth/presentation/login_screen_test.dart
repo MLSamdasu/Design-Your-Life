@@ -75,14 +75,14 @@ void main() {
     testWidgets('ConstrainedBox가 최대 너비를 제한한다', (tester) async {
       await tester.pumpWidget(buildTestWidget());
 
-      // 여러 ConstrainedBox 중 maxWidth가 400인 것을 찾는다
+      // 여러 ConstrainedBox 중 maxWidth가 AppLayout.dialogMaxWidthSm(360)인 것을 찾는다
       final constrainedBoxes = tester.widgetList<ConstrainedBox>(
         find.byType(ConstrainedBox),
       );
-      final hasMaxWidth400 = constrainedBoxes.any(
-        (box) => box.constraints.maxWidth == 400,
+      final hasMaxWidth360 = constrainedBoxes.any(
+        (box) => box.constraints.maxWidth == 360,
       );
-      expect(hasMaxWidth400, true);
+      expect(hasMaxWidth360, true);
     });
 
     testWidgets('그라디언트 배경 Container가 존재한다', (tester) async {

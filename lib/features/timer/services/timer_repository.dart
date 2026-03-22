@@ -4,6 +4,7 @@
 
 import '../../../core/cache/hive_cache_service.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/error/error_handler.dart';
 import '../models/timer_log.dart';
 
 /// 타이머 로그 저장소 (로컬 퍼스트)
@@ -33,48 +34,55 @@ class TimerRepository {
     final dayStart = DateTime(today.year, today.month, today.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
 
-    // Hive에서 전체 로그를 조회한 뒤 날짜 필터링한다
+    // Hive에서 전체 로그를 조회하고 TimerLog.fromMap으로 파싱한다
+    // fromMap은 camelCase/snake_case 양쪽 키를 모두 처리한다
     final all = _cache.getAll(AppConstants.timerLogsBox);
-    final filtered = all.where((map) {
-      final startTimeRaw = map['startTime'] as String?;
-      if (startTimeRaw == null) return false;
-      final startTime = DateTime.tryParse(startTimeRaw);
-      if (startTime == null) return false;
-      // 해당 날짜 범위에 속하는 로그만 반환한다
-      return startTime.isAfter(dayStart.subtract(const Duration(milliseconds: 1))) &&
-          startTime.isBefore(dayEnd);
-    }).toList();
+    final logs = <TimerLog>[];
+    for (final map in all) {
+      try {
+        final log = TimerLog.fromMap(map);
+        // 해당 날짜 범위에 속하는 로그만 추가한다
+        if (!log.startTime.isBefore(dayStart) && log.startTime.isBefore(dayEnd)) {
+          logs.add(log);
+        }
+      } catch (e, stack) {
+        // V3-008: 파싱 실패를 로깅하여 손상된 데이터 추적을 가능하게 한다
+        ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
+        continue;
+      }
+    }
 
-    // start_time 오름차순 정렬
-    filtered.sort((a, b) {
-      final aTime = DateTime.tryParse(a['startTime'] as String? ?? '') ?? DateTime(0);
-      final bTime = DateTime.tryParse(b['startTime'] as String? ?? '') ?? DateTime(0);
-      return aTime.compareTo(bTime);
-    });
+    // startTime 오름차순 정렬
+    logs.sort((a, b) => a.startTime.compareTo(b.startTime));
 
-    return filtered.map(_fromHiveMap).toList();
+    return logs;
   }
 
   // ─── 기간별 로그 조회 ──────────────────────────────────────────────────────
   /// 특정 기간의 타이머 로그를 조회한다
   /// [from] ~ [to] 범위의 로그를 반환한다 (양 끝 포함)
   Future<List<TimerLog>> getLogsForPeriod(DateTime from, DateTime to) async {
+    // Hive에서 전체 로그를 조회하고 TimerLog.fromMap으로 파싱한다
+    // fromMap은 camelCase/snake_case 양쪽 키를 모두 처리한다
     final all = _cache.getAll(AppConstants.timerLogsBox);
-    final filtered = all.where((map) {
-      final startTimeRaw = map['startTime'] as String?;
-      if (startTimeRaw == null) return false;
-      final startTime = DateTime.tryParse(startTimeRaw);
-      if (startTime == null) return false;
-      return !startTime.isBefore(from) && !startTime.isAfter(to);
-    }).toList();
+    final logs = <TimerLog>[];
+    for (final map in all) {
+      try {
+        final log = TimerLog.fromMap(map);
+        if (!log.startTime.isBefore(from) && !log.startTime.isAfter(to)) {
+          logs.add(log);
+        }
+      } catch (e, stack) {
+        // V3-008: 파싱 실패를 로깅하여 손상된 데이터 추적을 가능하게 한다
+        ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
+        continue;
+      }
+    }
 
-    filtered.sort((a, b) {
-      final aTime = DateTime.tryParse(a['startTime'] as String? ?? '') ?? DateTime(0);
-      final bTime = DateTime.tryParse(b['startTime'] as String? ?? '') ?? DateTime(0);
-      return aTime.compareTo(bTime);
-    });
+    // startTime 오름차순 정렬
+    logs.sort((a, b) => a.startTime.compareTo(b.startTime));
 
-    return filtered.map(_fromHiveMap).toList();
+    return logs;
   }
 
   // ─── 통계 조회 ───────────────────────────────────────────────────────────
@@ -84,13 +92,40 @@ class TimerRepository {
     final all = _cache.getAll(AppConstants.timerLogsBox);
     int total = 0;
     for (final map in all) {
-      // todoId가 일치하고 focus 타입인 로그만 합산한다
-      if ((map['todoId'] as String?) == todoId &&
-          (map['type'] as String?) == 'focus') {
-        total += (map['durationSeconds'] as int?) ?? 0;
+      try {
+        // fromMap은 camelCase/snake_case 양쪽 키를 모두 처리한다
+        final log = TimerLog.fromMap(map);
+        if (log.todoId == todoId && log.type == TimerSessionType.focus) {
+          total += log.durationSeconds;
+        }
+      } catch (e, stack) {
+        // V3-008: 파싱 실패를 로깅하여 손상된 데이터 추적을 가능하게 한다
+        ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
+        continue;
       }
     }
     return total;
+  }
+
+  // ─── 로그 삭제 ──────────────────────────────────────────────────────────────
+
+  /// 타이머 로그 단건 삭제
+  Future<void> deleteLog(String logId) async {
+    await _cache.deleteById(AppConstants.timerLogsBox, logId);
+  }
+
+  /// 특정 투두에 연결된 모든 타이머 로그 삭제
+  Future<void> deleteLogsByTodoId(String todoId) async {
+    final all = _cache.getAll(AppConstants.timerLogsBox);
+    for (final log in all) {
+      // camelCase/snake_case 양쪽 키를 모두 확인한다
+      if (log['todoId']?.toString() == todoId || log['todo_id']?.toString() == todoId) {
+        final logId = log['id']?.toString();
+        if (logId != null) {
+          await _cache.deleteById(AppConstants.timerLogsBox, logId);
+        }
+      }
+    }
   }
 
   // ─── 백업 전용 직렬화 ─────────────────────────────────────────────────────
@@ -114,23 +149,19 @@ class TimerRepository {
 
   // ─── 내부 직렬화 헬퍼 ────────────────────────────────────────────────────
   /// TimerLog → Hive 저장용 Map 변환
-  /// camelCase 키를 사용하여 Hive 내부 포맷을 통일한다
+  /// snake_case 키를 사용하여 다른 Repository와 포맷을 통일한다
   Map<String, dynamic> _toHiveMap(TimerLog log) {
     return {
       'id': log.id,
-      'userId': log.userId,
-      'todoId': log.todoId,
-      'todoTitle': log.todoTitle,
-      'startTime': log.startTime.toIso8601String(),
-      'endTime': log.endTime.toIso8601String(),
-      'durationSeconds': log.durationSeconds,
+      'user_id': log.userId,
+      'todo_id': log.todoId,
+      'todo_title': log.todoTitle,
+      'start_time': log.startTime.toIso8601String(),
+      'end_time': log.endTime.toIso8601String(),
+      'duration_seconds': log.durationSeconds,
       'type': log.type.toJsonValue(),
-      'createdAt': log.createdAt.toIso8601String(),
+      'created_at': log.createdAt.toIso8601String(),
     };
   }
 
-  /// Hive Map → TimerLog 변환
-  TimerLog _fromHiveMap(Map<String, dynamic> map) {
-    return TimerLog.fromMap(map);
-  }
 }

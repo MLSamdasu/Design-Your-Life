@@ -1,19 +1,23 @@
 // D-day 긴급도 열거형
-// D-day 카드에서 일정의 긴급도를 시각적으로 구분하는 데 사용한다
+// D-3 이내의 일정을 4단계로 구분하여 시각적 우선순위를 제공한다
 enum UrgencyLevel {
-  /// 위험: D-3 이하 (빨간색 강조 표시)
+  /// D-Day (당일): 가장 긴급 — 빨간색 강조
+  imminent,
+
+  /// D-1 (내일): 매우 긴급 — 주황색 강조
   critical,
 
-  /// 경고: D-7 이하 (노란색 표시)
+  /// D-2 (모레): 긴급 — 노란색 강조
   warning,
 
-  /// 일반: D-8 이상 (기본 표시)
+  /// D-3 (3일 후): 일반 — 파란색 표시
   normal;
 
-  /// 남은 일수로 긴급도 계산
+  /// 남은 일수로 긴급도 계산 (D-3 이내만 사용)
   static UrgencyLevel fromDaysRemaining(int daysRemaining) {
-    if (daysRemaining <= 3) return UrgencyLevel.critical;
-    if (daysRemaining <= 7) return UrgencyLevel.warning;
+    if (daysRemaining <= 0) return UrgencyLevel.imminent;
+    if (daysRemaining == 1) return UrgencyLevel.critical;
+    if (daysRemaining == 2) return UrgencyLevel.warning;
     return UrgencyLevel.normal;
   }
 }

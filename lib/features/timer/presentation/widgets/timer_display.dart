@@ -12,6 +12,7 @@ import '../../services/timer_engine.dart';
 import '../../models/timer_log.dart';
 import '../../models/timer_state.dart';
 import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 
 /// 원형 프로그레스 + 남은 시간 표시 위젯
 class TimerDisplay extends StatelessWidget {
@@ -23,7 +24,7 @@ class TimerDisplay extends StatelessWidget {
 
   const TimerDisplay({
     required this.timerState,
-    this.size = 240,
+    this.size = AppLayout.timerDisplaySize,
     super.key,
   });
 
@@ -56,7 +57,7 @@ class TimerDisplay extends StatelessWidget {
               progressColor: progressColor,
               // 배경 트랙: 흰색 15% 투명도
               trackColor: context.themeColors.textPrimaryWithAlpha(0.15),
-              strokeWidth: 10,
+              strokeWidth: AppLayout.timerStrokeWidth,
             ),
           ),
 
@@ -70,7 +71,7 @@ class TimerDisplay extends StatelessWidget {
                 style: AppTypography.displayLg.copyWith(
                     color: context.themeColors.textPrimary,
                   // 고정폭 폰트 특성 시뮬레이션: 자간 없애기
-                  letterSpacing: 2,
+                  letterSpacing: AppLayout.timerTimeLetterSpacing,
                 ),
               ),
 
@@ -79,7 +80,7 @@ class TimerDisplay extends StatelessWidget {
               // 연결된 투두 이름 (있을 경우에만 표시)
               if (timerState.linkedTodoTitle != null) ...[
                 SizedBox(
-                  width: size * 0.65,
+                  width: size * AppLayout.timerTodoTitleWidthRatio,
                   child: Text(
                     timerState.linkedTodoTitle!,
                     textAlign: TextAlign.center,
@@ -92,10 +93,11 @@ class TimerDisplay extends StatelessWidget {
                 ),
               ] else ...[
                 // 투두 미연결 상태 안내
+                // WCAG 최소 대비: 안내 텍스트 0.55 이상 보장
                 Text(
                   '투두 없이 실행 중',
                   style: AppTypography.captionMd.copyWith(
-                    color: context.themeColors.textPrimaryWithAlpha(0.45),
+                    color: context.themeColors.textPrimaryWithAlpha(0.55),
                   ),
                 ),
               ],

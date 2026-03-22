@@ -113,8 +113,8 @@ class TimerLog {
             map['start_time'] ?? map['startTime']),
         endTime: DateParser.parse(
             map['end_time'] ?? map['endTime']),
-        durationSeconds: (map['duration_seconds'] as int?) ??
-            (map['durationSeconds'] as int?) ??
+        durationSeconds: (map['duration_seconds'] as num?)?.toInt() ??
+            (map['durationSeconds'] as num?)?.toInt() ??
             0,
         type: timerSessionTypeFromString(
             (map['type'] as String?) ?? 'focus'),
@@ -132,7 +132,7 @@ class TimerLog {
   Map<String, dynamic> toInsertMap(String userId) {
     return {
       'user_id': userId,
-      'todo_id': todoId != null ? (int.tryParse(todoId!) ?? todoId) : null,
+      'todo_id': todoId,
       'todo_title': todoTitle,
       'start_time': startTime.toIso8601String(),
       'end_time': endTime.toIso8601String(),

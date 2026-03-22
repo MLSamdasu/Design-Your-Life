@@ -102,6 +102,9 @@ abstract class AppConstants {
   static const String goalsBox = 'goalsBox';
   static const String subGoalsBox = 'subGoalsBox';
   static const String goalTasksBox = 'goalTasksBox';
+  static const String timerLogsBox = 'timerLogsBox';
+  static const String achievementsBox = 'achievementsBox';
+  static const String tagsBox = 'tagsBox';
   static const String settingsBox = 'settingsBox';
   static const String syncMetaBox = 'syncMetaBox';
 
@@ -166,18 +169,6 @@ abstract class AppConstants {
   /// 긴 휴식 전 필요한 포모도로 세션 횟수
   static const int pomodoroSessionsBeforeLongBreak = 4;
 
-  // ─── Hive Box 이름 (타이머) ─────────────────────────────────────────────
-  /// 타이머 로그 Hive Box 이름
-  static const String timerLogsBox = 'timerLogsBox';
-
-  // ─── Hive Box 이름 (업적) ────────────────────────────────────────────────
-  /// 달성 업적 Hive Box 이름
-  static const String achievementsBox = 'achievementsBox';
-
-  // ─── Hive Box 이름 (태그) ────────────────────────────────────────────────
-  /// 사용자 태그 Hive Box 이름
-  static const String tagsBox = 'tagsBox';
-
   // ─── Hive 설정 키 (튜토리얼) ────────────────────────────────────────────
   /// 앱 튜토리얼 완료 여부 설정 키 (bool)
   static const String settingsKeyHasSeenTutorial = 'hasSeenTutorial';
@@ -185,6 +176,19 @@ abstract class AppConstants {
   // ─── Hive 설정 키 (백업 관련) ────────────────────────────────────────────
   /// 마지막 백업 시각 설정 키
   static const String settingsKeyLastBackupTime = 'lastBackupTime';
+
+  // ─── Hive 설정 키 (타이머 설정) ────────────────────────────────────────
+  /// 포모도로 집중 시간 설정 키 (int, 분 단위)
+  static const String settingsKeyTimerFocusMinutes = 'timerFocusMinutes';
+
+  /// 짧은 휴식 시간 설정 키 (int, 분 단위)
+  static const String settingsKeyTimerShortBreakMinutes = 'timerShortBreakMinutes';
+
+  /// 긴 휴식 시간 설정 키 (int, 분 단위)
+  static const String settingsKeyTimerLongBreakMinutes = 'timerLongBreakMinutes';
+
+  /// 긴 휴식 전 세션 횟수 설정 키 (int)
+  static const String settingsKeyTimerSessionsBeforeLongBreak = 'timerSessionsBeforeLongBreak';
 
   // ─── 날짜 포맷 ───────────────────────────────────────────────────────────
   /// 날짜 전용 필드 포맷 (타임존 무관)

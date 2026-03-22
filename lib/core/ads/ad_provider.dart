@@ -7,8 +7,10 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/auth_service.dart';
 import '../backup/backup_provider.dart';
 import '../backup/backup_service.dart';
+import 'ad_constants.dart';
 import 'ad_service.dart';
 
 // ─── AdService 싱글톤 Provider ──────────────────────────────────────────────
@@ -24,7 +26,11 @@ final adServiceProvider = Provider<AdService>((ref) {
 // ─── 광고 초기화 Provider ───────────────────────────────────────────────────
 /// AdMob 초기화 + 광고 미리 로드를 수행하는 FutureProvider
 /// main.dart 또는 앱 시작 시 한 번 호출한다
+/// 데스크톱(macOS/Windows)에서는 초기화를 건너뛴다
 final adInitProvider = FutureProvider<void>((ref) async {
+  // 데스크톱에서는 광고를 사용하지 않으므로 초기화를 건너뛴다
+  if (!AdConstants.isAdSupported) return;
+
   final adService = ref.watch(adServiceProvider);
   await adService.initialize();
   await adService.preloadAds();
@@ -45,6 +51,16 @@ final showBackupAdProvider =
   return ({
     void Function(double progress)? onProgress,
   }) async {
+    // 인증 미지원 플랫폼에서는 즉시 미인증 반환
+    if (!AuthService.isAuthSupported) {
+      return BackupResult.unauthenticated();
+    }
+
+    // 데스크톱(광고 미지원)에서는 광고 없이 바로 백업을 실행한다
+    if (!AdConstants.isAdSupported) {
+      return backupService.backupAll(onProgress: onProgress);
+    }
+
     // Completer로 리워드 광고의 비동기 콜백을 Future로 변환한다
     final rewardCompleter = Completer<bool>();
 
@@ -55,15 +71,27 @@ final showBackupAdProvider =
           rewardCompleter.complete(true);
         }
       },
+      onDismissed: () {
+        // 사용자가 보상 획득 전에 광고를 닫은 경우에도 Completer를 완료한다
+        // 그렇지 않으면 rewardCompleter.future가 영원히 대기하여 백업 플로우가 멈춘다
+        if (!rewardCompleter.isCompleted) {
+          rewardCompleter.complete(false);
+        }
+      },
     );
 
     if (!adShown) {
       // 광고가 로드되지 않았으면 바로 백업을 진행한다
-      // (showRewardedAd 내부에서 onRewarded가 즉시 호출되어 Completer가 이미 완료됨)
+      if (!rewardCompleter.isCompleted) {
+        rewardCompleter.complete(true);
+      }
     }
 
     // 보상 확인을 대기한 후 백업을 실행한다
-    await rewardCompleter.future;
+    final rewarded = await rewardCompleter.future;
+    if (!rewarded) {
+      // 보상을 받지 못했더라도 백업은 진행한다 (UX 우선)
+    }
     return backupService.backupAll(onProgress: onProgress);
   };
 });
@@ -81,13 +109,17 @@ final showIncompleteTaskAdProvider = Provider<bool Function()>((ref) {
 
 // ─── 광고 로드 상태 Provider ─────────────────────────────────────────────────
 /// 전면 광고 준비 완료 여부 Provider
+/// 데스크톱에서는 항상 false를 반환한다 (광고 미지원)
 final isInterstitialReadyProvider = Provider<bool>((ref) {
+  if (!AdConstants.isAdSupported) return false;
   final adService = ref.watch(adServiceProvider);
   return adService.isInterstitialReady;
 });
 
 /// 리워드 광고 준비 완료 여부 Provider
+/// 데스크톱에서는 항상 false를 반환한다 (광고 미지원)
 final isRewardedReadyProvider = Provider<bool>((ref) {
+  if (!AdConstants.isAdSupported) return false;
   final adService = ref.watch(adServiceProvider);
   return adService.isRewardedReady;
 });

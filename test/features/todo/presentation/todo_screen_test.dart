@@ -1,25 +1,49 @@
 // TodoScreen 위젯 테스트
 // 투두 화면의 기본 렌더링, 서브탭 구조, Provider 상태를 검증한다.
-// Supabase 마이그레이션 후 테스트를 업데이트했다.
+// 서브탭이 3개(일정표/주간 루틴/할 일)로 변경된 후 테스트를 업데이트했다.
 import 'package:design_your_life/core/auth/auth_provider.dart';
 import 'package:design_your_life/core/cache/hive_cache_service.dart';
+import 'package:design_your_life/core/providers/data_store_providers.dart';
 import 'package:design_your_life/core/providers/global_providers.dart';
+import 'package:design_your_life/features/calendar/providers/event_provider.dart';
+import 'package:design_your_life/features/calendar/services/event_repository.dart';
+import 'package:design_your_life/features/habit/providers/habit_provider.dart';
 import 'package:design_your_life/features/todo/presentation/todo_screen.dart';
 import 'package:design_your_life/features/todo/providers/todo_provider.dart';
 import 'package:design_your_life/features/todo/services/todo_filter.dart';
+import 'package:design_your_life/shared/models/habit.dart';
 import 'package:design_your_life/shared/models/todo.dart';
+import 'package:design_your_life/shared/providers/tag_provider.dart';
 import 'package:design_your_life/shared/widgets/date_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Hive 의존성 없이 테스트를 위한 MockHiveCacheService
+/// getAll도 빈 리스트를 반환하여 Hive 박스 접근 오류를 방지한다
 class _MockHiveCacheService extends HiveCacheService {
   @override
   Future<void> saveSetting(String key, Object value) async {}
 
   @override
   T? readSetting<T>(String key) => null;
+
+  @override
+  List<Map<String, dynamic>> getAll(String boxName) => [];
+
+  @override
+  Map<String, dynamic>? get(String boxName, String key) => null;
+
+  @override
+  List<Map<String, dynamic>> query(
+    String boxName,
+    bool Function(Map<String, dynamic>) predicate,
+  ) => [];
+}
+
+/// EventRepository 의존성 격리용 Mock
+class _MockEventRepository extends EventRepository {
+  _MockEventRepository() : super(cache: _MockHiveCacheService());
 }
 
 void main() {
@@ -59,26 +83,28 @@ void main() {
       expect(stats.withoutTimeCount, 0);
     });
 
-    test('todosForDateProvider 에러 시 todoStatsProvider가 empty를 반환한다', () {
+    // P1-2: todosForDateProvider가 동기 Provider로 변경되어 에러 테스트 제거
+    // 동기 Provider는 에러를 throw하면 컨테이너 자체에서 예외가 발생하므로
+    // 빈 리스트 기반 통합 테스트로 대체한다
+    test('todosForDateProvider가 빈 리스트일 때 todoStatsProvider가 empty를 반환한다', () {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => throw Exception('테스트 에러'),
+            (ref) => <Todo>[],
           ),
         ],
       );
       addTearDown(container.dispose);
 
-      // 에러 상태에서 empty 통계 반환 확인
       final stats = container.read(todoStatsProvider);
       expect(stats.totalCount, 0);
     });
 
-    test('todosForDateProvider 에러 시 sortedTodosProvider가 빈 리스트를 반환한다', () {
+    test('todosForDateProvider가 빈 리스트일 때 sortedTodosProvider가 빈 리스트를 반환한다', () {
       final container = ProviderContainer(
         overrides: [
           todosForDateProvider.overrideWith(
-            (ref) async => throw Exception('테스트 에러'),
+            (ref) => <Todo>[],
           ),
         ],
       );
@@ -152,21 +178,50 @@ void main() {
 
   // ─── 위젯 인터랙션 테스트 ─────────────────────────────────────────────────
   group('TodoScreen - 위젯 렌더링 및 인터랙션', () {
-    /// 테스트용 위젯 래퍼: Provider override로 API 의존성을 격리한다
+    /// 테스트용 위젯 래퍼: Provider override로 Hive/API 의존성을 격리한다
+    /// DailyScheduleView, RoutineWeeklyView, TodoListView가 참조하는
+    /// 모든 Raw Data Provider를 빈 리스트로 오버라이드한다
     Widget buildTodoTestWidget() {
       return ProviderScope(
         overrides: [
+          // Hive 캐시 서비스를 Mock으로 대체하여 박스 접근 오류를 방지한다
           hiveCacheServiceProvider.overrideWithValue(_MockHiveCacheService()),
           currentUserIdProvider.overrideWithValue('test-user'),
+          // 투두 데이터
+          // P1-2: 동기 Provider로 변경됨에 따라 override 업데이트
           todosForDateProvider.overrideWith(
-            (ref) async => <Todo>[],
+            (ref) => <Todo>[],
           ),
-          // TodoListView가 참조하는 액션 Provider도 격리한다
+          // Single Source of Truth 데이터 스토어를 빈 리스트로 격리한다
+          allEventsRawProvider.overrideWithValue(const []),
+          allRoutinesRawProvider.overrideWithValue(const []),
+          allTimerLogsRawProvider.overrideWithValue(const []),
+          allTagsRawProvider.overrideWithValue(const []),
+          allHabitsRawProvider.overrideWithValue(const []),
+          allHabitLogsRawProvider.overrideWithValue(const []),
+          allRoutineLogsRawProvider.overrideWithValue(const []),
+          // EventRepository를 Mock으로 대체한다
+          eventRepositoryProvider.overrideWithValue(_MockEventRepository()),
+          // 태그 Provider 격리
+          userTagsProvider.overrideWith((ref) => []),
+          // TodoListView가 참조하는 액션 Provider를 격리한다
           toggleTodoProvider.overrideWithValue(
             (String todoId, bool isCompleted) async {},
           ),
           deleteTodoProvider.overrideWithValue(
             (String todoId) async {},
+          ),
+          updateTodoProvider.overrideWithValue(
+            (String todoId, Todo todo) async {},
+          ),
+          // 습관 관련 Provider 격리
+          habitsForTodoDateProvider.overrideWithValue(
+            const <({Habit habit, bool isCompleted})>[],
+          ),
+          toggleHabitProvider.overrideWithValue(
+            (String habitId, DateTime date, bool isCompleted) async {
+              return null; // 테스트 모의: TimeLockResult 없음(성공)
+            },
           ),
         ],
         child: const MaterialApp(
@@ -199,48 +254,58 @@ void main() {
       expect(find.byIcon(Icons.add_rounded), findsOneWidget);
     });
 
-    testWidgets('서브탭 텍스트 "하루 일정표"가 표시된다', (tester) async {
+    // 서브탭 라벨이 "일정표" / "주간 루틴" / "할 일" 3개로 변경됨
+    testWidgets('서브탭 텍스트 "일정표"가 표시된다', (tester) async {
       await tester.pumpWidget(buildTodoTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('하루 일정표'), findsOneWidget);
+      expect(find.text('일정표'), findsOneWidget);
     });
 
-    testWidgets('서브탭 텍스트 "할 일 목록"이 표시된다', (tester) async {
+    testWidgets('서브탭 텍스트 "주간 루틴"이 표시된다', (tester) async {
       await tester.pumpWidget(buildTodoTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('할 일 목록'), findsOneWidget);
+      expect(find.text('주간 루틴'), findsOneWidget);
     });
 
-    testWidgets('서브탭 탭으로 할 일 목록으로 전환된다', (tester) async {
+    testWidgets('서브탭 텍스트 "할 일"이 표시된다', (tester) async {
       await tester.pumpWidget(buildTodoTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
-      // "할 일 목록" 탭을 탭한다
-      await tester.tap(find.text('할 일 목록'));
-      await tester.pump(const Duration(milliseconds: 400));
-
-      // 탭 전환 후에도 두 탭 텍스트가 여전히 표시된다
-      expect(find.text('할 일 목록'), findsOneWidget);
-      expect(find.text('하루 일정표'), findsOneWidget);
+      expect(find.text('할 일'), findsOneWidget);
     });
 
-    testWidgets('서브탭 전환 후 다시 "하루 일정표"로 복귀할 수 있다', (tester) async {
+    testWidgets('서브탭 탭으로 할 일로 전환된다', (tester) async {
       await tester.pumpWidget(buildTodoTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
-      // "할 일 목록"으로 전환한다
-      await tester.tap(find.text('할 일 목록'));
+      // "할 일" 탭을 탭한다
+      await tester.tap(find.text('할 일'));
       await tester.pump(const Duration(milliseconds: 400));
 
-      // "하루 일정표"로 다시 전환한다
-      await tester.tap(find.text('하루 일정표'));
+      // 탭 전환 후에도 세 탭 텍스트가 여전히 표시된다
+      expect(find.text('일정표'), findsOneWidget);
+      expect(find.text('주간 루틴'), findsOneWidget);
+      expect(find.text('할 일'), findsOneWidget);
+    });
+
+    testWidgets('서브탭 전환 후 다시 "일정표"로 복귀할 수 있다', (tester) async {
+      await tester.pumpWidget(buildTodoTestWidget());
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // "할 일"로 전환한다
+      await tester.tap(find.text('할 일'));
       await tester.pump(const Duration(milliseconds: 400));
 
-      // 복귀 후에도 두 탭 텍스트가 여전히 표시된다
-      expect(find.text('하루 일정표'), findsOneWidget);
-      expect(find.text('할 일 목록'), findsOneWidget);
+      // "일정표"로 다시 전환한다
+      await tester.tap(find.text('일정표'));
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // 복귀 후에도 세 탭 텍스트가 여전히 표시된다
+      expect(find.text('일정표'), findsOneWidget);
+      expect(find.text('주간 루틴'), findsOneWidget);
+      expect(find.text('할 일'), findsOneWidget);
     });
 
     testWidgets('AnimatedSwitcher가 서브탭 전환에 사용된다', (tester) async {

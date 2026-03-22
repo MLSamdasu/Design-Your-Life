@@ -52,6 +52,7 @@ abstract class ProgressCalculator {
   // ─── 목표 단위 계산 ───────────────────────────────────────────────────────
 
   /// 목표 하나의 진행률을 계산한다 (하위 목표들의 평균, 0.0 ~ 1.0)
+  /// 만다라트 모드(tasks 존재)와 체크포인트 모드(tasks 없음)를 자동 판별한다
   static double calcGoalProgress(
     String goalId,
     List<SubGoal> subGoals,
@@ -61,12 +62,23 @@ abstract class ProgressCalculator {
     final goalSubGoals = subGoals.where((sg) => sg.goalId == goalId).toList();
     if (goalSubGoals.isEmpty) return 0.0;
 
-    // 각 하위 목표의 진행률 평균
-    final totalProgress = goalSubGoals.fold<double>(
-      0.0,
-      (sum, subGoal) => sum + calcSubGoalProgress(subGoal.id, allTasks),
+    // 해당 목표에 속한 전체 tasks를 확인한다
+    final hasTasks = goalSubGoals.any(
+      (sg) => allTasks.any((t) => t.subGoalId == sg.id),
     );
-    return totalProgress / goalSubGoals.length;
+
+    if (hasTasks) {
+      // 만다라트 모드: 기존 로직 유지 (tasks 완료율 기반)
+      final totalProgress = goalSubGoals.fold<double>(
+        0.0,
+        (sum, subGoal) => sum + calcSubGoalProgress(subGoal.id, allTasks),
+      );
+      return totalProgress / goalSubGoals.length;
+    } else {
+      // 체크포인트 모드: SubGoal의 isCompleted 상태로 진행률 계산
+      final completedCount = goalSubGoals.where((sg) => sg.isCompleted).length;
+      return completedCount / goalSubGoals.length;
+    }
   }
 
   // ─── 전체 통계 계산 ───────────────────────────────────────────────────────

@@ -18,6 +18,9 @@ class Tag {
 
   final DateTime createdAt;
 
+  /// 태그 이름 최대 글자 수
+  static const int nameMaxLength = 20;
+
   /// 사용자 계정당 최대 태그 수 제한
   static const int maxTagsPerUser = 20;
 
@@ -38,10 +41,9 @@ class Tag {
       return Tag(
         id: map['id']?.toString() ?? '',
         userId: (map['user_id'] ?? map['userId'] ?? '').toString(),
-        name: map['name'] as String,
-        colorIndex: map['color_index'] as int? ??
-            map['colorIndex'] as int? ??
-            0,
+        name: (map['name'] as String?) ?? '',
+        // colorIndex 범위를 0~7로 제한하여 인덱스 초과 에러를 방지한다
+        colorIndex: ((map['color_index'] ?? map['colorIndex'] ?? 0) as num).toInt().clamp(0, 7),
         createdAt: DateParser.parse(
             map['created_at'] ?? map['createdAt'] ?? DateTime.now()),
       );

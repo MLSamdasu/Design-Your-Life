@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// 자연어 파싱 결과
 /// NlpTodoParser.parse()의 반환값이다
 class ParsedTodo {
-  /// 추출된 투두 제목 (날짜/시간 표현을 제거한 나머지 텍스트)
+  /// 추출된 투두 제목 (날짜/시간/태그 표현을 제거한 나머지 텍스트)
   final String title;
 
   /// 파싱된 날짜 (null이면 날짜 표현 미감지)
@@ -14,6 +14,9 @@ class ParsedTodo {
 
   /// 파싱된 시간 (null이면 시간 표현 미감지)
   final TimeOfDay? time;
+
+  /// 파싱된 태그 이름 목록 (#태그 구문에서 추출)
+  final List<String> tagNames;
 
   /// 원본 입력 텍스트 (디버깅/표시용)
   final String originalText;
@@ -27,6 +30,9 @@ class ParsedTodo {
   /// 시간이 파싱되었는지 여부
   bool get hasTime => time != null;
 
+  /// 태그가 파싱되었는지 여부
+  bool get hasTags => tagNames.isNotEmpty;
+
   /// 날짜와 시간 모두 파싱되지 않았고 제목도 없으면 비어있다고 간주한다
   bool get isEmpty => title.trim().isEmpty && !hasDate && !hasTime;
 
@@ -34,6 +40,7 @@ class ParsedTodo {
     required this.title,
     this.date,
     this.time,
+    this.tagNames = const [],
     required this.originalText,
   });
 }

@@ -15,23 +15,28 @@ import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/models/event.dart';
 import '../../../../shared/widgets/glass_button.dart';
 import '../../../../shared/widgets/glass_input_field.dart';
-import '../../../../shared/widgets/tag_chip_selector.dart';
+import '../../../../core/constants/app_constants.dart';
+// P1-3: Event 모델에 tags 필드가 없으므로 TagChipSelector 제거됨
 import '../../providers/event_provider.dart';
 import 'event_form_fields.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../shared/widgets/app_snack_bar.dart';
 
 /// 일정 생성/수정 다이얼로그 (showDialog로 표시)
 class EventCreateDialog extends ConsumerStatefulWidget {
   /// 편집 모드 시 기존 이벤트 ID
   final String? editEventId;
+  /// 편집 모드 시 기존 이벤트 데이터 (폼 초기값으로 사용)
+  final Event? editEvent;
   /// 기본 선택 날짜
   final DateTime initialDate;
 
   const EventCreateDialog({
     super.key,
     this.editEventId,
+    this.editEvent,
     required this.initialDate,
   });
 
@@ -55,16 +60,55 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
   // 반복 요일 (1=월 ~ 7=일)
   final Set<int> _repeatDays = {};
 
-  /// 선택된 태그 ID 집합 (F16: 태그 시스템)
-  Set<String> _selectedTagIds = {};
-
   bool _isSaving = false;
   String? _titleError;
+  String? _dateError;
+  String? _repeatError;
 
   @override
   void initState() {
     super.initState();
     _startDate = widget.initialDate;
+
+    // 편집 모드: 기존 이벤트 데이터로 폼을 초기화한다
+    final event = widget.editEvent;
+    if (event != null) {
+      _titleController.text = event.title;
+      _memoController.text = event.memo ?? '';
+      _locationController.text = event.location ?? '';
+      _eventType = event.eventType;
+      _selectedColorIndex = event.colorIndex;
+      _startDate = event.startDate;
+      _endDate = event.endDate;
+      // 종일 이벤트가 아니면 시작/종료 시간을 설정한다
+      if (!event.allDay) {
+        _startTime = TimeOfDay(
+          hour: event.startDate.hour,
+          minute: event.startDate.minute,
+        );
+        if (event.endDate != null) {
+          _endTime = TimeOfDay(
+            hour: event.endDate!.hour,
+            minute: event.endDate!.minute,
+          );
+        }
+      }
+      // 범위 태그 초기화
+      if (event.rangeTag != null) {
+        _rangeTagController.text = event.rangeTag!.name;
+      }
+      // 반복 규칙 파싱 (FREQ=WEEKLY;BYDAY=MO,TU 형식)
+      if (event.recurrenceRule != null) {
+        final byDayMatch = RegExp(r'BYDAY=([A-Z,]+)').firstMatch(event.recurrenceRule!);
+        if (byDayMatch != null) {
+          final dayNames = {'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 7};
+          for (final day in byDayMatch.group(1)!.split(',')) {
+            final dayNum = dayNames[day];
+            if (dayNum != null) _repeatDays.add(dayNum);
+          }
+        }
+      }
+    }
   }
 
   @override
@@ -80,14 +124,41 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
     setState(() {
       _titleError =
           _titleController.text.trim().isEmpty ? '제목을 입력해주세요' : null;
+
+      // 범위 일정: 종료일이 시작일 이전이면 유효하지 않다
+      if (_eventType == EventType.range) {
+        if (_endDate == null) {
+          _dateError = '종료일을 선택해주세요';
+        } else if (_endDate!.isBefore(_startDate)) {
+          _dateError = '종료일은 시작일 이후여야 합니다';
+        } else {
+          _dateError = null;
+        }
+      } else {
+        _dateError = null;
+      }
+
+      // 반복 일정: 반복 요일이 최소 1개 선택되어야 한다
+      if (_eventType == EventType.recurring && _repeatDays.isEmpty) {
+        _repeatError = '반복 요일을 최소 1개 선택해주세요';
+      } else {
+        _repeatError = null;
+      }
     });
-    return _titleError == null;
+    return _titleError == null && _dateError == null && _repeatError == null;
   }
 
   /// EventRepository를 통해 이벤트를 저장한다
   /// 위젯에서 API에 직접 접근하지 않고 Provider를 통해 서비스 계층에 위임한다
   Future<void> _save() async {
-    if (!_validate()) return;
+    if (!_validate()) {
+      // 유효성 검사 실패 시 첫 번째 오류 메시지를 SnackBar로 표시한다
+      final errorMsg = _titleError ?? _dateError ?? _repeatError;
+      if (errorMsg != null && mounted) {
+        AppSnackBar.showError(context, errorMsg);
+      }
+      return;
+    }
 
     setState(() => _isSaving = true);
     try {
@@ -117,12 +188,7 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
       // 일정 저장 실패 시 오류 컬러 토큰을 사용해 SnackBar로 사용자에게 알린다
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('일정 저장에 실패했습니다'),
-            backgroundColor: ColorTokens.infoHintBg,
-          ),
-        );
+        AppSnackBar.showError(context, '일정 저장에 실패했습니다');
       }
     }
   }
@@ -175,6 +241,7 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
       startDate: startDateTime,
       endDate: endDateTime,
       allDay: _startTime == null && _endTime == null,
+      colorIndex: _selectedColorIndex,
       location: _locationController.text.trim().isNotEmpty
           ? _locationController.text.trim()
           : null,
@@ -201,8 +268,10 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.pill),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(
+          filter: ImageFilter.blur(sigmaX: AppLayout.modalBlurSigma, sigmaY: AppLayout.modalBlurSigma),
+          child: Material(
+            type: MaterialType.transparency,
+            child: Container(
             decoration: GlassDecoration.modal(),
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppSpacing.xxxl),
@@ -216,6 +285,7 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
                     controller: _titleController,
                     label: '제목',
                     hint: '일정 제목을 입력하세요',
+                    maxLength: AppConstants.maxTitleLength,
                     errorText: _titleError,
                     onChanged: (_) {
                       if (_titleError != null) setState(() => _titleError = null);
@@ -246,18 +316,12 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
                           _repeatDays.addAll(days);
                         }),
                   ),
-                  const SizedBox(height: AppSpacing.xl),
-                  // 태그 선택 (F16: TagChipSelector)
-                  TagChipSelector(
-                    selectedTagIds: _selectedTagIds,
-                    onChanged: (tagIds) =>
-                        setState(() => _selectedTagIds = tagIds),
-                  ),
                   const SizedBox(height: AppSpacing.xxxl),
                   _buildButtons(),
                 ],
               ),
             ),
+          ),
           ),
         ),
       ),
@@ -278,12 +342,12 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
           onTap: () => Navigator.of(context).pop(false),
           behavior: HitTestBehavior.opaque,
           child: SizedBox(
-            width: 44,
-            height: 44,
+            width: AppLayout.minTouchTarget,
+            height: AppLayout.minTouchTarget,
             child: Center(
               child: Container(
-                width: 28,
-                height: 28,
+                width: AppLayout.iconHuge,
+                height: AppLayout.iconHuge,
                 decoration: BoxDecoration(
                   color: context.themeColors.textPrimaryWithAlpha(0.15),
                   shape: BoxShape.circle,
@@ -301,10 +365,76 @@ class _EventCreateDialogState extends ConsumerState<EventCreateDialog> {
     );
   }
 
+  /// 이벤트 삭제 확인 다이얼로그를 표시한다
+  Future<void> _deleteEvent() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.themeColors.dialogSurface,
+        title: Text(
+          '일정 삭제',
+          style: AppTypography.titleMd.copyWith(
+            color: context.themeColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          '이 일정을 삭제하시겠습니까?',
+          style: AppTypography.bodyMd.copyWith(
+            color: context.themeColors.textPrimaryWithAlpha(0.7),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              '취소',
+              style: AppTypography.bodyMd.copyWith(
+                color: context.themeColors.textPrimaryWithAlpha(0.7),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              '삭제',
+              style: AppTypography.bodyMd.copyWith(
+                color: ColorTokens.error,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        final deleteFn = ref.read(deleteEventProvider);
+        await deleteFn(widget.editEventId!);
+        if (mounted) Navigator.of(context).pop(true);
+      } catch (e) {
+        if (mounted) {
+          AppSnackBar.showError(context, '일정 삭제에 실패했습니다');
+        }
+      }
+    }
+  }
+
   /// 저장/취소 버튼 영역
   Widget _buildButtons() {
     return Row(
       children: [
+        // 편집 모드에서만 삭제 버튼을 표시한다 (Expanded로 3버튼 균등 분배)
+        if (widget.editEventId != null) ...[
+          Expanded(
+            child: GlassButton(
+              label: '삭제',
+              variant: GlassButtonVariant.ghost,
+              onTap: _isSaving ? null : _deleteEvent,
+              leadingIcon: Icons.delete_outline_rounded,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.lg),
+        ],
         Expanded(
           child: GlassButton(
             label: '취소',

@@ -6,17 +6,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/color_tokens.dart';
-import '../../../../core/theme/typography_tokens.dart';
-import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/enums/goal_period.dart';
 import '../../providers/goal_provider.dart';
-import '../../services/progress_calculator.dart';
 import 'goal_stats_header.dart';
 import 'goal_card.dart';
 import 'goal_create_dialog.dart';
 import 'goal_list_helpers.dart';
 import '../../../../core/theme/animation_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../shared/widgets/app_snack_bar.dart';
+import '../../../../shared/widgets/bottom_scroll_spacer.dart';
 
 /// 목표 리스트 뷰
 /// 상단: 년간/월간 탭 + 통계 바
@@ -28,10 +28,11 @@ class GoalListView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final year = ref.watch(selectedGoalYearProvider);
     final period = ref.watch(selectedGoalPeriodProvider);
-    final goalsAsync = ref.watch(
+    // 동기 Provider이므로 직접 사용한다
+    final goals = ref.watch(
       goalsByYearAndPeriodStreamProvider((year: year, period: period)),
     );
-    final statsAsync = ref.watch(goalStatsProvider);
+    final stats = ref.watch(goalStatsProvider);
 
     return Stack(
       children: [
@@ -46,61 +47,42 @@ class GoalListView extends ConsumerWidget {
             // 통계 헤더 (3개 스탯 카드) — 수평 패딩 20px
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-              child: statsAsync.when(
-                data: (stats) => GoalStatsHeader(stats: stats, isLoading: false),
-                loading: () => GoalStatsHeader(
-                  stats: const GoalStats(
-                    achievementRate: 0,
-                    avgProgress: 0,
-                    totalGoalCount: 0,
-                  ),
-                  isLoading: true,
-                ),
-                error: (_, __) => const SizedBox.shrink(),
+              // goalStatsProvider는 동기 Provider이므로 직접 사용한다
+              child: GoalStatsHeader(
+                stats: stats,
+                isLoading: false,
               ),
             ),
             const SizedBox(height: AppSpacing.xxl),
             // 목표 목록
             Expanded(
-              child: goalsAsync.when(
-                data: (goals) {
-                  if (goals.isEmpty) {
-                    // 빈 상태 위젯 (goal_list_helpers.dart에서 분리)
-                    return EmptyGoalState(period: period, year: year);
-                  }
-                  // 카드 좌우 20px, 하단 100px 여백으로 FAB 가림 방지
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-                    itemCount: goals.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xl),
-                    itemBuilder: (context, index) {
-                      // AN-02: Staggered 카드 등장 (goal_list_helpers.dart)
-                      return StaggeredCard(
-                        index: index,
-                        child: GoalCard(goal: goals[index]),
-                      );
-                    },
-                  );
-                },
-                loading: () => Center(
-                  child: CircularProgressIndicator(color: context.themeColors.textPrimary),
-                ),
-                error: (e, _) => Center(
-                  child: Text(
-                    '목표를 불러올 수 없어요',
-                    style: AppTypography.bodyLg.copyWith(
-                      color: context.themeColors.textPrimaryWithAlpha(0.6),
-                    ),
-                  ),
-                ),
-              ),
+              // goalsByYearAndPeriodStreamProvider는 동기 Provider이므로 직접 사용한다
+              child: () {
+                if (goals.isEmpty) {
+                  // 빈 상태 위젯 (goal_list_helpers.dart에서 분리)
+                  return EmptyGoalState(period: period, year: year);
+                }
+                // 하단 여백: 마지막 콘텐츠를 화면 중앙까지 스크롤 가능하도록 화면 절반 높이
+                return ListView.separated(
+                  padding: EdgeInsets.fromLTRB(AppSpacing.pageHorizontal, 0, AppSpacing.pageHorizontal, BottomScrollSpacer.height(context)),
+                  itemCount: goals.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xl),
+                  itemBuilder: (context, index) {
+                    // AN-02: Staggered 카드 등장 (goal_list_helpers.dart)
+                    return StaggeredCard(
+                      index: index,
+                      child: GoalCard(goal: goals[index]),
+                    );
+                  },
+                );
+              }(),
             ),
           ],
         ),
-        // FAB: 새 목표 추가 — right 20px로 화면 가장자리에서 적절히 이격
+        // FAB: 새 목표 추가 — 하단 여백 기준 배치
         Positioned(
           right: AppSpacing.xxl,
-          bottom: AppSpacing.xl,
+          bottom: AppLayout.bottomNavArea + AppSpacing.xl,
           child: _AddGoalFab(period: period, year: year),
         ),
       ],
@@ -154,8 +136,8 @@ class _AddGoalFab extends ConsumerWidget {
     return FloatingActionButton(
       onPressed: () => _showCreateDialog(context),
       backgroundColor: ColorTokens.main,
-      foregroundColor: Colors.white,
-      elevation: 4,
+      foregroundColor: ColorTokens.white,
+      elevation: AppLayout.fabElevation,
       child: const Icon(Icons.add_rounded),
     );
   }
@@ -168,7 +150,7 @@ class _AddGoalFab extends ConsumerWidget {
         context: context,
         barrierDismissible: true,
         barrierLabel: 'Close',
-        barrierColor: ColorTokens.barrierBase.withValues(alpha: 0.4),
+        barrierColor: ColorTokens.barrierBase.withValues(alpha: AppAnimation.barrierAlpha),
         transitionDuration: AppAnimation.standard,
         pageBuilder: (_, __, ___) => GoalCreateDialog(
           defaultPeriod: period,
@@ -181,7 +163,7 @@ class _AddGoalFab extends ConsumerWidget {
             reverseCurve: Curves.easeInCubic,
           );
           return ScaleTransition(
-            scale: Tween<double>(begin: 0.9, end: 1.0).animate(curved),
+            scale: Tween<double>(begin: AppAnimation.dialogScaleIn, end: 1.0).animate(curved),
             child: FadeTransition(opacity: curved, child: child),
           );
         },
@@ -189,12 +171,7 @@ class _AddGoalFab extends ConsumerWidget {
     } catch (e) {
       // 다이얼로그 처리 중 예기치 않은 오류가 발생한 경우 사용자에게 알린다
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('목표 추가에 실패했습니다'),
-            backgroundColor: ColorTokens.infoHintBg,
-          ),
-        );
+        AppSnackBar.showError(context, '목표 추가에 실패했습니다');
       }
     }
   }

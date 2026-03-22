@@ -2,6 +2,7 @@
 // todo_create_dialog.dart에서 추출한다.
 // 포함: TodoGlassTextField, TodoPrimaryButton, TodoDialogHeader, TodoColorSection
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/typography_tokens.dart';
@@ -31,13 +32,18 @@ class TodoGlassTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      maxLength: AppLayout.todoTitleMaxLength,
+      maxLengthEnforcement: MaxLengthEnforcement.enforced,
+      // 카운터 위젯을 숨겨 시각적 노이즈를 제거한다
+      buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
       validator: validator,
       style: AppTypography.bodyLg.copyWith(color: context.themeColors.textPrimary),
       cursorColor: context.themeColors.textPrimary,
       decoration: InputDecoration(
         hintText: hintText,
+        // WCAG: 힌트 텍스트 알파 0.55 이상으로 가독성 보장
         hintStyle: AppTypography.bodyLg.copyWith(
-          color: context.themeColors.textPrimaryWithAlpha(0.4),
+          color: context.themeColors.textPrimaryWithAlpha(0.55),
         ),
         filled: true,
         fillColor: context.themeColors.textPrimaryWithAlpha(0.10),
@@ -90,9 +96,9 @@ class TodoPrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: [
             BoxShadow(
-              color: ColorTokens.main.withValues(alpha: 0.3),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+              color: ColorTokens.main.withValues(alpha: AppLayout.badgeShadowAlpha),
+              blurRadius: AppLayout.ctaShadowBlur,
+              offset: const Offset(0, AppLayout.ctaShadowOffsetY),
             ),
           ],
         ),
@@ -100,7 +106,7 @@ class TodoPrimaryButton extends StatelessWidget {
           child: Text(
             label,
             // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-            style: AppTypography.titleMd.copyWith(color: Colors.white),
+            style: AppTypography.titleMd.copyWith(color: ColorTokens.white),
           ),
         ),
       ),
@@ -109,17 +115,23 @@ class TodoPrimaryButton extends StatelessWidget {
 }
 
 /// 다이얼로그 헤더 (제목 텍스트 + 닫기 버튼)
+/// [title]: 헤더 제목 (기본값: '할 일 추가', 수정 모드에서는 '할 일 수정' 전달)
 class TodoDialogHeader extends StatelessWidget {
   final VoidCallback onClose;
+  final String title;
 
-  const TodoDialogHeader({super.key, required this.onClose});
+  const TodoDialogHeader({
+    super.key,
+    required this.onClose,
+    this.title = '할 일 추가',
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Text(
-          '할 일 추가',
+          title,
           style: AppTypography.titleMd.copyWith(color: context.themeColors.textPrimary),
         ),
         const Spacer(),

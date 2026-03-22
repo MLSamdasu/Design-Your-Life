@@ -106,7 +106,8 @@ class TodoTimeRangeSection extends StatelessWidget {
                 child: Icon(
                   Icons.arrow_forward_rounded,
                   size: AppLayout.iconMd,
-                  color: context.themeColors.textPrimaryWithAlpha(0.4),
+                  // WCAG: 화살표 아이콘 알파 0.50 이상으로 가독성 보장
+                  color: context.themeColors.textPrimaryWithAlpha(0.50),
                 ),
               ),
               // 종료 시간
@@ -185,7 +186,8 @@ class _LabeledTimePicker extends StatelessWidget {
         Text(
           label,
           style: AppTypography.captionMd.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.5),
+            // WCAG: 라벨 텍스트 알파 0.55 이상으로 가독성 보장
+            color: context.themeColors.textPrimaryWithAlpha(0.55),
           ),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -217,7 +219,7 @@ class _QuickDurationButtons extends StatelessWidget {
         return Expanded(
           child: Padding(
             padding: EdgeInsets.only(
-              right: option == _options.last ? 0 : 6,
+              right: option == _options.last ? 0 : AppLayout.quickDurationGap,
             ),
             child: GestureDetector(
               onTap: () => onDurationSelected(option.minutes),

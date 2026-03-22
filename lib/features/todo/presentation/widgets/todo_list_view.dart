@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/models/todo.dart';
 import '../../../../shared/models/habit.dart';
 import '../../../../shared/widgets/empty_state.dart';
-import '../../../../shared/widgets/loading_indicator.dart';
 import '../../../../shared/providers/tag_provider.dart';
 import '../../providers/todo_provider.dart';
 import '../../../habit/providers/habit_provider.dart';
@@ -18,9 +17,11 @@ import 'todo_create_dialog.dart';
 import 'todo_item_tile.dart';
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../shared/widgets/animated_strikethrough.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../shared/widgets/bottom_scroll_spacer.dart';
+import '../../../../shared/widgets/app_snack_bar.dart';
 
 /// 수정 다이얼로그를 열고 결과를 updateTodo로 저장한다
 Future<void> _openEditDialog(
@@ -53,6 +54,8 @@ Future<void> _openEditDialog(
       todo.id,
       todo.copyWith(
         title: result.title,
+        // P1-16: 다이얼로그에서 변경된 날짜를 반영한다
+        date: result.date,
         startTime: result.startTime,
         clearStartTime: result.startTime == null,
         endTime: result.endTime,
@@ -68,12 +71,7 @@ Future<void> _openEditDialog(
   } catch (e) {
     // 수정 실패 시 사용자에게 오류를 알린다
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('할 일 수정에 실패했습니다'),
-          backgroundColor: ColorTokens.infoHintBg,
-        ),
-      );
+      AppSnackBar.showError(context, '할 일 수정에 실패했습니다');
     }
   }
 }
@@ -85,7 +83,6 @@ class TodoListView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final todosAsync = ref.watch(todosForDateProvider);
     // P0: 액션 Provider는 ref.read()로 충분하다 (watch하면 불필요한 rebuild 발생)
     final toggleTodo = ref.read(toggleTodoProvider);
     final deleteTodo = ref.read(deleteTodoProvider);
@@ -99,109 +96,83 @@ class TodoListView extends ConsumerWidget {
     // 오늘의 습관 체크리스트를 watch한다
     final habitsForDay = ref.watch(habitsForTodoDateProvider);
 
-    return todosAsync.when(
-      data: (_) {
-        // 태그 필터가 적용된 정렬 목록을 사용한다 (P1-1: filteredTodosProvider)
-        final filtered = ref.watch(filteredTodosProvider);
+    // 태그 필터가 적용된 정렬 목록을 사용한다
+    final filtered = ref.watch(filteredTodosProvider);
 
-        if (filtered.isEmpty && habitsForDay.isEmpty) {
-          // AN-13: 빈 상태 -> 콘텐츠 전환 AnimatedSwitcher
-          return AnimatedSwitcher(
-            duration: AppAnimation.medium,
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: EmptyState(
-              key: const ValueKey('todo-empty'),
-              icon: Icons.task_alt_rounded,
-              mainText: '오늘 할 일이 없습니다',
-              subText: '새로운 할 일을 추가해보세요!',
-              ctaLabel: '할 일 추가',
-              onCtaTap: null, // FAB에서 처리
-            ),
-          );
+    if (filtered.isEmpty && habitsForDay.isEmpty) {
+      return EmptyState(
+        key: const ValueKey('todo-empty'),
+        icon: Icons.task_alt_rounded,
+        mainText: '오늘 할 일이 없습니다',
+        subText: '새로운 할 일을 추가해보세요!',
+        ctaLabel: '할 일 추가',
+        onCtaTap: null, // FAB에서 처리
+      );
+    }
+
+    // 이벤트/루틴/타이머 중 하나라도 있으면 요약 바를 표시한다
+    final hasScheduleInfo = calendarEvents.isNotEmpty ||
+        routineEntries.isNotEmpty ||
+        timerEntries.isNotEmpty;
+
+    // 습관 섹션이 있는지 확인한다
+    final hasHabits = habitsForDay.isNotEmpty;
+
+    // 헤더 수: 요약 바 + 습관 섹션 (각각 존재할 때만)
+    final headerCount = (hasScheduleInfo ? 1 : 0) + (hasHabits ? 1 : 0);
+
+    // 외부 SingleChildScrollView가 제거되었으므로 ListView 자체가 스크롤을 담당한다
+    return ListView.builder(
+      key: const ValueKey('todo-list'),
+      // 하단 여백: 마지막 콘텐츠를 화면 중앙까지 스크롤 가능하도록 화면 절반 높이
+      padding: EdgeInsets.fromLTRB(AppSpacing.xxl, 0, AppSpacing.xxl, BottomScrollSpacer.height(context)),
+      // 요약 바 + 습관 섹션 + 투두 목록
+      itemCount: filtered.length + headerCount,
+      itemBuilder: (context, index) {
+        int currentOffset = 0;
+
+        // 요약 정보 바 (첫 번째 헤더)
+        if (hasScheduleInfo) {
+          if (index == currentOffset) {
+            return _ScheduleSummaryBar(
+              eventCount: calendarEvents.length,
+              routineCount: routineEntries.length,
+              timerCount: timerEntries.length,
+            );
+          }
+          currentOffset++;
         }
 
-        // 이벤트/루틴/타이머 중 하나라도 있으면 요약 바를 표시한다
-        final hasScheduleInfo = calendarEvents.isNotEmpty ||
-            routineEntries.isNotEmpty ||
-            timerEntries.isNotEmpty;
-
-        // 습관 섹션이 있는지 확인한다
-        final hasHabits = habitsForDay.isNotEmpty;
-
-        // 헤더 수: 요약 바 + 습관 섹션 (각각 존재할 때만)
-        final headerCount = (hasScheduleInfo ? 1 : 0) + (hasHabits ? 1 : 0);
-
-        // 외부 SingleChildScrollView가 제거되었으므로 ListView 자체가 스크롤을 담당한다
-        return ListView.builder(
-          key: const ValueKey('todo-list'),
-          // 하단 여백: 마지막 콘텐츠를 화면 중앙까지 스크롤 가능하도록 화면 절반 높이
-          padding: EdgeInsets.fromLTRB(AppSpacing.xxl, 0, AppSpacing.xxl, BottomScrollSpacer.height(context)),
-          // 요약 바 + 습관 섹션 + 투두 목록
-          itemCount: filtered.length + headerCount,
-          itemBuilder: (context, index) {
-            int currentOffset = 0;
-
-            // 요약 정보 바 (첫 번째 헤더)
-            if (hasScheduleInfo) {
-              if (index == currentOffset) {
-                return _ScheduleSummaryBar(
-                  eventCount: calendarEvents.length,
-                  routineCount: routineEntries.length,
-                  timerCount: timerEntries.length,
-                );
-              }
-              currentOffset++;
-            }
-
-            // 습관 체크리스트 섹션 (두 번째 헤더)
-            if (hasHabits) {
-              if (index == currentOffset) {
-                return _HabitChecklistSection(
-                  habits: habitsForDay,
-                  selectedDate: selectedDate,
-                );
-              }
-              currentOffset++;
-            }
-
-            final todoIndex = index - currentOffset;
-            final todo = filtered[todoIndex];
-            return TodoItemTile(
-              key: Key(todo.id),
-              todo: todo,
-              onToggle: (isCompleted) =>
-                  toggleTodo(todo.id, isCompleted),
-              onDelete: () => deleteTodo(todo.id),
-              onEdit: () => _openEditDialog(
-                context,
-                ref,
-                todo,
-                selectedDate,
-                updateTodo,
-              ),
+        // 습관 체크리스트 섹션 (두 번째 헤더)
+        if (hasHabits) {
+          if (index == currentOffset) {
+            return _HabitChecklistSection(
+              habits: habitsForDay,
+              selectedDate: selectedDate,
             );
-          },
-        );
-      },
-      loading: () => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-        child: Column(
-          children: List.generate(
-            3,
-            (i) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.md),
-              child: LoadingSkeleton(height: AppLayout.timelineHourHeight, borderRadius: AppRadius.xl),
+          }
+          currentOffset++;
+        }
+
+        final todoIndex = index - currentOffset;
+        final todo = filtered[todoIndex];
+        return RepaintBoundary(
+          child: TodoItemTile(
+            key: Key(todo.id),
+            todo: todo,
+            onToggle: (isCompleted) =>
+                toggleTodo(todo.id, isCompleted),
+            onDelete: () => deleteTodo(todo.id),
+            onEdit: () => _openEditDialog(
+              context,
+              ref,
+              todo,
+              selectedDate,
+              updateTodo,
             ),
           ),
-        ),
-      ),
-      error: (error, _) => Center(
-        child: Text(
-          '투두를 불러오지 못했어요',
-          style: TextStyle(color: context.themeColors.textPrimaryWithAlpha(0.6)),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -396,13 +367,14 @@ class _HabitChecklistSection extends ConsumerWidget {
               );
             },
             child: AnimatedContainer(
-              duration: AppAnimation.normal,
+              duration: AppAnimation.slow,
+              curve: Curves.easeInOut,
               width: AppLayout.iconMd,
               height: AppLayout.iconMd,
               decoration: BoxDecoration(
                 color: isCompleted
                     ? context.themeColors.accent
-                    : Colors.transparent,
+                    : ColorTokens.transparent,
                 borderRadius: BorderRadius.circular(AppRadius.xs),
                 border: Border.all(
                   color: isCompleted
@@ -427,16 +399,14 @@ class _HabitChecklistSection extends ConsumerWidget {
               padding: const EdgeInsets.only(right: AppSpacing.xs),
               child: Text(habit.icon!, style: AppTypography.bodyMd),
             ),
-          // 습관 이름
+          // 습관 이름 (완료 시 빨간펜 취소선 애니메이션 적용)
           Expanded(
-            child: Text(
-              habit.name,
+            child: AnimatedStrikethrough(
+              text: habit.name,
               style: AppTypography.bodySm.copyWith(
                 color: context.themeColors.textPrimary,
-                decoration:
-                    isCompleted ? TextDecoration.lineThrough : null,
               ),
-              overflow: TextOverflow.ellipsis,
+              isActive: isCompleted,
             ),
           ),
         ],

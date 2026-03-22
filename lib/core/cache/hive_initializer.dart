@@ -1,11 +1,16 @@
 // C0.6: Hive 초기화 + Box 등록
 // Hive.initFlutter() 호출 후 각 Box를 오픈한다.
 // AES 암호화 키를 flutter_secure_storage에서 읽어 Hive Box 암호화에 사용한다.
+// 데스크톱(macOS/Windows)에서 Keychain 접근이 실패하면 파일 기반 키 저장소를 사용한다.
 // 암호화 키가 없으면 새로 생성 후 저장한다 (초회 설치 시).
+import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../constants/app_constants.dart';
 
@@ -22,21 +27,33 @@ abstract class HiveInitializer {
   /// Hive AES 키 저장 키 이름
   static const _hiveEncryptionKeyName = 'hive_encryption_key';
 
+  /// flutter_secure_storage 타임아웃 (초)
+  /// macOS에서 Keychain 접근이 무한 대기할 수 있으므로 타임아웃을 설정한다
+  static const _secureStorageTimeoutSeconds = 5;
+
   // ─── 초기화 ───────────────────────────────────────────────────────────────
   /// Hive를 초기화하고 모든 Box를 오픈한다
   /// 암호화 Box는 AES 256-bit 키로 보호한다
   static Future<void> init() async {
     // Flutter 네이티브 환경 초기화
+    debugPrint('[Hive] initFlutter 시작...');
     await Hive.initFlutter();
+    debugPrint('[Hive] initFlutter 완료');
 
     // 암호화 키 획득 또는 생성
+    debugPrint('[Hive] 암호화 키 획득 시작...');
     final encryptionKey = await _getOrCreateEncryptionKey();
+    debugPrint('[Hive] 암호화 키 획득 완료');
 
     // 암호화 적용 Box (사용자 데이터 보관)
+    debugPrint('[Hive] 암호화 Box 오픈 시작...');
     await _openEncryptedBoxes(encryptionKey);
+    debugPrint('[Hive] 암호화 Box 오픈 완료');
 
     // 비암호화 Box (설정, 메타데이터)
+    debugPrint('[Hive] 일반 Box 오픈 시작...');
     await _openPlainBoxes();
+    debugPrint('[Hive] 일반 Box 오픈 완료');
   }
 
   // ─── 안전한 Box 오픈 헬퍼 ──────────────────────────────────────────────────
@@ -50,21 +67,34 @@ abstract class HiveInitializer {
   }
 
   // ─── 암호화 키 관리 ──────────────────────────────────────────────────────
-  /// AES 암호화 키를 반환한다 (없으면 생성 후 SecureStorage에 저장)
-  /// 네이티브 환경 전용: iOS Keychain, Android Keystore에 키를 안전하게 보관한다
-  /// 본 앱은 Android/iOS/macOS 전용이므로 Web 분기를 제거한다 (배포 대상 아님)
+  /// AES 암호화 키를 반환한다 (없으면 생성 후 저장)
+  /// 모바일(Android/iOS): flutter_secure_storage (Keychain/Keystore)
+  /// 데스크톱(macOS/Windows): flutter_secure_storage 시도 후 실패 시 파일 기반 폴백
   static Future<HiveAesCipher> _getOrCreateEncryptionKey() async {
-    String? existingKey = await _secureStorage.read(key: _hiveEncryptionKeyName);
+    // 데스크톱 플랫폼에서는 Keychain 접근이 무한 대기할 수 있으므로
+    // 타임아웃 후 파일 기반 키 저장소로 폴백한다
+    if (_isDesktop) {
+      return _getOrCreateEncryptionKeyDesktop();
+    }
+
+    // 모바일(Android/iOS): flutter_secure_storage를 직접 사용한다
+    return _getOrCreateEncryptionKeyMobile();
+  }
+
+  /// 데스크톱 여부 (macOS/Windows/Linux)
+  static bool get _isDesktop =>
+      Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+
+  /// 모바일용 암호화 키 관리 (flutter_secure_storage 사용)
+  static Future<HiveAesCipher> _getOrCreateEncryptionKeyMobile() async {
+    String? existingKey =
+        await _secureStorage.read(key: _hiveEncryptionKeyName);
 
     if (existingKey != null) {
       try {
-        // 기존 키를 List<int>로 변환 (쉼표 구분 문자열로 저장)
         final keyList = existingKey.split(',').map(int.parse).toList();
         return HiveAesCipher(keyList);
       } catch (e) {
-        // 키 문자열이 손상된 경우: 새 키를 생성하여 복구한다
-        // 기존 암호화된 Box 데이터는 복호화할 수 없으므로 손실된다
-        // 사용자에게 Google Drive 백업에서 복원하도록 안내해야 한다
         developer.log(
           '[HiveInitializer] 암호화 키 파싱 실패, 새 키 생성: $e',
           name: 'hive',
@@ -76,6 +106,79 @@ abstract class HiveInitializer {
     final newKey = Hive.generateSecureKey();
     final keyString = newKey.join(',');
     await _secureStorage.write(key: _hiveEncryptionKeyName, value: keyString);
+
+    return HiveAesCipher(newKey);
+  }
+
+  /// 데스크톱용 암호화 키 관리
+  /// flutter_secure_storage를 타임아웃으로 시도한 후,
+  /// 실패 시 파일 기반 키 저장소로 폴백한다
+  static Future<HiveAesCipher> _getOrCreateEncryptionKeyDesktop() async {
+    // 1차: flutter_secure_storage 시도 (타임아웃 적용)
+    try {
+      debugPrint('[Hive] 데스크톱: SecureStorage 시도 ($_secureStorageTimeoutSeconds초 타임아웃)...');
+      final existingKey = await _secureStorage
+          .read(key: _hiveEncryptionKeyName)
+          .timeout(
+            Duration(seconds: _secureStorageTimeoutSeconds),
+          );
+
+      if (existingKey != null) {
+        final keyList = existingKey.split(',').map(int.parse).toList();
+        debugPrint('[Hive] 데스크톱: SecureStorage에서 기존 키 로드 성공');
+        return HiveAesCipher(keyList);
+      }
+
+      // SecureStorage에 키가 없으면 새로 생성하여 SecureStorage에 저장 시도
+      final newKey = Hive.generateSecureKey();
+      final keyString = newKey.join(',');
+      await _secureStorage
+          .write(key: _hiveEncryptionKeyName, value: keyString)
+          .timeout(Duration(seconds: _secureStorageTimeoutSeconds));
+      debugPrint('[Hive] 데스크톱: SecureStorage에 새 키 저장 성공');
+      return HiveAesCipher(newKey);
+    } catch (e) {
+      // SecureStorage 실패(타임아웃 포함) → 파일 기반 폴백
+      debugPrint('[Hive] 데스크톱: SecureStorage 실패 ($e), 파일 기반 폴백 사용');
+    }
+
+    // 2차: 파일 기반 키 저장소 (앱 서포트 디렉토리에 저장)
+    return _getOrCreateEncryptionKeyFromFile();
+  }
+
+  /// 파일 기반 암호화 키 저장소 (데스크톱 폴백용)
+  /// Application Support 디렉토리에 암호화 키를 JSON 파일로 저장한다
+  /// Keychain보다 보안 수준이 낮지만 앱이 정상 동작하도록 보장한다
+  static Future<HiveAesCipher> _getOrCreateEncryptionKeyFromFile() async {
+    final dir = await getApplicationSupportDirectory();
+    final keyFile = File('${dir.path}/.hive_key');
+
+    // 기존 키 파일이 있으면 읽기
+    if (keyFile.existsSync()) {
+      try {
+        final content = await keyFile.readAsString();
+        final keyList =
+            (jsonDecode(content) as List<dynamic>).cast<int>().toList();
+        debugPrint('[Hive] 데스크톱: 파일에서 기존 키 로드 성공');
+        return HiveAesCipher(keyList);
+      } catch (e) {
+        developer.log(
+          '[HiveInitializer] 파일 기반 키 파싱 실패, 새 키 생성: $e',
+          name: 'hive',
+        );
+      }
+    }
+
+    // 새 키 생성 후 파일에 저장
+    final newKey = Hive.generateSecureKey();
+    await keyFile.writeAsString(jsonEncode(newKey));
+
+    // macOS/Linux에서 키 파일 권한을 소유자만 읽기/쓰기로 제한한다 (0600)
+    // Windows는 POSIX 권한 모델이 없으므로 제외한다
+    if (!Platform.isWindows) {
+      await Process.run('chmod', ['600', keyFile.path]);
+    }
+    debugPrint('[Hive] 데스크톱: 파일에 새 키 저장 완료 (권한 설정 적용)');
 
     return HiveAesCipher(newKey);
   }

@@ -132,7 +132,7 @@ class _GlassInputFieldState extends State<GlassInputField> {
                       ? context.themeColors.textPrimaryWithAlpha(0.50)
                       // 기본 상태: 0.20 opacity
                       : context.themeColors.textPrimaryWithAlpha(0.20),
-              width: _isFocused ? 1.5 : 1,
+              width: _isFocused ? AppLayout.borderMedium : AppLayout.borderThin,
             ),
           ),
           child: TextField(

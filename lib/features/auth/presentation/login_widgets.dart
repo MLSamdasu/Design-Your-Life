@@ -23,22 +23,22 @@ class AppIcon extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.massive),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
         child: Container(
-          width: 80,
-          height: 80,
+          width: AppLayout.appIconSize,
+          height: AppLayout.appIconSize,
           decoration: BoxDecoration(
             color: context.themeColors.textPrimaryWithAlpha(0.18),
             borderRadius: BorderRadius.circular(AppRadius.massive),
             border: Border.all(
               color: context.themeColors.textPrimaryWithAlpha(0.30),
-              width: 1.5,
+              width: AppLayout.borderMedium,
             ),
             boxShadow: [
               BoxShadow(
                 color: ColorTokens.gray900.withValues(alpha: 0.18),
-                blurRadius: 20,
-                offset: const Offset(0, 6),
+                blurRadius: AppLayout.shadowBlurXl,
+                offset: const Offset(0, AppLayout.shadowOffsetMd),
               ),
             ],
           ),
@@ -46,7 +46,7 @@ class AppIcon extends StatelessWidget {
             child: Text(
               '✦',
               style: AppTypography.emojiLg.copyWith(
-                fontSize: 32,
+                fontSize: AppLayout.emojiAppIcon,
                 color: context.themeColors.textPrimary,
               ),
             ),
@@ -81,21 +81,21 @@ class LoginCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.massive),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
         child: Container(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(AppLayout.loginCardPadding),
           decoration: BoxDecoration(
             color: context.themeColors.textPrimaryWithAlpha(0.15),
             borderRadius: BorderRadius.circular(AppRadius.massive),
             border: Border.all(
               color: context.themeColors.textPrimaryWithAlpha(0.25),
-              width: 1,
+              width: AppLayout.borderThin,
             ),
             boxShadow: [
               BoxShadow(
                 color: ColorTokens.gray900.withValues(alpha: 0.12),
-                blurRadius: 32,
-                offset: const Offset(0, 8),
+                blurRadius: AppLayout.shadowBlurXxl,
+                offset: const Offset(0, AppLayout.shadowOffsetLg),
               ),
             ],
           ),
@@ -148,7 +148,7 @@ class LoginCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(AppRadius.xlLg),
                         border: Border.all(
                           color: context.themeColors.textPrimaryWithAlpha(0.20),
-                          width: 1,
+                          width: AppLayout.borderThin,
                         ),
                       ),
                       child: Row(
@@ -238,13 +238,13 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
           borderRadius: BorderRadius.circular(AppRadius.xlLg),
           border: Border.all(
             color: context.themeColors.textPrimaryWithAlpha(0.35),
-            width: 1,
+            width: AppLayout.borderThin,
           ),
           boxShadow: [
             BoxShadow(
               color: ColorTokens.main.withValues(alpha: 0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              blurRadius: AppLayout.shadowBlurMd,
+              offset: const Offset(0, AppLayout.shadowOffsetSm),
             ),
           ],
         ),
@@ -254,10 +254,10 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
             // 로딩 중이면 인디케이터, 아니면 Google 'G' 로고
             if (widget.isLoading)
               SizedBox(
-                width: 20,
-                height: 20,
+                width: AppLayout.googleLogoSize,
+                height: AppLayout.googleLogoSize,
                 child: CircularProgressIndicator(
-                  strokeWidth: 2,
+                  strokeWidth: AppLayout.spinnerStrokeWidth,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     context.themeColors.textPrimaryWithAlpha(0.80),
                   ),
@@ -265,8 +265,8 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
               )
             else
               Container(
-                width: 20,
-                height: 20,
+                width: AppLayout.googleLogoSize,
+                height: AppLayout.googleLogoSize,
                 decoration: BoxDecoration(
                   color: context.themeColors.textPrimary,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -276,7 +276,7 @@ class _GoogleSignInButtonState extends State<GoogleSignInButton> {
                     'G',
                     style: AppTypography.captionLg.copyWith(
                       color: ColorTokens.main,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: AppTypography.weightExtraBold,
                       height: 1.0,
                     ),
                   ),

@@ -101,7 +101,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
           sigmaY: GlassDecoration.elevatedBlurSigma,
         ),
         child: Container(
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(AppSpacing.xxxl),
           decoration: GlassDecoration.modal(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -117,8 +117,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
 
               // 업적 이모지 (크게 표시, 배경 테마에 맞는 악센트 색상 원형 배경)
               Container(
-                width: 80,
-                height: 80,
+                width: AppLayout.containerXl,
+                height: AppLayout.containerXl,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
@@ -132,15 +132,15 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   boxShadow: [
                     BoxShadow(
                       color: context.themeColors.accentWithAlpha(0.40),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
+                      blurRadius: AppLayout.shadowBlurLg,
+                      offset: const Offset(0, AppLayout.shadowOffsetMd),
                     ),
                   ],
                 ),
                 child: Center(
                   child: Text(
                     widget.achievement.iconName,
-                    style: const TextStyle(fontSize: 36),
+                    style: TextStyle(fontSize: AppLayout.emojiDialogXl),
                   ),
                 ),
               ),
@@ -151,7 +151,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                 widget.achievement.title,
                 style: AppTypography.titleLg.copyWith(
                     color: context.themeColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: AppTypography.weightBold,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -190,7 +190,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                       '+${widget.achievement.xpReward} XP 획득!',
                       style: AppTypography.titleMd.copyWith(
                         color: context.themeColors.accent,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: AppTypography.weightBold,
                       ),
                     ),
                   ],
@@ -210,8 +210,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     boxShadow: [
                       BoxShadow(
                         color: ColorTokens.main.withValues(alpha: 0.30),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
+                        blurRadius: AppLayout.ctaShadowBlur,
+                        offset: const Offset(0, AppLayout.ctaShadowOffsetY),
                       ),
                     ],
                   ),
@@ -219,7 +219,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                     '확인',
                     style: AppTypography.titleMd.copyWith(
                       // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-                      color: Colors.white,
+                      color: ColorTokens.white,
                     ),
                     textAlign: TextAlign.center,
                   ),

@@ -138,18 +138,34 @@ final allGoalTasksRawProvider = Provider<List<Map<String, dynamic>>>((ref) {
 
 /// 모든 데이터 버전 카운터를 일괄 증가시킨다
 /// 백업 복원, Pull-to-refresh 등 전체 데이터가 변경된 경우에 호출한다
-/// Ref(Provider 내부)와 WidgetRef(위젯) 모두에서 사용할 수 있도록 dynamic 타입을 받는다
+/// Riverpod의 Ref(Provider 내부)와 WidgetRef(위젯)는 공통 인터페이스가 없으므로
+/// 타입 체크로 분기하여 안전하게 처리한다
 void bumpAllDataVersions(dynamic ref) {
-  ref.read(todoDataVersionProvider.notifier).state++;
-  ref.read(eventDataVersionProvider.notifier).state++;
-  ref.read(habitDataVersionProvider.notifier).state++;
-  ref.read(habitLogDataVersionProvider.notifier).state++;
-  ref.read(routineDataVersionProvider.notifier).state++;
-  ref.read(routineLogDataVersionProvider.notifier).state++;
-  ref.read(tagDataVersionProvider.notifier).state++;
-  ref.read(timerLogDataVersionProvider.notifier).state++;
-  ref.read(achievementDataVersionProvider.notifier).state++;
-  ref.read(goalDataVersionProvider.notifier).state++;
-  ref.read(subGoalDataVersionProvider.notifier).state++;
-  ref.read(goalTaskDataVersionProvider.notifier).state++;
+  // Ref 또는 WidgetRef인지 타입을 검증한 후 버전 카운터를 증가시킨다
+  if (ref is Ref) {
+    _bumpAll(ref.read);
+  } else if (ref is WidgetRef) {
+    _bumpAll(ref.read);
+  } else {
+    throw ArgumentError(
+      'bumpAllDataVersions: ref는 Ref 또는 WidgetRef여야 한다. '
+      '전달된 타입: ${ref.runtimeType}',
+    );
+  }
+}
+
+/// 내부 헬퍼: read 함수를 받아 모든 버전 카운터를 1씩 증가시킨다
+void _bumpAll(T Function<T>(ProviderListenable<T>) read) {
+  read(todoDataVersionProvider.notifier).state++;
+  read(eventDataVersionProvider.notifier).state++;
+  read(habitDataVersionProvider.notifier).state++;
+  read(habitLogDataVersionProvider.notifier).state++;
+  read(routineDataVersionProvider.notifier).state++;
+  read(routineLogDataVersionProvider.notifier).state++;
+  read(tagDataVersionProvider.notifier).state++;
+  read(timerLogDataVersionProvider.notifier).state++;
+  read(achievementDataVersionProvider.notifier).state++;
+  read(goalDataVersionProvider.notifier).state++;
+  read(subGoalDataVersionProvider.notifier).state++;
+  read(goalTaskDataVersionProvider.notifier).state++;
 }

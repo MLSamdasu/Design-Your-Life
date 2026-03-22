@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/animation_tokens.dart';
 import '../../core/theme/color_tokens.dart';
 import '../../core/theme/layout_tokens.dart';
+import '../../core/theme/spacing_tokens.dart';
 import '../../core/theme/theme_colors.dart';
 
 /// 8색 컬러 피커 위젯
@@ -30,20 +31,20 @@ class ColorPickerWidget extends StatelessWidget {
           onTap: () => onColorSelected(index),
           child: AnimatedContainer(
             duration: AppAnimation.fast,
-            width: isSelected ? 32 : AppLayout.minButtonSize,
-            height: isSelected ? 32 : AppLayout.minButtonSize,
+            width: isSelected ? AppLayout.colorPickerSelectedSize : AppLayout.minButtonSize,
+            height: isSelected ? AppLayout.colorPickerSelectedSize : AppLayout.minButtonSize,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
               border: isSelected
-                  ? Border.all(color: context.themeColors.textPrimary, width: 2.5)
+                  ? Border.all(color: context.themeColors.textPrimary, width: AppLayout.borderAccent)
                   : null,
               boxShadow: isSelected
                   ? [
                       BoxShadow(
                         color: color.withValues(alpha: 0.5),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                        blurRadius: AppLayout.colorPickerShadowBlur,
+                        offset: const Offset(0, AppSpacing.xxs),
                       ),
                     ]
                   : null,

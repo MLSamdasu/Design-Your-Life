@@ -8,6 +8,7 @@ import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/enums/goal_period.dart';
 import '../../../../core/theme/animation_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 
@@ -82,10 +83,11 @@ class PillTab extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: AppTypography.captionLg.copyWith(
+              // WCAG 최소 대비: 비선택 탭 텍스트 0.55 이상 보장
               color: isSelected
                   ? context.themeColors.textPrimary
-                  : context.themeColors.textPrimaryWithAlpha(0.5),
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                  : context.themeColors.textPrimaryWithAlpha(0.55),
+              fontWeight: isSelected ? AppTypography.weightBold : AppTypography.weightRegular,
             ),
           ),
         ),
@@ -123,7 +125,7 @@ class YearMonthSelector extends StatelessWidget {
           child: GoalDropdownField<int>(
             label: '연도',
             value: year,
-            items: List.generate(10, (i) => DateTime.now().year - 2 + i),
+            items: List.generate(AppLayout.goalYearRange, (i) => DateTime.now().year - AppLayout.goalYearPastOffset + i),
             itemLabel: (y) => '$y년',
             onChanged: onYearChanged,
           ),
@@ -135,7 +137,7 @@ class YearMonthSelector extends StatelessWidget {
             child: GoalDropdownField<int>(
               label: '월',
               value: month,
-              items: List.generate(12, (i) => i + 1),
+              items: List.generate(AppLayout.monthsInYear, (i) => i + 1),
               itemLabel: (m) => '$m월',
               onChanged: onMonthChanged,
             ),
@@ -191,8 +193,8 @@ class GoalDropdownField<T> extends StatelessWidget {
             child: DropdownButton<T>(
               value: value,
               isExpanded: true,
-              // gradientMid 토큰 사용 (딥 퍼플 드롭다운 배경)
-              dropdownColor: ColorTokens.gradientMid,
+              // 테마 인식 드롭다운 배경: 모든 테마에서 가독성 보장
+              dropdownColor: context.themeColors.dialogSurface,
               style: AppTypography.bodyLg.copyWith(color: context.themeColors.textPrimary),
               icon: Icon(
                 Icons.keyboard_arrow_down_rounded,
@@ -245,11 +247,13 @@ class GlassTextFormField extends StatelessWidget {
       style: AppTypography.bodyLg.copyWith(color: context.themeColors.textPrimary),
       decoration: InputDecoration(
         hintText: hintText,
+        // WCAG 최소 대비: 힌트 텍스트 0.55 이상 보장
         hintStyle: AppTypography.bodyLg.copyWith(
-          color: context.themeColors.textPrimaryWithAlpha(0.4),
+          color: context.themeColors.textPrimaryWithAlpha(0.55),
         ),
+        // WCAG 최소 대비: 글자 수 카운터 텍스트 0.55 이상 보장
         counterStyle: AppTypography.captionSm.copyWith(
-          color: context.themeColors.textPrimaryWithAlpha(0.4),
+          color: context.themeColors.textPrimaryWithAlpha(0.55),
         ),
         filled: true,
         fillColor: context.themeColors.textPrimaryWithAlpha(0.1),
@@ -274,7 +278,7 @@ class GlassTextFormField extends StatelessWidget {
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.xl),
           borderSide: BorderSide(
-            color: ColorTokens.error.withValues(alpha: 0.6),
+            color: ColorTokens.error.withValues(alpha: AppAnimation.errorBorderAlpha),
           ),
         ),
         errorStyle: AppTypography.captionMd.copyWith(

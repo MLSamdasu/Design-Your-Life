@@ -25,11 +25,12 @@ class RoutineRepository {
   }
 
   /// 활성 루틴만 로컬에서 조회한다 (캘린더 타임라인 연동용)
+  /// 백업 복원 데이터는 camelCase('isActive')를 사용할 수 있으므로 양쪽 키를 확인한다
   List<Routine> getActiveRoutines() {
     return _cache
         .query(
           AppConstants.routinesBox,
-          (m) => m['is_active'] == true,
+          (m) => (m['is_active'] ?? m['isActive']) == true,
         )
         .map((m) => Routine.fromMap(m))
         .toList();
@@ -37,14 +38,15 @@ class RoutineRepository {
 
   /// 특정 요일의 활성 루틴 목록을 로컬에서 조회한다
   /// dayStr: 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN' 중 하나
+  /// 백업 복원 데이터는 camelCase 키를 사용할 수 있으므로 양쪽 키를 확인한다
   List<Routine> getRoutinesForDay(String dayStr) {
     return _cache
         .query(
           AppConstants.routinesBox,
           (m) {
-            if (m['is_active'] != true) return false;
-            // days_of_week 필드가 List 형태로 저장되어 있다
-            final days = m['days_of_week'];
+            if ((m['is_active'] ?? m['isActive']) != true) return false;
+            // days_of_week 또는 daysOfWeek 필드가 List 형태로 저장되어 있다
+            final days = m['days_of_week'] ?? m['daysOfWeek'];
             if (days is! List) return false;
             return days.contains(dayStr);
           },
@@ -60,7 +62,7 @@ class RoutineRepository {
   Future<Routine> createRoutine(Routine routine) async {
     final id = const Uuid().v4();
     final now = DateTime.now().toIso8601String();
-    final map = routine.toInsertMap('local_user')
+    final map = routine.toInsertMap(AppConstants.localUserId)
       ..['id'] = id
       ..['created_at'] = now
       ..['updated_at'] = now;
@@ -86,17 +88,6 @@ class RoutineRepository {
   Future<void> toggleRoutineActive(String routineId, bool isActive) async {
     await _cache.update(AppConstants.routinesBox, routineId, {
       'is_active': isActive,
-      'updated_at': DateTime.now().toIso8601String(),
-    });
-  }
-
-  // ─── 완료 토글 ───────────────────────────────────────────────────────────
-
-  /// 루틴 완료 상태를 로컬에서 토글한다
-  Future<void> toggleRoutineCompleted(
-      String routineId, bool isCompleted) async {
-    await _cache.update(AppConstants.routinesBox, routineId, {
-      'is_completed': isCompleted,
       'updated_at': DateTime.now().toIso8601String(),
     });
   }

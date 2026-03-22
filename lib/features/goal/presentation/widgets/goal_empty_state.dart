@@ -10,6 +10,7 @@ import '../../../../core/theme/theme_colors.dart';
 import '../../../../shared/enums/goal_period.dart';
 import 'goal_template_section.dart';
 import '../../../../core/theme/animation_tokens.dart';
+import '../../../../core/theme/layout_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 
 /// 목표 빈 상태 위젯
@@ -81,7 +82,7 @@ class _FloatingIconState extends State<FloatingIcon>
       duration: AppAnimation.snackBar,
     )..repeat(reverse: true);
 
-    _offsetAnim = Tween<double>(begin: -4, end: 4).animate(
+    _offsetAnim = Tween<double>(begin: -AppAnimation.floatOffset, end: AppAnimation.floatOffset).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
     );
   }
@@ -104,7 +105,7 @@ class _FloatingIconState extends State<FloatingIcon>
       },
       child: Icon(
         widget.icon,
-        size: 48,
+        size: AppLayout.iconEmpty,
         color: context.themeColors.textPrimaryWithAlpha(0.3),
       ),
     );

@@ -84,14 +84,15 @@ class WizardStepIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: List.generate(3, (i) {
+      children: List.generate(AppLayout.wizardStepCount, (i) {
         final isActive = i < currentStep;
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: i < 2 ? 4 : 0),
+            // 마지막 인디케이터에는 우측 간격 없음
+            padding: EdgeInsets.only(right: i < AppLayout.wizardStepCount - 1 ? AppSpacing.xs : 0),
             child: AnimatedContainer(
               duration: AppAnimation.medium,
-              height: 4,
+              height: AppLayout.stepIndicatorHeight,
               decoration: BoxDecoration(
                 // 어두운 배경(Glassmorphism/Neon)에서 진한 보라 대신 밝은 보라를 사용해 가독성을 확보한다
         color: isActive

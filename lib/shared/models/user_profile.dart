@@ -51,8 +51,9 @@ class UserProfile {
         isDarkMode: map['is_dark_mode'] as bool? ??
             map['isDarkMode'] as bool? ??
             false,
-        schemaVersion: map['schema_version'] as int? ??
-            map['schemaVersion'] as int? ??
+        // JSON 역직렬화 시 num → int 안전 변환 (int/double 모두 처리)
+        schemaVersion: (map['schema_version'] as num?)?.toInt() ??
+            (map['schemaVersion'] as num?)?.toInt() ??
             1,
         createdAt: DateParser.parse(
             map['created_at'] ?? map['createdAt'] ?? DateTime.now()),

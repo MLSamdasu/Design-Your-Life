@@ -50,8 +50,9 @@ class Achievement {
         title: (map['title'] as String?) ?? '',
         description: (map['description'] as String?) ?? '',
         iconName: (map['icon_name'] ?? map['iconName'] ?? '') as String,
-        xpReward: (map['xp_reward'] as int?) ??
-            (map['xpReward'] as int?) ??
+        // JSON 역직렬화 시 num → int 안전 변환 (int/double 모두 처리)
+        xpReward: (map['xp_reward'] as num?)?.toInt() ??
+            (map['xpReward'] as num?)?.toInt() ??
             0,
         unlockedAt: DateParser.parse(
             map['unlocked_at'] ?? map['unlockedAt'] ?? DateTime.now()),

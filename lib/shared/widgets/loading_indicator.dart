@@ -15,7 +15,7 @@ class LoadingSkeleton extends StatefulWidget {
 
   const LoadingSkeleton({
     this.width = double.infinity,
-    this.height = 80,
+    this.height = AppLayout.containerXl,
     this.borderRadius = AppRadius.card,
     super.key,
   });
@@ -82,7 +82,7 @@ class GlassLoadingSpinner extends StatelessWidget {
       width: size,
       height: size,
       child: CircularProgressIndicator(
-        strokeWidth: 2.5,
+        strokeWidth: AppLayout.borderAccent,
         valueColor: AlwaysStoppedAnimation<Color>(
           context.themeColors.textPrimaryWithAlpha(0.7),
         ),

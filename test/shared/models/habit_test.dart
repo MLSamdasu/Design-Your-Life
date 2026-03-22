@@ -85,8 +85,9 @@ void main() {
       expect(habit.name, '운동 30분');
     });
 
-    test('UI 호환 colorIndex getter가 0을 반환한다', () {
-      expect(habit.colorIndex, 0);
+    test('UI 호환 colorIndex getter가 RGB 거리 기반으로 가장 가까운 팔레트 인덱스를 반환한다', () {
+      // '#4CAF50'은 팔레트의 '#22C55E'(인덱스 3)과 가장 가까운 녹색이다
+      expect(habit.colorIndex, 3);
     });
 
     test('UI 호환 userId getter가 빈 문자열을 반환한다', () {

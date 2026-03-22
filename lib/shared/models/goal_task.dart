@@ -38,13 +38,13 @@ class GoalTask {
     try {
       return GoalTask(
         id: map['id']?.toString() ?? '',
-        subGoalId: (map['sub_goal_id'] ?? map['subGoalId']).toString(),
-        title: map['title'] as String,
+        subGoalId: (map['sub_goal_id'] ?? map['subGoalId'] ?? '').toString(),
+        title: (map['title'] as String?) ?? '',
         isCompleted: map['is_completed'] as bool? ??
             map['isCompleted'] as bool? ??
             false,
-        orderIndex: map['order_index'] as int? ??
-            map['orderIndex'] as int? ??
+        orderIndex: (map['order_index'] as num?)?.toInt() ??
+            (map['orderIndex'] as num?)?.toInt() ??
             0,
         createdAt: DateParser.parse(
             map['created_at'] ?? map['createdAt'] ?? DateTime.now()),
@@ -57,12 +57,14 @@ class GoalTask {
   }
 
   /// INSERT용 Map (id 제외)
+  /// 백업/복원 시 생성 시각이 누락되지 않도록 created_at을 포함한다
   Map<String, dynamic> toInsertMap() {
     return {
-      'sub_goal_id': int.tryParse(subGoalId) ?? subGoalId,
+      'sub_goal_id': subGoalId,
       'title': title,
       'is_completed': isCompleted,
       'order_index': orderIndex,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 

@@ -65,4 +65,7 @@ abstract class AppSpacing {
 
   /// 섹션 간 간격 (24px)
   static const double sectionGap = 24;
+
+  /// 하단 영역 여분 (24px) - 사이드 네비게이션 전환 후 최소 스크롤 여백
+  static const double bottomScrollPadding = 24;
 }

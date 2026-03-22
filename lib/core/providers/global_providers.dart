@@ -15,11 +15,25 @@ import '../theme/theme_preset_registry.dart';
 // auth_provider.dart를 재내보내기하지 않는다 (순환 참조 방지).
 // Feature에서 인증 Provider 사용 시 auth_provider.dart를 직접 import한다.
 
+// ─── 오늘 날짜 Provider ──────────────────────────────────────────────────
+/// 오늘 날짜(시간 제거) StateProvider — 홈 대시보드 전체에서 공유한다
+/// 각 Provider가 독립적으로 DateTime.now()를 호출하면 자정 경계에서 불일치가 발생할 수 있다
+/// StateProvider로 선언하여 앱이 백그라운드에서 복귀할 때 자정 갱신이 가능하도록 한다
+final todayDateProvider = StateProvider<DateTime>((ref) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+});
+
 // ─── HiveCacheService Provider ───────────────────────────────────────────
+/// HiveCacheService 싱글톤 인스턴스
+/// _locks 맵이 단일 인스턴스에서만 관리되도록 보장한다
+final _hiveCacheServiceInstance = HiveCacheService();
+
 /// Hive 캐시 서비스 Provider
 /// Repository 계층에서 Write-Through 캐시 패턴 구현에 사용한다
+/// 모듈 수준 싱글톤을 반환하여 동시 쓰기 보호 잠금의 일관성을 보장한다
 final hiveCacheServiceProvider = Provider<HiveCacheService>((ref) {
-  return HiveCacheService();
+  return _hiveCacheServiceInstance;
 });
 
 // ─── 테마 Provider ───────────────────────────────────────────────────────

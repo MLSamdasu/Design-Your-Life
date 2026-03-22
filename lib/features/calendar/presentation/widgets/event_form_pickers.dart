@@ -30,22 +30,22 @@ class EventColorPicker extends StatelessWidget {
           onTap: () => onChanged(index),
           child: AnimatedContainer(
             duration: AppAnimation.fast,
-            width: isSelected ? 34 : 28,
-            height: isSelected ? 34 : 28,
+            width: isSelected ? AppLayout.colorPickerSelectedSize : AppLayout.colorPickerSize,
+            height: isSelected ? AppLayout.colorPickerSelectedSize : AppLayout.colorPickerSize,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
               border: Border.all(
                 // 선택된 색상 원의 외곽선: 테마 기본 텍스트 색상으로 표시한다
                 color: isSelected ? context.themeColors.textPrimary : ColorTokens.transparent,
-                width: 2.5,
+                width: AppLayout.borderAccent,
               ),
               boxShadow: isSelected
                   ? [
                       BoxShadow(
                         color: color.withValues(alpha: 0.50),
-                        blurRadius: 8,
-                        spreadRadius: 1,
+                        blurRadius: AppLayout.colorPickerShadowBlur,
+                        spreadRadius: AppLayout.colorPickerShadowSpread,
                       )
                     ]
                   : null,
@@ -95,8 +95,8 @@ class RepeatDaySelector extends StatelessWidget {
           },
           child: AnimatedContainer(
             duration: AppAnimation.fast,
-            width: 36,
-            height: 36,
+            width: AppLayout.containerLg,
+            height: AppLayout.containerLg,
             decoration: BoxDecoration(
               // 선택된 요일: 배경 테마에 맞는 악센트 색상으로 표시한다
               color: isSelected
@@ -113,7 +113,7 @@ class RepeatDaySelector extends StatelessWidget {
                     ? context.themeColors.textPrimary
                     : context.themeColors.textPrimaryWithAlpha(0.60),
                 fontWeight:
-                    isSelected ? FontWeight.w700 : FontWeight.w400,
+                    isSelected ? AppTypography.weightBold : AppTypography.weightRegular,
               ),
             ),
           ),

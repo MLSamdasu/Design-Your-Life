@@ -88,7 +88,8 @@ class _StatCard extends StatelessWidget {
         ),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg, horizontal: AppSpacing.lg),
-          decoration: GlassDecoration.subtleCard(radius: 16),
+          // 서브탭 카드와 동일한 xxl(16px) 반지름을 사용한다
+          decoration: GlassDecoration.subtleCard(radius: AppRadius.xxl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -103,8 +104,8 @@ class _StatCard extends StatelessWidget {
               // 수치
               isLoading
                   ? Container(
-                      height: 20,
-                      width: 40,
+                      height: AppLayout.skeletonTextHeight,
+                      width: AppLayout.skeletonTextWidth,
                       decoration: BoxDecoration(
                         color: context.themeColors.textPrimaryWithAlpha(0.15),
                         borderRadius: BorderRadius.circular(AppRadius.sm),

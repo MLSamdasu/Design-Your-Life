@@ -170,6 +170,84 @@ void main() {
     });
   });
 
+  group('KoreanTimeParser - 시간대 키워드 + 명시적 시간 조합', () {
+    test('밤 12시를 파싱하면 자정(0시)이 된다', () {
+      // "밤 12시"는 자정을 의미한다 — 정오(12시)가 아니다
+      final result = KoreanTimeParser.parse('밤 12시 공부');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 0, minute: 0));
+    });
+
+    test('밤 11시를 파싱하면 23시가 된다', () {
+      final result = KoreanTimeParser.parse('밤 11시 독서');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 23, minute: 0));
+    });
+
+    test('밤 9시를 파싱하면 21시가 된다', () {
+      final result = KoreanTimeParser.parse('밤 9시 산책');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 21, minute: 0));
+    });
+
+    test('밤 1시를 파싱하면 새벽 1시(01:00)가 된다', () {
+      // "밤 1시" = 자정 이후 새벽 시간대
+      final result = KoreanTimeParser.parse('밤 1시 취침');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 1, minute: 0));
+    });
+
+    test('새벽 3시를 파싱하면 03:00이 된다', () {
+      final result = KoreanTimeParser.parse('새벽 3시 기상');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 3, minute: 0));
+    });
+
+    test('새벽 5시 30분을 파싱하면 05:30이 된다', () {
+      final result = KoreanTimeParser.parse('새벽 5시 30분 러닝');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 5, minute: 30));
+    });
+
+    test('아침 8시를 파싱하면 08:00이 된다', () {
+      final result = KoreanTimeParser.parse('아침 8시 출근');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 8, minute: 0));
+    });
+
+    test('점심 12시를 파싱하면 정오(12:00)가 된다', () {
+      final result = KoreanTimeParser.parse('점심 12시 식사');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 12, minute: 0));
+    });
+
+    test('점심 1시를 파싱하면 13:00이 된다', () {
+      // "점심 1시" → PM 계열 → 1 + 12 = 13
+      final result = KoreanTimeParser.parse('점심 1시 미팅');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 13, minute: 0));
+    });
+
+    test('저녁 7시를 파싱하면 19:00이 된다', () {
+      final result = KoreanTimeParser.parse('저녁 7시 약속');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 19, minute: 0));
+    });
+
+    test('저녁 6시 반을 파싱하면 18:30이 된다', () {
+      final result = KoreanTimeParser.parse('저녁 6시 반 퇴근');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 18, minute: 30));
+    });
+
+    test('밤 12시 30분을 파싱하면 00:30이 된다', () {
+      // "밤 12시 30분" = 자정 30분
+      final result = KoreanTimeParser.parse('밤 12시 30분 취침');
+      expect(result, isNotNull);
+      expect(result!.time, const TimeOfDay(hour: 0, minute: 30));
+    });
+  });
+
   group('KoreanTimeParser - 파싱 실패 케이스', () {
     test('시간 표현이 없으면 null을 반환한다', () {
       final result = KoreanTimeParser.parse('그냥 할 일');

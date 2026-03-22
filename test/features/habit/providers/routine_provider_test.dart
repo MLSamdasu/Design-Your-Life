@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('routinesProvider', () {
-    test('스트림 데이터가 있을 때 루틴 리스트를 반환한다', () async {
+    test('데이터가 있을 때 루틴 리스트를 반환한다', () {
       final testRoutines = [
         Routine(
           id: 'r1',
@@ -26,36 +26,37 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           routinesProvider.overrideWith(
-            (ref) async => testRoutines,
+            (ref) => testRoutines,
           ),
         ],
       );
       addTearDown(container.dispose);
 
-      final routines = await container.read(routinesProvider.future);
+      // 동기 Provider이므로 .future 없이 직접 읽는다
+      final routines = container.read(routinesProvider);
 
       expect(routines.length, 1);
       expect(routines.first.name, '아침 운동');
     });
 
-    test('빈 스트림에서 빈 리스트를 반환한다', () async {
+    test('빈 데이터에서 빈 리스트를 반환한다', () {
       final container = ProviderContainer(
         overrides: [
           routinesProvider.overrideWith(
-            (ref) async => <Routine>[],
+            (ref) => <Routine>[],
           ),
         ],
       );
       addTearDown(container.dispose);
 
-      final routines = await container.read(routinesProvider.future);
+      final routines = container.read(routinesProvider);
 
       expect(routines, isEmpty);
     });
   });
 
   group('activeRoutinesProvider', () {
-    test('활성 루틴만 반환한다', () async {
+    test('활성 루틴만 반환한다', () {
       final testRoutines = [
         Routine(
           id: 'r1',
@@ -74,29 +75,30 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           activeRoutinesProvider.overrideWith(
-            (ref) async => testRoutines,
+            (ref) => testRoutines,
           ),
         ],
       );
       addTearDown(container.dispose);
 
-      final routines = await container.read(activeRoutinesProvider.future);
+      // 동기 Provider이므로 .future 없이 직접 읽는다
+      final routines = container.read(activeRoutinesProvider);
 
       expect(routines.length, 1);
       expect(routines.first.isActive, true);
     });
 
-    test('빈 스트림에서 빈 리스트를 반환한다', () async {
+    test('빈 데이터에서 빈 리스트를 반환한다', () {
       final container = ProviderContainer(
         overrides: [
           activeRoutinesProvider.overrideWith(
-            (ref) async => <Routine>[],
+            (ref) => <Routine>[],
           ),
         ],
       );
       addTearDown(container.dispose);
 
-      final routines = await container.read(activeRoutinesProvider.future);
+      final routines = container.read(activeRoutinesProvider);
 
       expect(routines, isEmpty);
     });
@@ -120,12 +122,6 @@ void main() {
   });
 
   group('deleteRoutineProvider', () {
-    test('Provider가 함수를 반환한다', () {
-      expect(true, true);
-    });
-  });
-
-  group('generateRoutineIdProvider', () {
     test('Provider가 함수를 반환한다', () {
       expect(true, true);
     });

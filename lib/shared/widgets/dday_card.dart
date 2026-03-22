@@ -1,6 +1,6 @@
 // 공용 위젯: DdayCard (D-Day 카드)
 // D-day 숫자, 이벤트 제목, 날짜를 표시하는 카드 위젯
-// D-3 이하(critical): 빨간색 강조 배경 적용 (AC-HM-05 수락 기준)
+// D-Day(빨강), D-1(주황), D-2(노랑), D-3(파랑) 4단계 긴급도 색상 적용
 // design-system.md Subtle Card 스타일 사용 (radius-2xl: 16px)
 import 'package:flutter/material.dart';
 import '../../core/theme/color_tokens.dart';
@@ -9,7 +9,7 @@ import '../../core/theme/radius_tokens.dart';
 import '../../core/theme/spacing_tokens.dart';
 import '../../core/theme/theme_colors.dart';
 import '../../core/theme/typography_tokens.dart';
-import '../../shared/enums/urgency_level.dart';
+import '../enums/urgency_level.dart';
 
 /// D-Day 카드 위젯
 /// 홈 대시보드 D-day 섹션의 수평 스크롤 카드로 사용한다
@@ -23,7 +23,7 @@ class DdayCard extends StatelessWidget {
   /// 날짜 문자열 표시용 (예: "3월 15일")
   final String dateLabel;
 
-  /// 긴급도 (critical: D-3 이하, warning: D-7 이하, normal: 그 외)
+  /// 긴급도 (imminent/critical/warning/normal — 4단계)
   final UrgencyLevel urgencyLevel;
 
   /// 탭 콜백 (선택)
@@ -45,42 +45,53 @@ class DdayCard extends StatelessWidget {
     return 'D+${daysRemaining.abs()}';
   }
 
-  /// 긴급도에 따른 카드 배경색 (테마 인식)
+  /// 긴급도에 따른 카드 배경색 (4단계)
   Color _cardBackground(ResolvedThemeColors tc) {
     switch (urgencyLevel) {
-      case UrgencyLevel.critical:
-        // D-3 이하: 빨간색 강조 (AC-HM-05)
+      case UrgencyLevel.imminent:
+        // D-Day: 빨간색 강조 배경
         return ColorTokens.error.withValues(alpha: 0.25);
+      case UrgencyLevel.critical:
+        // D-1: 주황색 배경
+        return ColorTokens.warning.withValues(alpha: 0.25);
       case UrgencyLevel.warning:
-        // D-7 이하: 경고 노란색
-        return ColorTokens.warning.withValues(alpha: 0.20);
+        // D-2: 연한 노란색 배경
+        return ColorTokens.warning.withValues(alpha: 0.15);
       case UrgencyLevel.normal:
-        // 일반: 테마 텍스트 색상 기반 반투명 배경
-        return tc.overlayLight;
+        // D-3: 파란색 배경
+        return ColorTokens.info.withValues(alpha: 0.18);
     }
   }
 
   /// 긴급도에 따른 테두리 색상
-  Color get _borderColor {
+  Color _borderColor() {
     switch (urgencyLevel) {
+      case UrgencyLevel.imminent:
+        return ColorTokens.error.withValues(alpha: 0.45);
       case UrgencyLevel.critical:
-        return ColorTokens.error.withValues(alpha: 0.40);
+        return ColorTokens.warning.withValues(alpha: 0.40);
       case UrgencyLevel.warning:
-        return ColorTokens.warning.withValues(alpha: 0.35);
+        return ColorTokens.warning.withValues(alpha: 0.30);
       case UrgencyLevel.normal:
-        return ColorTokens.transparent;
+        return ColorTokens.info.withValues(alpha: 0.30);
     }
   }
 
-  /// D-day 숫자 색상 (테마 인식)
+  /// D-day 숫자 색상 (4단계 구분)
   Color _ddayColor(ResolvedThemeColors tc) {
     switch (urgencyLevel) {
-      case UrgencyLevel.critical:
+      case UrgencyLevel.imminent:
+        // D-Day: 밝은 빨간색
         return ColorTokens.errorLight;
-      case UrgencyLevel.warning:
+      case UrgencyLevel.critical:
+        // D-1: 밝은 주황색
         return ColorTokens.warningLight;
+      case UrgencyLevel.warning:
+        // D-2: 노란색
+        return ColorTokens.warning;
       case UrgencyLevel.normal:
-        return tc.textPrimary;
+        // D-3: 밝은 파란색
+        return ColorTokens.infoLight;
     }
   }
 
@@ -96,9 +107,10 @@ class DdayCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: _cardBackground(tc),
           borderRadius: BorderRadius.circular(AppRadius.xxl), // radius-2xl
-          border: urgencyLevel != UrgencyLevel.normal
-              ? Border.all(color: _borderColor, width: 1)
-              : null,
+          border: Border.all(
+            color: _borderColor(),
+            width: AppLayout.borderThin,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

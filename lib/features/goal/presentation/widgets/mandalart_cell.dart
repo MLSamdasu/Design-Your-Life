@@ -9,6 +9,8 @@ import '../../../../shared/models/mandalart_grid.dart';
 import '../../../../shared/enums/mandalart_cell_type.dart';
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import '../../../../core/theme/spacing_tokens.dart';
+import '../../../../shared/widgets/animated_strikethrough.dart';
 
 /// 만다라트 개별 셀 위젯
 /// 셀 유형에 따라 배경색과 표시 내용이 달라진다
@@ -43,15 +45,19 @@ class MandalartCellWidget extends StatelessWidget {
         duration: AppAnimation.normal,
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
-          color: bgColor.withValues(alpha: isDimmed ? 0.3 : 1.0),
+          // isDimmed일 때만 기존 alpha에 dimmedAlpha를 곱해 흐리게 한다
+          // 기존 alpha를 덮어쓰면 textPrimaryWithAlpha(0.04) 등의 설정이 무시된다
+          color: isDimmed
+              ? bgColor.withValues(alpha: bgColor.a * AppAnimation.dimmedAlpha)
+              : bgColor,
           border: Border.all(
             color: context.themeColors.textPrimaryWithAlpha(0.08),
-            width: 0.5,
+            width: AppLayout.borderHairline,
           ),
         ),
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(3),
+            padding: const EdgeInsets.all(AppSpacing.xxs),
             child: _buildCellContent(context, textColor),
           ),
         ),
@@ -62,19 +68,40 @@ class MandalartCellWidget extends StatelessWidget {
   Widget _buildCellContent(BuildContext context, Color textColor) {
     // 빈 셀: "+" 아이콘 표시
     if (cell.type == MandalartCellType.empty) {
+      // WCAG 최소 대비: 빈 셀 "+" 아이콘 0.50 이상 보장
       return Icon(
         Icons.add_rounded,
         size: AppLayout.iconMd,
-        color: context.themeColors.textPrimaryWithAlpha(0.25),
+        color: context.themeColors.textPrimaryWithAlpha(0.50),
       );
     }
 
-    return Text(
-      cell.text,
-      textAlign: TextAlign.center,
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: _textStyle(textColor),
+    // FittedBox로 셀 크기에 맞게 텍스트를 자동 축소한다
+    // 긴 텍스트가 어색하게 줄바꿈되는 것을 방지한다
+    final style = _textStyle(textColor);
+
+    // 실천과제(task)는 빨간펜 취소선 애니메이션으로 완료 상태를 표시한다
+    if (cell.type == MandalartCellType.task) {
+      return FittedBox(
+        fit: BoxFit.scaleDown,
+        child: AnimatedStrikethrough(
+          text: cell.text,
+          style: style,
+          isActive: cell.isCompleted,
+          maxLines: 2,
+        ),
+      );
+    }
+
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        cell.text,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: style,
+      ),
     );
   }
 
@@ -83,19 +110,19 @@ class MandalartCellWidget extends StatelessWidget {
       case MandalartCellType.core:
         return AppTypography.captionLg.copyWith(
           color: textColor,
-          fontWeight: FontWeight.w800,
+          fontWeight: AppTypography.weightExtraBold,
         );
       case MandalartCellType.subGoal:
         return AppTypography.captionMd.copyWith(
           color: textColor,
-          fontWeight: FontWeight.w600,
+          fontWeight: AppTypography.weightSemiBold,
         );
       case MandalartCellType.task:
+        // 취소선은 AnimatedStrikethrough 위젯에서 처리한다
         return AppTypography.captionSm.copyWith(
           color: textColor.withValues(
-            alpha: cell.isCompleted ? 0.5 : 0.85,
+            alpha: cell.isCompleted ? AppAnimation.completedTextAlpha : AppAnimation.activeTextAlpha,
           ),
-          decoration: cell.isCompleted ? TextDecoration.lineThrough : null,
         );
       case MandalartCellType.empty:
         return AppTypography.captionSm.copyWith(color: textColor);
@@ -133,8 +160,9 @@ class MandalartCellWidget extends StatelessWidget {
         return context.themeColors.textPrimary;
       case MandalartCellType.task:
         return context.themeColors.textPrimary;
+      // WCAG 최소 대비: 빈 셀 텍스트 0.50 이상 보장
       case MandalartCellType.empty:
-        return context.themeColors.textPrimaryWithAlpha(0.3);
+        return context.themeColors.textPrimaryWithAlpha(0.50);
     }
   }
 }

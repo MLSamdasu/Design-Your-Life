@@ -23,19 +23,14 @@ class TagFilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tagsAsync = ref.watch(userTagsProvider);
+    // userTagsProvider는 동기 Provider이므로 직접 사용한다
+    final tags = ref.watch(userTagsProvider);
     final selectedTagIds = ref.watch(selectedTagFilterProvider);
 
-    return tagsAsync.when(
-      data: (tags) {
-        // 태그가 없으면 표시하지 않는다
-        if (tags.isEmpty) return const SizedBox.shrink();
+    // 태그가 없으면 표시하지 않는다
+    if (tags.isEmpty) return const SizedBox.shrink();
 
-        return _buildFilterBar(context, ref, tags, selectedTagIds);
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
-    );
+    return _buildFilterBar(context, ref, tags, selectedTagIds);
   }
 
   /// 필터 바 본체 빌드
@@ -142,7 +137,7 @@ class _FilterChipItem extends StatelessWidget {
             color: isSelected
                 ? color
                 : context.themeColors.borderMedium,
-            width: isSelected ? 1.5 : 1,
+            width: isSelected ? AppLayout.borderMedium : AppLayout.borderThin,
           ),
         ),
         child: Text(
@@ -150,9 +145,9 @@ class _FilterChipItem extends StatelessWidget {
           style: AppTypography.captionLg.copyWith(
             // 선택 시: 흰색(컬러 배경 위 대비), 미선택 시: 테마 텍스트
             color: isSelected
-                ? Colors.white
+                ? ColorTokens.white
                 : context.themeColors.textPrimaryWithAlpha(0.75),
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            fontWeight: isSelected ? AppTypography.weightBold : AppTypography.weightMedium,
           ),
         ),
       ),

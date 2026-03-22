@@ -126,7 +126,7 @@ class EventFormFields extends StatelessWidget {
         _label(context, '유형'),
         const SizedBox(height: AppSpacing.md),
         Container(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(AppSpacing.xxs),
           decoration: BoxDecoration(
             color: context.themeColors.textPrimaryWithAlpha(0.10),
             borderRadius: BorderRadius.circular(AppRadius.lgXl),
@@ -140,7 +140,7 @@ class EventFormFields extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: AppAnimation.normal,
                     curve: Curves.easeInOutCubic,
-                    padding: const EdgeInsets.symmetric(vertical: 7),
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     decoration: BoxDecoration(
                       color: isActive
                           ? context.themeColors.textPrimaryWithAlpha(0.20)
@@ -155,7 +155,7 @@ class EventFormFields extends StatelessWidget {
                             ? context.themeColors.textPrimary
                             : context.themeColors.textPrimaryWithAlpha(0.50),
                         fontWeight:
-                            isActive ? FontWeight.w700 : FontWeight.w400,
+                            isActive ? AppTypography.weightBold : AppTypography.weightRegular,
                       ),
                     ),
                   ),

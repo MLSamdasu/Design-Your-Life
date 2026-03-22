@@ -4,6 +4,7 @@ import 'package:design_your_life/core/auth/auth_service.dart';
 import 'package:design_your_life/core/cache/hive_cache_service.dart';
 import 'package:design_your_life/core/calendar_sync/calendar_sync_provider.dart';
 import 'package:design_your_life/core/auth/auth_provider.dart';
+import 'package:design_your_life/core/providers/data_store_providers.dart';
 import 'package:design_your_life/core/providers/global_providers.dart';
 import 'package:design_your_life/features/calendar/presentation/calendar_screen.dart';
 import 'package:design_your_life/features/calendar/providers/calendar_provider.dart';
@@ -12,17 +13,33 @@ import 'package:design_your_life/shared/enums/view_type.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 /// Hive 의존성 없이 테스트를 위한 MockHiveCacheService
+/// getAll/query도 빈 목록을 반환하여 Hive 박스 접근을 완전히 차단한다
 class _MockHiveCacheService extends HiveCacheService {
   @override
   Future<void> saveSetting(String key, Object value) async {}
 
   @override
   T? readSetting<T>(String key) => null;
+
+  @override
+  List<Map<String, dynamic>> getAll(String boxName) => const [];
+
+  @override
+  List<Map<String, dynamic>> query(
+    String boxName,
+    bool Function(Map<String, dynamic>) predicate,
+  ) => const [];
 }
 
 void main() {
+  // table_calendar가 intl 로케일 데이터를 필요로 하므로 테스트 전에 초기화한다
+  setUpAll(() async {
+    await initializeDateFormatting('ko_KR');
+  });
+
   group('캘린더 뷰 전환 통합 테스트', () {
     test('monthly -> weekly -> daily 순차 전환', () {
       final container = ProviderContainer();
@@ -220,7 +237,10 @@ void main() {
 
   // ─── 위젯 인터랙션 테스트 ─────────────────────────────────────────────────
   group('CalendarScreen - 위젯 렌더링 및 인터랙션', () {
-    /// 테스트용 위젯 래퍼: Provider override로 API 및 Google Calendar 의존성을 격리한다
+    // table_calendar가 충분한 높이를 요구하므로 테스트 화면 크기를 확보한다
+    const testSurfaceSize = Size(1080, 1920);
+
+    /// 테스트용 위젯 래퍼: Provider override로 API, Hive, Google Calendar 의존성을 격리한다
     Widget buildCalendarTestWidget() {
       return ProviderScope(
         overrides: [
@@ -235,16 +255,25 @@ void main() {
           currentUserIdProvider.overrideWithValue('test-user'),
           isAuthenticatedProvider.overrideWithValue(true),
           eventsForMonthProvider.overrideWith(
-            (ref) async => const <CalendarEvent>[],
+            (ref) => const <CalendarEvent>[],
           ),
           routinesForDayProvider.overrideWith(
-            (ref) async => const <RoutineEntry>[],
+            (ref) => const <RoutineEntry>[],
           ),
           // F17: Google Calendar 연동은 테스트에서 비활성화한다 (Hive/네트워크 의존성 격리)
           googleCalendarSyncEnabledProvider.overrideWith((ref) => false),
           googleCalendarEventsProvider.overrideWith(
             (ref) async => const <CalendarEvent>[],
           ),
+          // MonthlyView가 참조하는 병합 Provider들이 allXxxRawProvider에 의존하므로
+          // Hive 박스 접근을 차단하기 위해 모든 데이터 스토어 Provider를 빈 목록으로 격리한다
+          allEventsRawProvider.overrideWithValue(const []),
+          allTodosRawProvider.overrideWithValue(const []),
+          allRoutinesRawProvider.overrideWithValue(const []),
+          allHabitsRawProvider.overrideWithValue(const []),
+          allHabitLogsRawProvider.overrideWithValue(const []),
+          allTimerLogsRawProvider.overrideWithValue(const []),
+          allRoutineLogsRawProvider.overrideWithValue(const []),
         ],
         child: const MaterialApp(
           home: CalendarScreen(),
@@ -253,6 +282,11 @@ void main() {
     }
 
     testWidgets('CalendarScreen이 Scaffold를 포함한다', (tester) async {
+      // 테스트 화면 크기를 캘린더가 오버플로우 없이 렌더링될 수 있도록 확보한다
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -260,6 +294,10 @@ void main() {
     });
 
     testWidgets('FAB(FloatingActionButton)이 존재한다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -267,6 +305,10 @@ void main() {
     });
 
     testWidgets('FAB에 add 아이콘이 표시된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -274,6 +316,10 @@ void main() {
     });
 
     testWidgets('뷰 전환 탭 "월간", "주간", "일간"이 표시된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -283,6 +329,10 @@ void main() {
     });
 
     testWidgets('"주간" 탭을 누르면 뷰가 전환된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -294,6 +344,10 @@ void main() {
     });
 
     testWidgets('"일간" 탭을 누르면 뷰가 전환된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -304,6 +358,10 @@ void main() {
     });
 
     testWidgets('"오늘" 버튼이 표시된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -312,6 +370,10 @@ void main() {
     });
 
     testWidgets('"오늘" 버튼 탭이 에러 없이 동작한다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -324,6 +386,10 @@ void main() {
     });
 
     testWidgets('월 네비게이션 이전/다음 버튼이 존재한다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -333,6 +399,10 @@ void main() {
     });
 
     testWidgets('이전 월 버튼 탭이 에러 없이 동작한다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -345,6 +415,10 @@ void main() {
     });
 
     testWidgets('다음 월 버튼 탭이 에러 없이 동작한다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -357,15 +431,24 @@ void main() {
     });
 
     testWidgets('현재 월/연도 텍스트가 표시된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
       final now = DateTime.now();
       final headerText = '${now.year}년 ${now.month}월';
-      expect(find.text(headerText), findsOneWidget);
+      // 커스텀 헤더 + table_calendar 내부 헤더에서 동일 텍스트가 각각 렌더링될 수 있다
+      expect(find.text(headerText), findsWidgets);
     });
 
     testWidgets('AnimatedSwitcher가 뷰 전환에 사용된다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -373,6 +456,10 @@ void main() {
     });
 
     testWidgets('뷰 전환 후 다시 월간으로 돌아올 수 있다', (tester) async {
+      tester.view.physicalSize = testSurfaceSize;
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
       await tester.pumpWidget(buildCalendarTestWidget());
       await tester.pump(const Duration(milliseconds: 100));
 

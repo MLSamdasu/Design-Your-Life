@@ -123,14 +123,14 @@ void main() {
         expect(data.useBlur, isTrue);
       });
 
-      test('blurSigma가 12.0이다', () {
-        // 미묘한 글라스 효과를 위한 블러 시그마
-        expect(data.blurSigma, 12.0);
+      test('blurSigma가 20.0이다', () {
+        // 리치 그라디언트 글라스모피즘을 위한 강한 블러 시그마
+        expect(data.blurSigma, 20.0);
       });
 
-      test('배경이 3가지 색상의 그라디언트이다', () {
-        // refinedGradientStart, refinedGradientMid, refinedGradientEnd 3색
-        expect(data.backgroundGradient.colors.length, 3);
+      test('배경이 4가지 리치 컬러 그라디언트이다', () {
+        // 딥 인디고 → 바이올렛 → 마젠타 → 틸 4색 그라디언트
+        expect(data.backgroundGradient.colors.length, 4);
       });
     });
 

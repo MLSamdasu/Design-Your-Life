@@ -202,22 +202,37 @@ class _DonutChartState extends State<DonutChart>
   double _strokeWidth() {
     switch (widget.size) {
       case DonutChartSize.large:
-        return 10;
+        // 대형 도넛 차트: 타이머 스트로크 너비 토큰 (10px)
+        return AppLayout.timerStrokeWidth;
       case DonutChartSize.medium:
-        return 8;
+        // 중형 도넛 차트: 기본 중간 간격 토큰 (8px)
+        return AppLayout.iconMd / 2;
       case DonutChartSize.mini:
-        return 3;
+        // 미니 도넛 차트: 최소 스트로크 (3px)
+        return _donutStrokeMini;
     }
   }
+
+  /// 미니 도넛 차트 스트로크 너비
+  static const double _donutStrokeMini = 3;
+
+  /// 대형 도넛 차트 중앙 반지름
+  static const double _centerRadiusLarge = 45;
+
+  /// 중형 도넛 차트 중앙 반지름
+  static const double _centerRadiusMedium = 35;
+
+  /// 미니 도넛 차트 중앙 반지름
+  static const double _centerRadiusMini = 10;
 
   double _centerSpaceRadius() {
     switch (widget.size) {
       case DonutChartSize.large:
-        return 45;
+        return _centerRadiusLarge;
       case DonutChartSize.medium:
-        return 35;
+        return _centerRadiusMedium;
       case DonutChartSize.mini:
-        return 10;
+        return _centerRadiusMini;
     }
   }
 }

@@ -172,4 +172,20 @@ abstract class AppTypography {
         fontSize: 10,
         height: 1.0,
       );
+
+  // ─── 폰트 웨이트 시맨틱 토큰 ───────────────────────────────────────────
+  /// Regular 웨이트 (비선택 상태, 일반 텍스트)
+  static const FontWeight weightRegular = FontWeight.w400;
+
+  /// Medium 웨이트 (본문 강조)
+  static const FontWeight weightMedium = FontWeight.w500;
+
+  /// SemiBold 웨이트 (서브 타이틀)
+  static const FontWeight weightSemiBold = FontWeight.w600;
+
+  /// Bold 웨이트 (선택된 상태, 제목)
+  static const FontWeight weightBold = FontWeight.w700;
+
+  /// ExtraBold 웨이트 (강조 수치, 디스플레이)
+  static const FontWeight weightExtraBold = FontWeight.w800;
 }

@@ -77,9 +77,9 @@ class _CollisionGroup {
 /// [minBlockHeight]: 최소 블록 높이 (기본 24px)
 List<OverlapLayoutResult> calculateOverlapLayout(
   List<Todo> todos, {
-  double hourHeight = 60.0,
+  double hourHeight = AppLayout.timelineHourHeight,
   int startHour = 0,
-  double minBlockHeight = 24.0,
+  double minBlockHeight = AppLayout.timelineMinBlockHeight,
 }) {
   // 시간이 없는 투두는 필터링한다
   final timedTodos = todos.where((t) => t.startTime != null).toList();
@@ -123,8 +123,8 @@ List<_TimeRange> _convertToTimeRanges(List<Todo> todos) {
         endMin = AppLayout.hoursInDay * 60; // 자정까지로 제한한다
       }
     } else {
-      // endTime 미설정 시 기본 30분 지속
-      endMin = min(startMin + 30, AppLayout.hoursInDay * 60);
+      // endTime 미설정 시 기본 지속 시간 적용
+      endMin = min(startMin + AppLayout.defaultDurationMinutes, AppLayout.hoursInDay * 60);
     }
 
     return _TimeRange(
@@ -202,7 +202,7 @@ List<OverlapLayoutResult> _layoutGroup(
     final col = columnAssignments[i];
 
     // Y 위치: (시작 분 - 타임라인 시작) * 분당 픽셀
-    final minuteHeight = hourHeight / 60.0;
+    final minuteHeight = hourHeight / 60;
     final topOffset =
         (item.startMinutes - startHour * 60) * minuteHeight;
 
@@ -256,12 +256,12 @@ _CascadeParams _calculateCascadeParams(int overlapCount) {
     case 1:
       return const _CascadeParams(widthPerItem: 1.0, offsetStep: 0.0);
     case 2:
-      return const _CascadeParams(widthPerItem: 0.75, offsetStep: 0.25);
+      return const _CascadeParams(widthPerItem: AppLayout.cascadeWidth2, offsetStep: AppLayout.cascadeOffset2);
     case 3:
-      return const _CascadeParams(widthPerItem: 0.65, offsetStep: 0.175);
+      return const _CascadeParams(widthPerItem: AppLayout.cascadeWidth3Plus, offsetStep: AppLayout.cascadeOffset3Plus);
     default:
-      // 4개 이상: 첫 3개는 65% 캐스케이드, 나머지는 "+N" 뱃지로 처리
-      return const _CascadeParams(widthPerItem: 0.65, offsetStep: 0.175);
+      // 4개 이상: 첫 3개는 캐스케이드, 나머지는 "+N" 뱃지로 처리
+      return const _CascadeParams(widthPerItem: AppLayout.cascadeWidth3Plus, offsetStep: AppLayout.cascadeOffset3Plus);
   }
 }
 
@@ -285,7 +285,7 @@ List<({int startMinutes, int endMinutes, int count})> calculateDensityRanges(
       endMin = layout.todo.endTime!.hour * 60 + layout.todo.endTime!.minute;
       if (endMin <= startMin) endMin = AppLayout.hoursInDay * 60;
     } else {
-      endMin = min(startMin + 30, AppLayout.hoursInDay * 60);
+      endMin = min(startMin + AppLayout.defaultDurationMinutes, AppLayout.hoursInDay * 60);
     }
 
     events.add((minute: startMin, isStart: true));
