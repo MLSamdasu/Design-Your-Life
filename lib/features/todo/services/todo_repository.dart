@@ -46,10 +46,11 @@ class TodoRepository {
   // ─── 생성 ──────────────────────────────────────────────────────────────────
 
   /// 새 투두를 로컬 Hive에 생성한다
-  /// 클라이언트에서 UUID v4를 생성하여 ID로 사용한다
+  /// 호출자가 ID를 지정한 경우 해당 ID를 사용하고,
+  /// 비어있으면 새 UUID를 생성한다 (DailyThree 연동 시 ID 일치를 보장한다)
   Future<Todo> createTodo(Todo todo) async {
-    // 로컬에서 고유 ID를 생성한다
-    final id = _uuid.v4();
+    // 호출자가 ID를 지정했으면 사용하고, 아니면 새로 생성한다
+    final id = todo.id.isNotEmpty ? todo.id : _uuid.v4();
     final now = DateTime.now();
 
     // INSERT용 맵을 생성하고 로컬 전용 필드를 추가한다

@@ -3,8 +3,8 @@
 // Google Calendar API 연결 없이 순수 함수만 테스트하므로 Mock 불필요.
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:design_your_life/core/calendar_sync/google_calendar_service.dart';
-import 'package:design_your_life/core/calendar_sync/google_event_mapper.dart';
+import 'package:design_your_life/features/calendar/sync/google_calendar_service.dart';
+import 'package:design_your_life/features/calendar/sync/google_event_mapper.dart';
 import 'package:design_your_life/features/calendar/providers/event_provider.dart';
 
 void main() {

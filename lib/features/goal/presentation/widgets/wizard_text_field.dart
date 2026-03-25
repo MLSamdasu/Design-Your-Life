@@ -1,6 +1,6 @@
 // F5 위젯: WizardTextField - 만다라트 위저드 텍스트 입력 필드
 // Glass 스타일 단일 라인 입력 필드를 제공한다.
-// SRP: 위저드 내 텍스트 입력 UI만 담당한다.
+// SRP 분리: 위저드 내 텍스트 입력 UI만 담당한다.
 import 'package:flutter/material.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';

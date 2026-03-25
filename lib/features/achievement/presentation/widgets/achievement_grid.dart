@@ -45,7 +45,7 @@ class AchievementGrid extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: AppSpacing.lg,
         mainAxisSpacing: AppSpacing.lg,
-        childAspectRatio: AppLayout.achievementGridAspectRatio,
+        childAspectRatio: MiscLayout.achievementGridAspectRatio,
       ),
       itemBuilder: (context, index) {
         final def = sortedDefs[index];

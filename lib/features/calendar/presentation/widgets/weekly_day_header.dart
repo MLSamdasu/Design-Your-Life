@@ -39,7 +39,7 @@ class WeeklyDayHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      height: AppLayout.weeklyHeaderHeight,
+      height: TimelineLayout.weeklyHeaderHeight,
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -121,8 +121,11 @@ class WeeklyDayHeader extends ConsumerWidget {
                         return Text(
                           '${data.completed}/${data.total}',
                           style: AppTypography.captionSm.copyWith(
+                            // 어두운 배경에서도 작은 텍스트가 잘 보이도록 밝은 success 사용
                             color: allDone
-                                ? ColorTokens.success
+                                ? (context.themeColors.isOnDarkBackground
+                                    ? ColorTokens.successLight
+                                    : ColorTokens.success)
                                 : context.themeColors.textPrimaryWithAlpha(0.4),
                             fontWeight: allDone
                                 ? AppTypography.weightSemiBold

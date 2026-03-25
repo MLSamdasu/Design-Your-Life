@@ -8,6 +8,9 @@ import '../../../core/providers/data_store_providers.dart';
 import '../models/timer_log.dart';
 import '../models/timer_stats.dart';
 
+// 하위 호환용 재수출 (monthlyFocusTiersProvider)
+export 'timer_tier_provider.dart';
+
 // ─── 서브탭 상태 Provider ─────────────────────────────────────────────────
 
 /// 타이머 화면 서브탭 인덱스 (0: 타이머, 1: 통계)
@@ -146,8 +149,10 @@ final monthlyStatsProvider =
   final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
 
   final totalMinutes = dayMap.values.fold<int>(0, (sum, m) => sum + m);
-  final totalSessions = sessionMap.values.fold<int>(0, (sum, c) => sum + c);
-  final activeDays = dayMap.keys.where((d) => (dayMap[d] ?? 0) > 0).length;
+  final totalSessions =
+      sessionMap.values.fold<int>(0, (sum, c) => sum + c);
+  final activeDays =
+      dayMap.keys.where((d) => (dayMap[d] ?? 0) > 0).length;
 
   // 최장 연속 집중 일수(스트릭) 계산
   final longestStreak = _calcLongestStreak(dayMap, daysInMonth);

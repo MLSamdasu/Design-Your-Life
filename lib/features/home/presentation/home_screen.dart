@@ -8,6 +8,7 @@ import '../../../core/theme/theme_colors.dart';
 
 import 'widgets/greeting_header.dart';
 import 'widgets/dday_section.dart';
+import 'widgets/ritual_summary_card.dart';
 import 'widgets/today_summary_section.dart';
 import 'widgets/timer_summary_card.dart';
 import 'widgets/todo_summary_card.dart';
@@ -137,19 +138,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: AppSpacing.xl),
+                      // 0.5. 데일리 리추얼 요약 카드 (AN-02 index 1)
+                      _staggeredCard(const RitualSummaryCard(), 1),
+                      const SizedBox(height: AppSpacing.xl),
                     ],
                   ),
                 ),
 
-                // 1. 다가오는 일정 (D-Day) 섹션 (AN-02 index 1)
-                _staggeredCard(const DdaySection(), 1),
+                // 1. 다가오는 일정 (D-Day) 섹션 (AN-02 index 2)
+                _staggeredCard(const DdaySection(), 2),
 
                 const SizedBox(height: AppSpacing.xl),
 
-                // 2. 오늘의 요약 (2x2 그리드 stat 카드) (AN-02 index 2)
+                // 2. 오늘의 요약 (2x2 그리드 stat 카드) (AN-02 index 3)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl),
-                  child: _staggeredCard(const TodaySummarySection(), 2),
+                  child: _staggeredCard(const TodaySummarySection(), 3),
                 ),
 
                 const SizedBox(height: AppSpacing.xl),
@@ -160,23 +164,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 3. 오늘의 집중 시간 카드 (AN-02 index 3)
-                      _staggeredCard(const TimerSummaryCard(), 3),
+                      // 3. 오늘의 집중 시간 카드 (AN-02 index 4)
+                      _staggeredCard(const TimerSummaryCard(), 4),
 
                       const SizedBox(height: AppSpacing.xl),
 
-                      // 4. 오늘의 할일 카드 (AN-02 index 4)
-                      _staggeredCard(const TodoSummaryCard(), 4),
+                      // 4. 오늘의 할일 카드 (AN-02 index 5)
+                      _staggeredCard(const TodoSummaryCard(), 5),
 
                       const SizedBox(height: AppSpacing.xl),
 
-                      // 5. 오늘의 습관과 루틴 통합 카드 (AN-02 index 5)
-                      _staggeredCard(const HabitRoutineSummaryCard(), 5),
+                      // 5. 오늘의 습관과 루틴 통합 카드 (AN-02 index 6)
+                      _staggeredCard(const HabitRoutineSummaryCard(), 6),
 
                       const SizedBox(height: AppSpacing.xl),
 
-                      // 6. 올해의 목표 카드 (AN-02 index 6)
-                      _staggeredCard(const GoalSummaryCard(), 6),
+                      // 6. 올해의 목표 카드 (AN-02 index 7)
+                      _staggeredCard(const GoalSummaryCard(), 7),
                     ],
                   ),
                 ),

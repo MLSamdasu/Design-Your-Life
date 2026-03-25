@@ -53,8 +53,8 @@ class AchievementCard extends StatelessWidget {
               // 악센트 컬러 글로우 효과
               BoxShadow(
                 color: context.themeColors.accentWithAlpha(0.25),
-                blurRadius: AppLayout.ctaShadowBlur,
-                offset: const Offset(0, AppLayout.ctaShadowOffsetY),
+                blurRadius: EffectLayout.ctaShadowBlur,
+                offset: const Offset(0, EffectLayout.ctaShadowOffsetY),
               ),
             ],
           ),
@@ -108,7 +108,7 @@ class AchievementCard extends StatelessWidget {
           opacity: iconOpacity,
           child: Text(
             def.iconName,
-            style: AppTypography.emojiLg.copyWith(fontSize: AppLayout.emojiBadgeLg),
+            style: AppTypography.emojiLg.copyWith(fontSize: MiscLayout.emojiBadgeLg),
           ),
         ),
         const SizedBox(height: AppSpacing.md),

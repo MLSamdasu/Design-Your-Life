@@ -28,83 +28,103 @@ class TimerRepository {
 
   // ─── 날짜별 로그 조회 ──────────────────────────────────────────────────────
   /// 특정 날짜의 타이머 로그를 조회한다
-  /// 날짜 비교는 로컬 타임존 기준으로 수행한다
+  /// 최적화: start_time 문자열 프리픽스로 사전 필터링하여 불필요한 깊은 복사를 생략한다
   Future<List<TimerLog>> getTodayLogs(DateTime today) async {
-    // 해당 날짜의 시작과 끝 경계 계산
     final dayStart = DateTime(today.year, today.month, today.day);
     final dayEnd = dayStart.add(const Duration(days: 1));
+    final datePrefix = _datePrefix(today);
 
-    // Hive에서 전체 로그를 조회하고 TimerLog.fromMap으로 파싱한다
-    // fromMap은 camelCase/snake_case 양쪽 키를 모두 처리한다
-    final all = _cache.getAll(AppConstants.timerLogsBox);
-    final logs = <TimerLog>[];
-    for (final map in all) {
-      try {
-        final log = TimerLog.fromMap(map);
-        // 해당 날짜 범위에 속하는 로그만 추가한다
-        if (!log.startTime.isBefore(dayStart) && log.startTime.isBefore(dayEnd)) {
-          logs.add(log);
-        }
-      } catch (e, stack) {
-        // V3-008: 파싱 실패를 로깅하여 손상된 데이터 추적을 가능하게 한다
-        ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
-        continue;
-      }
-    }
+    // query()로 날짜 프리픽스 일치 항목만 깊은 복사한다
+    final filtered = _cache.query(
+      AppConstants.timerLogsBox,
+      (m) => _startTimePrefix(m) == datePrefix,
+    );
 
-    // startTime 오름차순 정렬
+    final logs = _parseLogs(filtered, (log) =>
+        !log.startTime.isBefore(dayStart) && log.startTime.isBefore(dayEnd));
+
     logs.sort((a, b) => a.startTime.compareTo(b.startTime));
-
     return logs;
   }
 
   // ─── 기간별 로그 조회 ──────────────────────────────────────────────────────
   /// 특정 기간의 타이머 로그를 조회한다
-  /// [from] ~ [to] 범위의 로그를 반환한다 (양 끝 포함)
+  /// 최적화: start_time 문자열 범위로 사전 필터링하여 불필요한 깊은 복사를 생략한다
   Future<List<TimerLog>> getLogsForPeriod(DateTime from, DateTime to) async {
-    // Hive에서 전체 로그를 조회하고 TimerLog.fromMap으로 파싱한다
-    // fromMap은 camelCase/snake_case 양쪽 키를 모두 처리한다
-    final all = _cache.getAll(AppConstants.timerLogsBox);
-    final logs = <TimerLog>[];
-    for (final map in all) {
-      try {
-        final log = TimerLog.fromMap(map);
-        if (!log.startTime.isBefore(from) && !log.startTime.isAfter(to)) {
-          logs.add(log);
-        }
-      } catch (e, stack) {
-        // V3-008: 파싱 실패를 로깅하여 손상된 데이터 추적을 가능하게 한다
-        ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
-        continue;
-      }
-    }
+    final fromPrefix = _datePrefix(from);
+    final toPrefix = _datePrefix(to);
 
-    // startTime 오름차순 정렬
+    // query()로 날짜 범위 내 항목만 깊은 복사한다
+    final filtered = _cache.query(
+      AppConstants.timerLogsBox,
+      (m) {
+        final prefix = _startTimePrefix(m);
+        return prefix.compareTo(fromPrefix) >= 0 &&
+            prefix.compareTo(toPrefix) <= 0;
+      },
+    );
+
+    final logs = _parseLogs(filtered, (log) =>
+        !log.startTime.isBefore(from) && !log.startTime.isAfter(to));
+
     logs.sort((a, b) => a.startTime.compareTo(b.startTime));
-
     return logs;
   }
 
   // ─── 통계 조회 ───────────────────────────────────────────────────────────
   /// 특정 투두의 총 집중 시간(초)을 계산한다
-  /// Hive에서 해당 todoId를 가진 focus 타입 로그의 합계를 반환한다
+  /// 최적화: todoId 필터를 query()에 위임하여 불필요한 깊은 복사를 생략한다
   Future<int> getTotalFocusSeconds(String todoId) async {
-    final all = _cache.getAll(AppConstants.timerLogsBox);
+    final filtered = _cache.query(
+      AppConstants.timerLogsBox,
+      (m) => (m['todo_id'] ?? m['todoId'])?.toString() == todoId,
+    );
+
     int total = 0;
-    for (final map in all) {
+    for (final map in filtered) {
       try {
-        // fromMap은 camelCase/snake_case 양쪽 키를 모두 처리한다
         final log = TimerLog.fromMap(map);
-        if (log.todoId == todoId && log.type == TimerSessionType.focus) {
+        if (log.type == TimerSessionType.focus) {
           total += log.durationSeconds;
         }
       } catch (e, stack) {
-        // V3-008: 파싱 실패를 로깅하여 손상된 데이터 추적을 가능하게 한다
         ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
-        continue;
       }
     }
     return total;
+  }
+
+  // ─── 내부 헬퍼 ────────────────────────────────────────────────────────────
+
+  /// start_time 필드에서 YYYY-MM-DD 프리픽스를 추출한다
+  String _startTimePrefix(Map<String, dynamic> m) {
+    final raw = (m['start_time'] ?? m['startTime'])?.toString() ?? '';
+    return raw.length >= 10 ? raw.substring(0, 10) : raw;
+  }
+
+  /// DateTime을 YYYY-MM-DD 문자열로 변환한다
+  String _datePrefix(DateTime dt) {
+    final y = dt.year.toString().padLeft(4, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
+
+  /// Map 목록을 TimerLog로 파싱하고 추가 조건으로 필터링한다
+  List<TimerLog> _parseLogs(
+    List<Map<String, dynamic>> maps,
+    bool Function(TimerLog) predicate,
+  ) {
+    final logs = <TimerLog>[];
+    for (final map in maps) {
+      try {
+        final log = TimerLog.fromMap(map);
+        if (predicate(log)) logs.add(log);
+      } catch (e, stack) {
+        ErrorHandler.logServiceError('TimerRepository:parseLog', e, stack);
+      }
+    }
+    return logs;
   }
 
   // ─── 로그 삭제 ──────────────────────────────────────────────────────────────

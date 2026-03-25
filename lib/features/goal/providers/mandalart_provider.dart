@@ -61,20 +61,20 @@ final wizardCoreGoalProvider = StateProvider<String>((ref) => '');
 
 /// 위저드 세부 목표 8개 입력 Provider (index: 0~7)
 final wizardSubGoalInputsProvider =
-    StateProvider<List<String>>((ref) => List.filled(AppLayout.mandalartSubGoalCount, ''));
+    StateProvider<List<String>>((ref) => List.filled(GoalLayout.mandalartSubGoalCount, ''));
 
 /// 위저드 실천 과제 입력 Provider (subGoalIndex: 0~7, taskIndex: 0~7)
 final wizardTaskInputsProvider =
     StateProvider<Map<int, List<String>>>((ref) => {
-      for (int i = 0; i < AppLayout.mandalartSubGoalCount; i++) i: List.filled(AppLayout.mandalartSubGoalCount, ''),
+      for (int i = 0; i < GoalLayout.mandalartSubGoalCount; i++) i: List.filled(GoalLayout.mandalartSubGoalCount, ''),
     });
 
 /// 위저드 상태를 초기화한다
 void resetWizard(WidgetRef ref) {
   ref.read(wizardStepProvider.notifier).state = 1;
   ref.read(wizardCoreGoalProvider.notifier).state = '';
-  ref.read(wizardSubGoalInputsProvider.notifier).state = List.filled(AppLayout.mandalartSubGoalCount, '');
+  ref.read(wizardSubGoalInputsProvider.notifier).state = List.filled(GoalLayout.mandalartSubGoalCount, '');
   ref.read(wizardTaskInputsProvider.notifier).state = {
-    for (int i = 0; i < AppLayout.mandalartSubGoalCount; i++) i: List.filled(AppLayout.mandalartSubGoalCount, ''),
+    for (int i = 0; i < GoalLayout.mandalartSubGoalCount; i++) i: List.filled(GoalLayout.mandalartSubGoalCount, ''),
   };
 }

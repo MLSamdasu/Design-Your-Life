@@ -101,8 +101,8 @@ class _MandalartEmptyStateState extends State<MandalartEmptyState>
                 boxShadow: [
                   BoxShadow(
                     color: ColorTokens.main.withValues(alpha: AppAnimation.ctaButtonShadowAlpha),
-                    blurRadius: AppLayout.shadowBlurLg,
-                    offset: const Offset(0, AppLayout.shadowOffsetMd),
+                    blurRadius: EffectLayout.shadowBlurLg,
+                    offset: const Offset(0, EffectLayout.shadowOffsetMd),
                   ),
                 ],
               ),

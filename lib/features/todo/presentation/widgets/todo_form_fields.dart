@@ -32,7 +32,7 @@ class TodoGlassTextField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      maxLength: AppLayout.todoTitleMaxLength,
+      maxLength: MiscLayout.todoTitleMaxLength,
       maxLengthEnforcement: MaxLengthEnforcement.enforced,
       // 카운터 위젯을 숨겨 시각적 노이즈를 제거한다
       buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
@@ -96,9 +96,9 @@ class TodoPrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.xl),
           boxShadow: [
             BoxShadow(
-              color: ColorTokens.main.withValues(alpha: AppLayout.badgeShadowAlpha),
-              blurRadius: AppLayout.ctaShadowBlur,
-              offset: const Offset(0, AppLayout.ctaShadowOffsetY),
+              color: ColorTokens.main.withValues(alpha: EffectLayout.badgeShadowAlpha),
+              blurRadius: EffectLayout.ctaShadowBlur,
+              offset: const Offset(0, EffectLayout.ctaShadowOffsetY),
             ),
           ],
         ),

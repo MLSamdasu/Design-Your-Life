@@ -5,7 +5,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_constants.dart';
+import 'data_store_memo_providers.dart';
 import 'global_providers.dart';
+
+// 하위 호환을 위한 배럴 re-export (메모/리추얼/데일리쓰리)
+export 'data_store_memo_providers.dart';
 
 // ─── 버전 카운터 Provider ──────────────────────────────────────────────────
 // CRUD 후 해당 카운터를 1 증가시키면 의존 Provider가 자동 재평가된다
@@ -107,7 +111,8 @@ final allTimerLogsRawProvider = Provider<List<Map<String, dynamic>>>((ref) {
 });
 
 /// 전체 업적 목록 (Map 형태) — Single Source of Truth
-final allAchievementsRawProvider = Provider<List<Map<String, dynamic>>>((ref) {
+final allAchievementsRawProvider =
+    Provider<List<Map<String, dynamic>>>((ref) {
   ref.watch(achievementDataVersionProvider);
   final cache = ref.watch(hiveCacheServiceProvider);
   return cache.getAll(AppConstants.achievementsBox);
@@ -168,4 +173,7 @@ void _bumpAll(T Function<T>(ProviderListenable<T>) read) {
   read(goalDataVersionProvider.notifier).state++;
   read(subGoalDataVersionProvider.notifier).state++;
   read(goalTaskDataVersionProvider.notifier).state++;
+  read(ritualDataVersionProvider.notifier).state++;
+  read(dailyThreeDataVersionProvider.notifier).state++;
+  read(memoDataVersionProvider.notifier).state++;
 }

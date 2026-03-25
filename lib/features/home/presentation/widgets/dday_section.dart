@@ -53,7 +53,7 @@ class DdaySection extends ConsumerWidget {
         mainText: '다가오는 일정이 없어요',
         ctaLabel: '일정 추가하러 가기',
         onCtaTap: () => context.go(RoutePaths.calendar),
-        minHeight: AppLayout.dailyScrollOffset,
+        minHeight: TimelineLayout.dailyScrollOffset,
       ),
     );
   }
@@ -61,7 +61,7 @@ class DdaySection extends ConsumerWidget {
   /// D-day 카드 수평 스크롤 목록 (AN-10)
   Widget _buildDdayList(List<DdayItem> ddays) {
     return SizedBox(
-      height: AppLayout.ddayListHeight,
+      height: MiscLayout.ddayListHeight,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         // AN-10: BouncingScrollPhysics

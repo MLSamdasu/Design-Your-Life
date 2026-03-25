@@ -132,12 +132,24 @@ class HiveCacheService {
 
   /// 특정 박스에서 조건에 맞는 항목들을 반환한다
   /// predicate 함수가 true를 반환하는 항목만 리스트에 포함한다
+  /// 최적화: 조건 불일치 항목은 깊은 복사를 생략하여 메모리·CPU를 절약한다
   List<Map<String, dynamic>> query(
     String boxName,
     bool Function(Map<String, dynamic>) predicate,
   ) {
-    // getAll로 전체를 가져온 뒤 predicate로 필터링한다
-    return getAll(boxName).where(predicate).toList();
+    final box = _box(boxName);
+    final result = <Map<String, dynamic>>[];
+    for (final key in box.keys) {
+      final data = box.get(key);
+      if (data is! Map) continue;
+      // 얕은 캐스팅으로 predicate를 평가한다 (읽기 전용이므로 안전하다)
+      final shallow = data.map((k, v) => MapEntry(k.toString(), v));
+      if (predicate(shallow)) {
+        // 일치하는 항목만 깊은 복사하여 Hive 내부 참조를 차단한다
+        result.add(_deepCopyMap(data));
+      }
+    }
+    return result;
   }
 
   /// 항목을 ID 기반으로 업데이트한다

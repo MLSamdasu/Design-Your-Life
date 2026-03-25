@@ -1,16 +1,17 @@
 // 인증 Feature: 로그인 화면 하위 위젯 모음
-// SRP 분리: login_screen.dart에서 AppIcon, LoginCard, GoogleSignInButton을 추출한다.
-// IN: isLoading, errorMessage, onGoogleSignIn 콜백
-// OUT: 로그인 UI 위젯
+// SRP 분리: login_screen.dart에서 AppIcon, LoginCard를 추출한다.
+// GoogleSignInButton은 google_sign_in_button.dart로 별도 분리한다.
+// 입력: isLoading, errorMessage, onGoogleSignIn 콜백
+// 출력: 로그인 UI 위젯
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../core/theme/color_tokens.dart';
 import '../../../core/theme/typography_tokens.dart';
 import '../../../core/theme/theme_colors.dart';
-import '../../../core/theme/animation_tokens.dart';
 import '../../../core/theme/radius_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
+import 'google_sign_in_button.dart';
 
 // ─── 앱 아이콘 위젯 ─────────────────────────────────────────────────────────
 
@@ -23,10 +24,10 @@ class AppIcon extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.massive),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
+        filter: ImageFilter.blur(sigmaX: EffectLayout.blurSigmaStandard, sigmaY: EffectLayout.blurSigmaStandard),
         child: Container(
-          width: AppLayout.appIconSize,
-          height: AppLayout.appIconSize,
+          width: MiscLayout.appIconSize,
+          height: MiscLayout.appIconSize,
           decoration: BoxDecoration(
             color: context.themeColors.textPrimaryWithAlpha(0.18),
             borderRadius: BorderRadius.circular(AppRadius.massive),
@@ -37,8 +38,8 @@ class AppIcon extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: ColorTokens.gray900.withValues(alpha: 0.18),
-                blurRadius: AppLayout.shadowBlurXl,
-                offset: const Offset(0, AppLayout.shadowOffsetMd),
+                blurRadius: EffectLayout.shadowBlurXl,
+                offset: const Offset(0, EffectLayout.shadowOffsetMd),
               ),
             ],
           ),
@@ -46,7 +47,7 @@ class AppIcon extends StatelessWidget {
             child: Text(
               '✦',
               style: AppTypography.emojiLg.copyWith(
-                fontSize: AppLayout.emojiAppIcon,
+                fontSize: MiscLayout.emojiAppIcon,
                 color: context.themeColors.textPrimary,
               ),
             ),
@@ -81,9 +82,9 @@ class LoginCard extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.massive),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
+        filter: ImageFilter.blur(sigmaX: EffectLayout.blurSigmaStandard, sigmaY: EffectLayout.blurSigmaStandard),
         child: Container(
-          padding: const EdgeInsets.all(AppLayout.loginCardPadding),
+          padding: const EdgeInsets.all(MiscLayout.loginCardPadding),
           decoration: BoxDecoration(
             color: context.themeColors.textPrimaryWithAlpha(0.15),
             borderRadius: BorderRadius.circular(AppRadius.massive),
@@ -94,8 +95,8 @@ class LoginCard extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: ColorTokens.gray900.withValues(alpha: 0.12),
-                blurRadius: AppLayout.shadowBlurXxl,
-                offset: const Offset(0, AppLayout.shadowOffsetLg),
+                blurRadius: EffectLayout.shadowBlurXxl,
+                offset: const Offset(0, EffectLayout.shadowOffsetLg),
               ),
             ],
           ),
@@ -186,112 +187,6 @@ class LoginCard extends StatelessWidget {
               ],
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Google 로그인 버튼 ─────────────────────────────────────────────────────
-
-/// Google 로그인 버튼 (Glass 스타일)
-/// Pressed 시 opacity 증가, 로딩 중엔 인디케이터를 표시한다
-class GoogleSignInButton extends StatefulWidget {
-  final bool isLoading;
-  final VoidCallback onTap;
-
-  const GoogleSignInButton({
-    super.key,
-    required this.isLoading,
-    required this.onTap,
-  });
-
-  @override
-  State<GoogleSignInButton> createState() => _GoogleSignInButtonState();
-}
-
-class _GoogleSignInButtonState extends State<GoogleSignInButton> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) {
-        if (!widget.isLoading) setState(() => _isPressed = true);
-      },
-      onTapUp: (_) {
-        if (!widget.isLoading) setState(() => _isPressed = false);
-      },
-      onTapCancel: () {
-        if (!widget.isLoading) setState(() => _isPressed = false);
-      },
-      onTap: widget.isLoading ? null : widget.onTap,
-      child: AnimatedContainer(
-        duration: AppAnimation.fast,
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxl, vertical: AppSpacing.lgXl),
-        decoration: BoxDecoration(
-          // Pressed 시 opacity 증가 (design-system.md 4.4절)
-          color: _isPressed
-              ? context.themeColors.textPrimaryWithAlpha(0.30)
-              : context.themeColors.textPrimaryWithAlpha(0.18),
-          borderRadius: BorderRadius.circular(AppRadius.xlLg),
-          border: Border.all(
-            color: context.themeColors.textPrimaryWithAlpha(0.35),
-            width: AppLayout.borderThin,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: ColorTokens.main.withValues(alpha: 0.15),
-              blurRadius: AppLayout.shadowBlurMd,
-              offset: const Offset(0, AppLayout.shadowOffsetSm),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // 로딩 중이면 인디케이터, 아니면 Google 'G' 로고
-            if (widget.isLoading)
-              SizedBox(
-                width: AppLayout.googleLogoSize,
-                height: AppLayout.googleLogoSize,
-                child: CircularProgressIndicator(
-                  strokeWidth: AppLayout.spinnerStrokeWidth,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    context.themeColors.textPrimaryWithAlpha(0.80),
-                  ),
-                ),
-              )
-            else
-              Container(
-                width: AppLayout.googleLogoSize,
-                height: AppLayout.googleLogoSize,
-                decoration: BoxDecoration(
-                  color: context.themeColors.textPrimary,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                ),
-                child: Center(
-                  child: Text(
-                    'G',
-                    style: AppTypography.captionLg.copyWith(
-                      color: ColorTokens.main,
-                      fontWeight: AppTypography.weightExtraBold,
-                      height: 1.0,
-                    ),
-                  ),
-                ),
-              ),
-            const SizedBox(width: AppSpacing.lg),
-            // 버튼 텍스트
-            Text(
-              widget.isLoading ? '로그인 중...' : 'Google로 시작하기',
-              // titleMd 토큰 사용 (15px, SemiBold)
-              style: AppTypography.titleMd.copyWith(
-                    color: context.themeColors.textPrimary,
-              ),
-            ),
-          ],
         ),
       ),
     );

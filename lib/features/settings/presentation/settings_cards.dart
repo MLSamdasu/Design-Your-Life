@@ -12,6 +12,7 @@ import '../../../core/theme/theme_colors.dart';
 import '../../../core/theme/typography_tokens.dart';
 import '../../../shared/widgets/glass_card.dart';
 import 'settings_actions.dart';
+import 'settings_ritual_toggle.dart';
 import '../../../core/theme/spacing_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
 
@@ -128,6 +129,9 @@ class SettingsAppCard extends ConsumerWidget {
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.md),
+          // 데일리 리추얼 토글 행
+          const DailyRitualToggle(),
         ],
       ),
     );

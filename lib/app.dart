@@ -1,8 +1,8 @@
 // C0.4/C0.7: 앱 루트 위젯
 // MaterialApp.router(GoRouter)를 설정하고 라이트/다크 ThemeData를 적용한다.
 // ProviderScope는 main.dart에서 이미 씌워졌으므로 여기서 중복 추가하지 않는다.
-// IN: ProviderScope
-// OUT: MaterialApp.router (GoRouter + AppTheme 적용)
+// 입력: ProviderScope
+// 출력: MaterialApp.router (GoRouter + AppTheme 적용)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

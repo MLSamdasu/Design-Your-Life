@@ -25,8 +25,8 @@ class HabitCalendar extends ConsumerWidget {
     return TableCalendar(
       locale: 'ko_KR',
       focusedDay: focusedMonth,
-      firstDay: DateTime(AppLayout.calendarStartYear),
-      lastDay: DateTime(AppLayout.calendarEndYear),
+      firstDay: DateTime(TimelineLayout.calendarStartYear),
+      lastDay: DateTime(TimelineLayout.calendarEndYear),
       selectedDayPredicate: (day) => isSameDay(day, selectedDate),
       calendarFormat: CalendarFormat.month,
       startingDayOfWeek: StartingDayOfWeek.monday,

@@ -50,6 +50,7 @@ class GoalListView extends ConsumerWidget {
               // goalStatsProvider는 동기 Provider이므로 직접 사용한다
               child: GoalStatsHeader(
                 stats: stats,
+                goals: goals,
                 isLoading: false,
               ),
             ),
@@ -137,7 +138,7 @@ class _AddGoalFab extends ConsumerWidget {
       onPressed: () => _showCreateDialog(context),
       backgroundColor: ColorTokens.main,
       foregroundColor: ColorTokens.white,
-      elevation: AppLayout.fabElevation,
+      elevation: GoalLayout.fabElevation,
       child: const Icon(Icons.add_rounded),
     );
   }

@@ -9,6 +9,7 @@ import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
 import '../../../../features/goal/services/progress_calculator.dart';
+import '../../../../shared/models/goal.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
@@ -17,10 +18,12 @@ import '../../../../core/theme/layout_tokens.dart';
 /// 달성률/평균 진행률/총 목표 수 3개 스탯 카드를 가로로 표시한다
 class GoalStatsHeader extends ConsumerWidget {
   final GoalStats stats;
+  final List<Goal> goals;
   final bool isLoading;
 
   const GoalStatsHeader({
     required this.stats,
+    this.goals = const [],
     this.isLoading = false,
     super.key,
   });
@@ -29,21 +32,21 @@ class GoalStatsHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Row(
       children: [
-        // 달성률 카드
+        // 평균 진행률 카드 (체크포인트/할일 기반 실질 진행률)
         Expanded(
           child: _StatCard(
             label: '달성률',
-            value: '${stats.achievementPercent}%',
+            value: '${stats.avgProgressPercent}%',
             icon: Icons.flag_rounded,
             isLoading: isLoading,
           ),
         ),
         const SizedBox(width: AppSpacing.md),
-        // 완료 목표 수 카드 (달성률과 동일 값의 '평균 진행률' 대신 실질적 정보 표시)
+        // 완료 목표 수 카드 (isCompleted=true인 목표 수)
         Expanded(
           child: _StatCard(
             label: '완료',
-            value: '${(stats.achievementRate * stats.totalGoalCount).round()}',
+            value: '${goals.where((g) => g.isCompleted).length}',
             icon: Icons.check_circle_outline_rounded,
             isLoading: isLoading,
           ),
@@ -104,8 +107,8 @@ class _StatCard extends StatelessWidget {
               // 수치
               isLoading
                   ? Container(
-                      height: AppLayout.skeletonTextHeight,
-                      width: AppLayout.skeletonTextWidth,
+                      height: GoalLayout.skeletonTextHeight,
+                      width: GoalLayout.skeletonTextWidth,
                       decoration: BoxDecoration(
                         color: context.themeColors.textPrimaryWithAlpha(0.15),
                         borderRadius: BorderRadius.circular(AppRadius.sm),

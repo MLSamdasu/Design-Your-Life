@@ -1,6 +1,6 @@
 // F6: 설정 화면 액션 헬퍼
 // 로그아웃, 계정 삭제 등 설정 화면의 비즈니스 액션을 처리한다.
-// SRP: 액션 로직을 settings_screen.dart에서 분리하여 단일 책임을 유지한다.
+// SRP 분리: 액션 로직을 settings_screen.dart에서 분리하여 단일 책임을 유지한다.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

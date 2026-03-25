@@ -1,6 +1,6 @@
 // F5 위젯: WizardStepHeader - 만다라트 위저드 헤더 영역
 // 단계 진행 표시기 + 단계 제목 + 취소 버튼을 포함한다.
-// SRP: 위저드 헤더 표시만 담당한다.
+// SRP 분리: 위저드 헤더 표시만 담당한다.
 import 'package:flutter/material.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
@@ -84,15 +84,15 @@ class WizardStepIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: List.generate(AppLayout.wizardStepCount, (i) {
+      children: List.generate(GoalLayout.wizardStepCount, (i) {
         final isActive = i < currentStep;
         return Expanded(
           child: Padding(
             // 마지막 인디케이터에는 우측 간격 없음
-            padding: EdgeInsets.only(right: i < AppLayout.wizardStepCount - 1 ? AppSpacing.xs : 0),
+            padding: EdgeInsets.only(right: i < GoalLayout.wizardStepCount - 1 ? AppSpacing.xs : 0),
             child: AnimatedContainer(
               duration: AppAnimation.medium,
-              height: AppLayout.stepIndicatorHeight,
+              height: GoalLayout.stepIndicatorHeight,
               decoration: BoxDecoration(
                 // 어두운 배경(Glassmorphism/Neon)에서 진한 보라 대신 밝은 보라를 사용해 가독성을 확보한다
         color: isActive

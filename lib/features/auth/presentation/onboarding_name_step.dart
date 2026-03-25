@@ -41,9 +41,9 @@ class NameInputStep extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.massive),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: AppLayout.blurSigmaStandard, sigmaY: AppLayout.blurSigmaStandard),
+            filter: ImageFilter.blur(sigmaX: EffectLayout.blurSigmaStandard, sigmaY: EffectLayout.blurSigmaStandard),
             child: Container(
-              padding: const EdgeInsets.all(AppLayout.loginCardPadding),
+              padding: const EdgeInsets.all(MiscLayout.loginCardPadding),
               decoration: BoxDecoration(
                 color: context.themeColors.textPrimaryWithAlpha(0.15),
                 borderRadius: BorderRadius.circular(AppRadius.massive),

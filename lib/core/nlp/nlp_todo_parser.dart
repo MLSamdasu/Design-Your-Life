@@ -1,8 +1,8 @@
 // C0.NLP: 자연어 투두 파서 (통합 오케스트레이터)
 // KoreanDateParser + KoreanTimeParser를 조합하여 ParsedTodo를 생성한다.
 // Manager 계층: 직접 파싱 로직을 수행하지 않고 Atomic Module 호출만 한다.
-// IN: String (원본 텍스트), DateTime (기준 날짜)
-// OUT: ParsedTodo
+// 입력: String (원본 텍스트), DateTime (기준 날짜)
+// 출력: ParsedTodo
 import 'korean_date_parser.dart';
 import 'korean_time_parser.dart';
 import 'parsed_todo.dart';

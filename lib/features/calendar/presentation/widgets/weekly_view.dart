@@ -2,22 +2,23 @@
 // 7일 수평 열 + 수직 시간 타임라인 (00:00~23:59)
 // 선택된 날짜 기준 해당 주(월~일)의 일정을 열 별로 배치한다 (AC-CL-05)
 // SRP 분리: 이벤트/시간 위젯 → weekly_view_widgets.dart, 헤더 → weekly_day_header.dart
+//           단일 날짜 열 → weekly_day_column.dart
 // F17: Google Calendar 이벤트를 병합하여 주간 뷰에 표시한다
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/calendar_sync/calendar_sync_provider.dart';
-import '../../../../core/theme/color_tokens.dart';
-import '../../../../core/theme/theme_colors.dart';
+import '../../sync/calendar_sync_provider.dart';
 import '../../providers/calendar_provider.dart';
 import '../../providers/event_provider.dart';
-import '../../../habit/providers/routine_log_provider.dart';
-import '../../../todo/providers/todo_provider.dart';
 import 'weekly_day_header.dart';
 import '../utils/event_dialog_utils.dart';
 import 'weekly_view_widgets.dart';
+import 'weekly_day_column.dart';
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+
+// barrel re-export: 분리된 하위 위젯을 이 파일을 통해 접근할 수 있도록 한다
+export 'weekly_day_column.dart';
 
 /// 주간 타임라인 뷰
 class WeeklyView extends ConsumerStatefulWidget {
@@ -28,7 +29,7 @@ class WeeklyView extends ConsumerStatefulWidget {
 }
 
 class _WeeklyViewState extends ConsumerState<WeeklyView> {
-  static const double _timeColumnWidth = AppLayout.timelineTimeColumnMd;
+  static const double _timeColumnWidth = TimelineLayout.timelineTimeColumnMd;
 
   late final ScrollController _scrollController;
 
@@ -44,7 +45,7 @@ class _WeeklyViewState extends ConsumerState<WeeklyView> {
 
   void _scrollToCurrentTime() {
     final now = DateTime.now();
-    final scrollOffset = (now.hour * kWeeklyHourHeight) - AppLayout.weeklyScrollOffset;
+    final scrollOffset = (now.hour * kWeeklyHourHeight) - TimelineLayout.weeklyScrollOffset;
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
         scrollOffset.clamp(0, _scrollController.position.maxScrollExtent),
@@ -161,7 +162,7 @@ class _WeeklyViewState extends ConsumerState<WeeklyView> {
                     final dayRoutines = routinesByDay[dayKey] ?? const [];
 
                     return Expanded(
-                      child: _DayColumn(
+                      child: WeeklyDayColumn(
                         day: day,
                         events: dayEvents,
                         routines: dayRoutines,
@@ -177,96 +178,6 @@ class _WeeklyViewState extends ConsumerState<WeeklyView> {
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-/// 단일 날짜 열 (시간 구분선 + 루틴 블록 + 이벤트 블록 + 현재 시간선)
-/// ConsumerWidget으로 변환하여 투두/루틴 완료 토글 Provider에 접근한다
-class _DayColumn extends ConsumerWidget {
-  final DateTime day;
-  final List<CalendarEvent> events;
-  final List<RoutineEntry> routines;
-  final bool isToday;
-  final bool isSelected;
-  final DateTime now;
-  final void Function(CalendarEvent)? onEventTap;
-
-  const _DayColumn({
-    required this.day,
-    required this.events,
-    required this.routines,
-    required this.isToday,
-    required this.isSelected,
-    required this.now,
-    this.onEventTap,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return Stack(
-      children: [
-        // 시간 구분선 그리드
-        Column(
-          children: List.generate(AppLayout.hoursInDay, (i) {
-            return Container(
-              height: kWeeklyHourHeight,
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(
-                    color: context.themeColors.textPrimaryWithAlpha(0.14),
-                    width: AppLayout.borderThin,
-                  ),
-                  left: BorderSide(
-                    color: context.themeColors.textPrimaryWithAlpha(0.10),
-                    width: AppLayout.borderThin,
-                  ),
-                ),
-                // 선택된 날짜 열 배경 미세 하이라이트
-                color: isSelected
-                    ? context.themeColors.textPrimaryWithAlpha(0.03)
-                    : ColorTokens.transparent,
-              ),
-            );
-          }),
-        ),
-
-        // 루틴 블록 (이벤트 아래 레이어에 반투명 배경으로 표시)
-        ...routines.map((r) {
-          // 해당 날짜의 루틴 완료 상태를 Provider에서 감시한다
-          final isCompleted = ref.watch(routineCompletionProvider(
-            (routineId: r.id, date: day),
-          ));
-          return WeeklyRoutineBlock(
-            routine: r,
-            isCompleted: isCompleted,
-            onToggle: () {
-              ref.read(toggleRoutineLogProvider)(r.id, day, !isCompleted);
-            },
-          );
-        }),
-
-        // 이벤트 블록 (공용 위젯 사용, 루틴 위에 표시)
-        ...events
-            .where((e) => e.startHour != null)
-            .map((e) => WeeklyEventBlock(
-              event: e,
-              onTap: onEventTap != null ? () => onEventTap!(e) : null,
-              // 투두 이벤트: 완료 토글 콜백 전달
-              onToggleTodo: e.isTodoEvent
-                  ? () {
-                      final todoId = e.id.replaceFirst('todo_', '');
-                      ref.read(toggleTodoProvider)(
-                        todoId,
-                        !e.isTodoCompleted,
-                      );
-                    }
-                  : null,
-            )),
-
-        // 현재 시간 빨간 가로선 - 오늘 열에만 표시 (공용 위젯 사용)
-        if (isToday) WeeklyCurrentTimeLine(now: now),
       ],
     );
   }

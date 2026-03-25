@@ -104,6 +104,16 @@ final navSizeProvider = StateProvider<double>((ref) {
   return saved ?? AppLayout.sideNavWidth;
 });
 
+// ─── 데일리 리추얼 활성화 Provider ─────────────────────────────────────────
+/// 데일리 리추얼 활성화 여부 Provider
+/// Hive settingsBox에서 초기값을 읽는다 (기본값: true — 활성화)
+final dailyRitualEnabledProvider = StateProvider<bool>((ref) {
+  final cacheService = ref.watch(hiveCacheServiceProvider);
+  return cacheService.readSetting<bool>(
+          AppConstants.settingsKeyDailyRitualEnabled) ??
+      true;
+});
+
 // ─── 인증 Provider (재내보내기) ──────────────────────────────────────────
 // auth_provider.dart에서 정의된 Provider를 재내보내기하여
 // Feature들이 global_providers.dart 하나만 import하면 되도록 한다

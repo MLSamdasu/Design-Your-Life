@@ -48,9 +48,9 @@ class GlobalActionBar extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: ColorTokens.transparent,
       builder: (ctx) => DraggableScrollableSheet(
-        initialChildSize: AppLayout.settingsSheetInitialSize,
-        minChildSize: AppLayout.settingsSheetMinSize,
-        maxChildSize: AppLayout.settingsSheetMaxSize,
+        initialChildSize: MiscLayout.settingsSheetInitialSize,
+        minChildSize: MiscLayout.settingsSheetMinSize,
+        maxChildSize: MiscLayout.settingsSheetMaxSize,
         expand: false,
         builder: (_, controller) => ClipRRect(
           borderRadius: BorderRadius.vertical(

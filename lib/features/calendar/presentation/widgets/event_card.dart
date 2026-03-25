@@ -7,13 +7,14 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/color_tokens.dart';
-import '../../../../core/theme/typography_tokens.dart';
-import '../../../../core/theme/theme_colors.dart';
 import '../../providers/event_provider.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
-import '../../../../shared/widgets/animated_strikethrough.dart';
+import 'event_card_color_bar.dart';
+import 'event_card_badge_row.dart';
+import 'event_card_title_time.dart';
+import 'event_card_todo_checkbox.dart';
 
 /// 이벤트 카드 위젯
 /// 투두 이벤트 체크박스 토글 시 bounce + 취소선 draw 애니메이션을 지원한다
@@ -78,9 +79,6 @@ class _EventCardState extends State<EventCard>
     return '$h:$m';
   }
 
-  /// 투두 이벤트 전용 색상 (보라 배경에서 잘 보이는 밝은 틸 계열)
-  static const Color _todoCardColor = ColorTokens.todoCard;
-
   /// 체크박스 토글 핸들러
   /// 1) 로컬 상태 즉시 변경 → 취소선 애니메이션 시작
   /// 2) bounce 애니메이션 동시 재생
@@ -90,7 +88,7 @@ class _EventCardState extends State<EventCard>
 
     final newCompleted = !_localCompleted;
 
-    // 1) 로컬 상태 즉시 반영 → _AnimatedStrikethrough가 didUpdateWidget으로 애니메이션 시작
+    // 1) 로컬 상태 즉시 반영 → AnimatedStrikethrough가 didUpdateWidget으로 애니메이션 시작
     setState(() {
       _localCompleted = newCompleted;
     });
@@ -99,18 +97,9 @@ class _EventCardState extends State<EventCard>
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     if (!reduceMotion) {
       _bounceAnimation = TweenSequence<double>([
-        TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.95),
-          weight: 30,
-        ),
-        TweenSequenceItem(
-          tween: Tween(begin: 0.95, end: 1.02),
-          weight: 40,
-        ),
-        TweenSequenceItem(
-          tween: Tween(begin: 1.02, end: 1.0),
-          weight: 30,
-        ),
+        TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95), weight: 30),
+        TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.02), weight: 40),
+        TweenSequenceItem(tween: Tween(begin: 1.02, end: 1.0), weight: 30),
       ]).animate(
         CurvedAnimation(parent: _bounceController, curve: Curves.easeInOut),
       );
@@ -125,7 +114,7 @@ class _EventCardState extends State<EventCard>
   Widget build(BuildContext context) {
     // 투두 이벤트는 보라색 배경과 구분되는 틸/스카이블루 사용
     final cardColor = widget.event.isTodoEvent
-        ? _todoCardColor
+        ? ColorTokens.todoCard
         : ColorTokens.eventColor(widget.event.colorIndex);
     final startTime = _formatTime(widget.event.startHour, widget.event.startMinute);
     final endTime = _formatTime(widget.event.endHour, widget.event.endMinute);
@@ -152,169 +141,38 @@ class _EventCardState extends State<EventCard>
         ),
         child: Row(
           children: [
-            // 색상 인디케이터 바 (4px 너비) — 완료 시 불투명도 감소 애니메이션
-            AnimatedOpacity(
-              opacity: isCompleted ? AppAnimation.completedTextAlpha : 1.0,
-              duration: AppAnimation.textFade,
-              curve: Curves.easeInOut,
-              child: Container(
-                width: AppLayout.colorBarWidth,
-                height: AppLayout.colorBarHeight,
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(AppRadius.xs),
-                ),
-              ),
-            ),
+            // 좌측 색상 인디케이터 바
+            EventCardColorBar(color: cardColor, isCompleted: isCompleted),
             const SizedBox(width: AppSpacing.mdLg),
 
             // 이벤트 제목 + 시간
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 공용 AnimatedStrikethrough로 취소선 draw/erase 애니메이션 적용
-                  AnimatedOpacity(
-                    opacity: isCompleted
-                        ? AppAnimation.completedTextAlpha
-                        : 1.0,
-                    duration: AppAnimation.textFade,
-                    curve: Curves.easeInOut,
-                    child: AnimatedStrikethrough(
-                      isActive: isCompleted,
-                      text: widget.event.title,
-                      style: AppTypography.bodyLg.copyWith(
-                        color: context.themeColors.textPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (startTime != null) ...[
-                    const SizedBox(height: AppSpacing.xxs),
-                    AnimatedOpacity(
-                      opacity: isCompleted
-                          ? AppAnimation.completedTextAlpha
-                          : 1.0,
-                      duration: AppAnimation.textFade,
-                      curve: Curves.easeInOut,
-                      child: Text(
-                        endTime != null ? '$startTime - $endTime' : startTime,
-                        style: AppTypography.captionMd.copyWith(
-                          color: context.themeColors.textPrimaryWithAlpha(0.60),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+              child: EventCardTitleTime(
+                title: widget.event.title,
+                startTime: startTime,
+                endTime: endTime,
+                isCompleted: isCompleted,
               ),
             ),
 
-            // 중간 뱃지 영역 (범위 태그, Google 뱃지 등 — 체크박스 제외)
+            // 중간 뱃지 영역 (범위 태그, Google 뱃지)
             if (widget.event.rangeTag != null || widget.event.isGoogleEvent)
-              Flexible(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 이벤트 유형 뱃지 (범위 일정: 태그 표시)
-                    if (widget.event.rangeTag != null) ...[
-                      const SizedBox(width: AppSpacing.md),
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.sm,
-                            vertical: AppSpacing.xxs,
-                          ),
-                          decoration: BoxDecoration(
-                            color: cardColor.withValues(alpha: 0.40),
-                            borderRadius: BorderRadius.circular(AppRadius.huge),
-                          ),
-                          child: Text(
-                            widget.event.rangeTag!,
-                            style: AppTypography.captionMd.copyWith(
-                              color: context.themeColors.textPrimary,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-
-                    // Google Calendar 출처 뱃지
-                    if (widget.event.isGoogleEvent) ...[
-                      const SizedBox(width: AppSpacing.md),
-                      Container(
-                        width: AppLayout.checkboxMd,
-                        height: AppLayout.checkboxMd,
-                        decoration: BoxDecoration(
-                          color: ColorTokens.googleBrand.withValues(alpha: 0.30),
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'G',
-                            style: AppTypography.captionMd.copyWith(
-                              color: ColorTokens.googleBrand,
-                              fontWeight: AppTypography.weightBold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+              EventCardBadgeRow(
+                rangeTag: widget.event.rangeTag,
+                isGoogleEvent: widget.event.isGoogleEvent,
+                cardColor: cardColor,
               ),
 
             // 투두 체크박스: 항상 오른쪽 끝에 배치
-            // bounce 스케일 + 아이콘 전환 애니메이션
-            if (widget.event.isTodoEvent) ...[
-              const SizedBox(width: AppSpacing.md),
-              ScaleTransition(
-                scale: _bounceAnimation,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: _handleToggle,
-                  child: SizedBox(
-                    width: AppLayout.containerMd,
-                    height: AppLayout.containerMd,
-                    child: Center(
-                      // AnimatedSwitcher: 아이콘 전환 시 fade+scale 효과
-                      child: AnimatedSwitcher(
-                        duration: AppAnimation.slower,
-                        switchInCurve: Curves.easeOutBack,
-                        switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, animation) {
-                          return FadeTransition(
-                            opacity: animation,
-                            child: ScaleTransition(
-                              scale: animation,
-                              child: child,
-                            ),
-                          );
-                        },
-                        child: Icon(
-                          isCompleted
-                              ? Icons.check_circle
-                              : Icons.check_circle_outline,
-                          key: ValueKey<bool>(isCompleted),
-                          size: AppLayout.iconLg,
-                          color: isCompleted
-                              ? ColorTokens.error
-                              : context.themeColors.textPrimaryWithAlpha(0.50),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+            if (widget.event.isTodoEvent)
+              EventCardTodoCheckbox(
+                isCompleted: isCompleted,
+                bounceAnimation: _bounceAnimation,
+                onTap: _handleToggle,
               ),
-            ],
           ],
         ),
       ),
     );
   }
 }
-
-// 취소선 위젯은 공용 AnimatedStrikethrough (shared/widgets/animated_strikethrough.dart)를 사용한다

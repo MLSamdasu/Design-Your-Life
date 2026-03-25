@@ -1,6 +1,6 @@
 // F2 위젯: DatePickerButton / TimePickerButton
 // 날짜/시간 선택 버튼 - 탭하면 DatePicker/TimePicker 다이얼로그를 표시한다
-// SRP: 날짜/시간 값 표시 + 탭 콜백 위임만 담당
+// SRP 분리: 날짜/시간 값 표시 + 탭 콜백 위임만 담당
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/color_tokens.dart';

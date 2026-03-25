@@ -1,7 +1,7 @@
 // C0.9: 날짜/시간 유틸리티 (순수 함수 집합)
 // 날짜 포맷, 주차 계산, D-day 계산, 주간 범위 생성 등을 담당한다.
 // 모든 저장은 UTC, 표시는 로컬 타임존으로 변환한다.
-// IN: DateTime / OUT: 포맷 문자열 또는 변환된 DateTime
+// 입력: DateTime / 출력: 포맷 문자열 또는 변환된 DateTime
 import 'package:intl/intl.dart';
 
 /// 날짜/시간 유틸리티 (C0.9)

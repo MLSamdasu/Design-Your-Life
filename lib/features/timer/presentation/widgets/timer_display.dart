@@ -24,7 +24,7 @@ class TimerDisplay extends StatelessWidget {
 
   const TimerDisplay({
     required this.timerState,
-    this.size = AppLayout.timerDisplaySize,
+    this.size = MiscLayout.timerDisplaySize,
     super.key,
   });
 
@@ -57,7 +57,7 @@ class TimerDisplay extends StatelessWidget {
               progressColor: progressColor,
               // 배경 트랙: 흰색 15% 투명도
               trackColor: context.themeColors.textPrimaryWithAlpha(0.15),
-              strokeWidth: AppLayout.timerStrokeWidth,
+              strokeWidth: MiscLayout.timerStrokeWidth,
             ),
           ),
 
@@ -71,7 +71,7 @@ class TimerDisplay extends StatelessWidget {
                 style: AppTypography.displayLg.copyWith(
                     color: context.themeColors.textPrimary,
                   // 고정폭 폰트 특성 시뮬레이션: 자간 없애기
-                  letterSpacing: AppLayout.timerTimeLetterSpacing,
+                  letterSpacing: MiscLayout.timerTimeLetterSpacing,
                 ),
               ),
 
@@ -80,7 +80,7 @@ class TimerDisplay extends StatelessWidget {
               // 연결된 투두 이름 (있을 경우에만 표시)
               if (timerState.linkedTodoTitle != null) ...[
                 SizedBox(
-                  width: size * AppLayout.timerTodoTitleWidthRatio,
+                  width: size * MiscLayout.timerTodoTitleWidthRatio,
                   child: Text(
                     timerState.linkedTodoTitle!,
                     textAlign: TextAlign.center,

@@ -44,8 +44,8 @@ class EventColorPicker extends StatelessWidget {
                   ? [
                       BoxShadow(
                         color: color.withValues(alpha: 0.50),
-                        blurRadius: AppLayout.colorPickerShadowBlur,
-                        spreadRadius: AppLayout.colorPickerShadowSpread,
+                        blurRadius: EffectLayout.colorPickerShadowBlur,
+                        spreadRadius: EffectLayout.colorPickerShadowSpread,
                       )
                     ]
                   : null,

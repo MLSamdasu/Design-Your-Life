@@ -1,7 +1,5 @@
-// F3 위젯: QuickInputBar - 자연어 빠른 투두 입력 바
-// 텍스트 입력 시 NlpTodoParser로 실시간 파싱 → 미리보기 표시
-// Enter 키 입력 시 파싱 결과를 onSubmit 콜백으로 전달한다
-// Glassmorphism 스타일, GlassInputField 패턴을 따른다.
+// F3 위젯: QuickInputBar — 자연어 빠른 투두 입력 바
+// NlpTodoParser 실시간 파싱, Enter 시 onSubmit 콜백 전달, Glassmorphism 스타일
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,11 +9,11 @@ import '../../../../core/nlp/parsed_todo.dart';
 import '../../../../core/theme/glassmorphism.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
-import '../../../../core/utils/date_utils.dart';
 import '../../../../core/theme/animation_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/layout_tokens.dart';
+import 'quick_input_preview.dart';
 
 /// 빠른 입력 결과 콜백 타입
 typedef QuickInputCallback = void Function(ParsedTodo result);
@@ -135,7 +133,7 @@ class _QuickInputBarState extends State<QuickInputBar> {
                     child: TextField(
                       controller: _controller,
                       focusNode: _focusNode,
-                      maxLength: AppLayout.todoTitleMaxLength,
+                      maxLength: MiscLayout.todoTitleMaxLength,
                       maxLengthEnforcement: MaxLengthEnforcement.enforced,
                       // 카운터 위젯을 숨겨 시각적 노이즈를 제거한다
                       buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
@@ -174,7 +172,7 @@ class _QuickInputBarState extends State<QuickInputBar> {
                       onPressed: _onSubmit,
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                       constraints: const BoxConstraints(),
-                      splashRadius: AppLayout.iconButtonSplashRadius,
+                      splashRadius: MiscLayout.iconButtonSplashRadius,
                     )
                   else
                     const SizedBox(width: AppSpacing.lgXl),
@@ -189,7 +187,7 @@ class _QuickInputBarState extends State<QuickInputBar> {
                   indent: AppSpacing.lgXl,
                   endIndent: AppSpacing.lgXl,
                 ),
-                _ParsePreview(parsed: _parsed!),
+                QuickInputPreview(parsed: _parsed!),
               ],
             ],
           ),
@@ -197,98 +195,6 @@ class _QuickInputBarState extends State<QuickInputBar> {
         ),
         ),
       ),
-    );
-  }
-}
-
-/// 파싱 결과 미리보기 위젯 (QuickInputBar 내부 private 위젯)
-/// 날짜/시간/제목이 파싱된 경우 각각 아이콘과 함께 표시한다
-class _ParsePreview extends StatelessWidget {
-  /// 표시할 파싱 결과
-  final ParsedTodo parsed;
-
-  const _ParsePreview({required this.parsed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.lgXl, AppSpacing.md, AppSpacing.lgXl, AppSpacing.mdLg),
-      child: Wrap(
-        spacing: AppSpacing.lg,
-        runSpacing: AppSpacing.xs,
-        children: [
-          // 날짜 표시: 파싱된 날짜가 있을 때만 보여준다
-          if (parsed.hasDate)
-            _PreviewChip(
-              emoji: '📅',
-              label: AppDateUtils.toShortDate(parsed.date!),
-            ),
-          // 시간 표시: 파싱된 시간이 있을 때만 보여준다
-          if (parsed.hasTime)
-            _PreviewChip(
-              emoji: '⏰',
-              label: _formatTime(parsed.time!),
-            ),
-          // 태그 표시: 파싱된 태그가 있을 때만 보여준다
-          if (parsed.hasTags)
-            ...parsed.tagNames.map((name) => _PreviewChip(
-              emoji: '🏷️',
-              label: '#$name',
-            )),
-          // 제목 표시: 제목이 있을 때만 보여준다
-          if (parsed.title.isNotEmpty)
-            _PreviewChip(
-              emoji: '✏️',
-              label: parsed.title,
-            ),
-        ],
-      ),
-    );
-  }
-
-  /// TimeOfDay를 "오전/오후 H:MM" 형식으로 포맷한다
-  String _formatTime(TimeOfDay time) {
-    final isAm = time.hour < 12;
-    final displayHour = time.hour == 0
-        ? 12
-        : time.hour > 12
-            ? time.hour - 12
-            : time.hour;
-    final minuteStr = time.minute.toString().padLeft(2, '0');
-    final amPm = isAm ? '오전' : '오후';
-    return '$amPm $displayHour:$minuteStr';
-  }
-}
-
-/// 미리보기 개별 칩 위젯 (이모지 + 라벨 조합)
-class _PreviewChip extends StatelessWidget {
-  /// 앞에 표시할 이모지
-  final String emoji;
-
-  /// 표시할 텍스트 라벨
-  final String label;
-
-  const _PreviewChip({required this.emoji, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          emoji,
-          style: AppTypography.captionMd,
-        ),
-        const SizedBox(width: AppSpacing.xxs),
-        Text(
-          label,
-          style: AppTypography.captionMd.copyWith(
-            // 파싱 미리보기 라벨: 배경 테마에 맞는 악센트 색상을 사용한다
-            color: context.themeColors.accent,
-            fontWeight: AppTypography.weightSemiBold,
-          ),
-        ),
-      ],
     );
   }
 }

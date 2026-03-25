@@ -31,8 +31,8 @@ class StepIndicator extends StatelessWidget {
           duration: AppAnimation.medium,
           curve: Curves.easeInOutCubic,
           margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-          width: isActive ? AppLayout.stepIndicatorActiveWidth : AppLayout.stepIndicatorInactiveWidth,
-          height: AppLayout.stepIndicatorHeightLg,
+          width: isActive ? MiscLayout.stepIndicatorActiveWidth : MiscLayout.stepIndicatorInactiveWidth,
+          height: MiscLayout.stepIndicatorHeightLg,
           decoration: BoxDecoration(
             color: isActive
                 ? context.themeColors.textPrimary
@@ -56,8 +56,8 @@ class GlassCheckbox extends StatelessWidget {
     return AnimatedContainer(
       duration: AppAnimation.normal,
       curve: Curves.easeOutCubic,
-      width: AppLayout.checkboxOnboarding,
-      height: AppLayout.checkboxOnboarding,
+      width: MiscLayout.checkboxOnboarding,
+      height: MiscLayout.checkboxOnboarding,
       decoration: BoxDecoration(
         color: isChecked
             ? context.themeColors.accentWithAlpha(0.85)
@@ -135,18 +135,18 @@ class _NextButtonState extends State<NextButton> {
                 : [
                     BoxShadow(
                       color: context.themeColors.accentWithAlpha(0.30),
-                      blurRadius: AppLayout.ctaShadowBlur,
-                      offset: const Offset(0, AppLayout.ctaShadowOffsetY),
+                      blurRadius: EffectLayout.ctaShadowBlur,
+                      offset: const Offset(0, EffectLayout.ctaShadowOffsetY),
                     ),
                   ],
           ),
           child: Center(
             child: widget.isLoading
                 ? SizedBox(
-                    width: AppLayout.googleLogoSize,
-                    height: AppLayout.googleLogoSize,
+                    width: MiscLayout.googleLogoSize,
+                    height: MiscLayout.googleLogoSize,
                     child: CircularProgressIndicator(
-                      strokeWidth: AppLayout.spinnerStrokeWidth,
+                      strokeWidth: GoalLayout.spinnerStrokeWidth,
                       color: context.themeColors.textPrimary,
                     ),
                   )

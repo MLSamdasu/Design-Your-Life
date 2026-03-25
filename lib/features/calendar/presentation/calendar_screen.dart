@@ -82,7 +82,7 @@ class CalendarScreen extends ConsumerWidget {
         onPressed: () => _openEventDialog(context, selectedDate),
         backgroundColor: ColorTokens.main,
         foregroundColor: ColorTokens.white,
-        elevation: AppLayout.elevationNone,
+        elevation: EffectLayout.elevationNone,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.fab)),
         child: const Icon(Icons.add_rounded, size: AppLayout.iconHuge),
       ),

@@ -1,6 +1,4 @@
-// 공용 위젯: GlassButton (글래스 스타일 버튼)
-// Primary(MAIN 채움) / Secondary(유리) / Ghost(투명) 3가지 변형을 지원한다.
-// design-system.md 4.4절 Glass Button 스펙을 따른다.
+// 공용 위젯: GlassButton — Primary/Secondary/Ghost 3변형 글래스 버튼
 import 'package:flutter/material.dart';
 import '../../core/theme/animation_tokens.dart';
 import '../../core/theme/color_tokens.dart';
@@ -11,36 +9,19 @@ import '../../core/theme/theme_colors.dart';
 import '../../core/theme/typography_tokens.dart';
 
 /// 글래스 버튼 변형 유형
-enum GlassButtonVariant {
-  /// Primary: MAIN(#7C3AED) 단색 배경, CTA 버튼 (5.70:1 대비비)
-  primary,
-
-  /// Secondary: 반투명 유리 배경, 보조 버튼
-  secondary,
-
-  /// Ghost: 투명 배경, 텍스트 링크 스타일
-  ghost,
-}
+/// Primary: MAIN 단색, Secondary: 반투명 유리, Ghost: 투명
+enum GlassButtonVariant { primary, secondary, ghost }
 
 /// 글래스 스타일 버튼 공용 위젯
 class GlassButton extends StatefulWidget {
-  /// 버튼 텍스트
   final String label;
-
-  /// 탭 콜백 (null이면 비활성화)
   final VoidCallback? onTap;
-
-  /// 버튼 변형 유형
   final GlassButtonVariant variant;
-
-  /// 앞 아이콘 (선택)
   final IconData? leadingIcon;
-
-  /// 뒤 아이콘 (선택)
   final IconData? trailingIcon;
-
-  /// 전체 너비 여부
   final bool fullWidth;
+  /// 컴팩트 모드 — 패딩·아이콘·간격 축소 (3버튼 Row용)
+  final bool compact;
 
   const GlassButton({
     super.key,
@@ -50,6 +31,7 @@ class GlassButton extends StatefulWidget {
     this.leadingIcon,
     this.trailingIcon,
     this.fullWidth = false,
+    this.compact = false,
   });
 
   @override
@@ -109,8 +91,8 @@ class _GlassButtonState extends State<GlassButton> {
                   BoxShadow(
                     // CTA 버튼 전용 MAIN 컬러 그림자 (shadow-cta)
                     color: ColorTokens.main.withValues(alpha: 0.30),
-                    blurRadius: AppLayout.ctaShadowBlur,
-                    offset: const Offset(0, AppLayout.ctaShadowOffsetY),
+                    blurRadius: EffectLayout.ctaShadowBlur,
+                    offset: const Offset(0, EffectLayout.ctaShadowOffsetY),
                   ),
                 ],
         );
@@ -144,8 +126,14 @@ class _GlassButtonState extends State<GlassButton> {
     }
   }
 
-  /// variant별 패딩
+  /// variant별 패딩 — compact 모드에서는 패딩 축소
   EdgeInsetsGeometry _buildPadding() {
+    if (widget.compact) {
+      return const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.lg,
+      );
+    }
     switch (widget.variant) {
       case GlassButtonVariant.primary:
       case GlassButtonVariant.secondary:
@@ -181,15 +169,22 @@ class _GlassButtonState extends State<GlassButton> {
         ? AppTypography.bodyMd.copyWith(color: textColor)
         : AppTypography.titleMd.copyWith(color: textColor);
 
+    // compact 모드에서 아이콘/텍스트 크기·간격 축소
+    final iconSize = widget.compact ? AppLayout.iconMd : AppLayout.iconLg;
+    final iconGap = widget.compact ? AppSpacing.xs : AppSpacing.md;
+    final labelStyle = widget.compact
+        ? AppTypography.bodyMd.copyWith(color: textColor)
+        : textStyle;
+
     return Row(
       mainAxisSize: widget.fullWidth ? MainAxisSize.max : MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (widget.leadingIcon != null) ...[
-          Icon(widget.leadingIcon, color: textColor, size: AppLayout.iconLg),
-          const SizedBox(width: AppSpacing.md),
+          Icon(widget.leadingIcon, color: textColor, size: iconSize),
+          SizedBox(width: iconGap),
         ],
-        Text(widget.label, style: textStyle),
+        Flexible(child: Text(widget.label, style: labelStyle, overflow: TextOverflow.ellipsis, maxLines: 1)),
         if (widget.trailingIcon != null) ...[
           const SizedBox(width: AppSpacing.md),
           Icon(widget.trailingIcon, color: textColor, size: AppLayout.iconLg),

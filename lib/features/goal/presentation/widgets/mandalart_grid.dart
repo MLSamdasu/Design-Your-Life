@@ -68,21 +68,21 @@ class _MandalartGridWidgetState extends ConsumerState<MandalartGridWidget>
         borderRadius: BorderRadius.circular(AppRadius.xxl),
         child: InteractiveViewer(
           transformationController: _transformationController,
-          minScale: AppLayout.interactiveMinScale,
-          maxScale: AppLayout.interactiveMaxScale,
+          minScale: GoalLayout.interactiveMinScale,
+          maxScale: GoalLayout.interactiveMaxScale,
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: AppLayout.mandalartGridSize,
+              crossAxisCount: GoalLayout.mandalartGridSize,
               childAspectRatio: 1.0,
-              mainAxisSpacing: AppLayout.gridCellSpacing,
-              crossAxisSpacing: AppLayout.gridCellSpacing,
+              mainAxisSpacing: GoalLayout.gridCellSpacing,
+              crossAxisSpacing: GoalLayout.gridCellSpacing,
             ),
-            itemCount: AppLayout.mandalartCellCount,
+            itemCount: GoalLayout.mandalartCellCount,
             itemBuilder: (context, index) {
-              final row = index ~/ AppLayout.mandalartGridSize;
-              final col = index % AppLayout.mandalartGridSize;
+              final row = index ~/ GoalLayout.mandalartGridSize;
+              final col = index % GoalLayout.mandalartGridSize;
               final cell = widget.grid.cells.firstWhere(
                 (c) => c.row == row && c.col == col,
                 orElse: () => MandalartCell(

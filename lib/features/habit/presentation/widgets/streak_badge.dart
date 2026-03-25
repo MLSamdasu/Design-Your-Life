@@ -30,12 +30,12 @@ class StreakBadge extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.xxs),
           decoration: BoxDecoration(
             // 스트릭이 높을수록 더 강조된 색상
-            color: streak >= AppLayout.streakHighlightThreshold
+            color: streak >= MiscLayout.streakHighlightThreshold
                 ? ColorTokens.eventSocial.withValues(alpha: 0.35)
                 : context.themeColors.textPrimaryWithAlpha(0.15),
             borderRadius: BorderRadius.circular(AppRadius.huge),
             border: Border.all(
-              color: streak >= AppLayout.streakHighlightThreshold
+              color: streak >= MiscLayout.streakHighlightThreshold
                   ? ColorTokens.eventSocial.withValues(alpha: 0.6)
                   : context.themeColors.textPrimaryWithAlpha(0.25),
             ),
@@ -44,13 +44,13 @@ class StreakBadge extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // 불꽃 이모지 (7일 이상이면 표시)
-              if (streak >= AppLayout.streakHighlightThreshold)
+              if (streak >= MiscLayout.streakHighlightThreshold)
                 Text('🔥', style: AppTypography.captionSm),
-              if (streak >= AppLayout.streakHighlightThreshold) const SizedBox(width: AppSpacing.xxs),
+              if (streak >= MiscLayout.streakHighlightThreshold) const SizedBox(width: AppSpacing.xxs),
               Text(
                 '$value일 연속',
                 style: AppTypography.captionLg.copyWith(
-                  color: streak >= AppLayout.streakHighlightThreshold
+                  color: streak >= MiscLayout.streakHighlightThreshold
                       ? ColorTokens.warningLight
                       : context.themeColors.textPrimaryWithAlpha(0.8),
                 ),

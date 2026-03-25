@@ -124,8 +124,8 @@ class MandalartAddButton extends StatelessWidget {
           boxShadow: [
             BoxShadow(
               color: ColorTokens.main.withValues(alpha: AppAnimation.buttonShadowAlpha),
-              blurRadius: AppLayout.shadowBlurMd,
-              offset: const Offset(0, AppLayout.shadowOffsetSm),
+              blurRadius: EffectLayout.shadowBlurMd,
+              offset: const Offset(0, EffectLayout.shadowOffsetSm),
             ),
           ],
         ),

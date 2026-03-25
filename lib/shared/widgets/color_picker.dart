@@ -43,7 +43,7 @@ class ColorPickerWidget extends StatelessWidget {
                   ? [
                       BoxShadow(
                         color: color.withValues(alpha: 0.5),
-                        blurRadius: AppLayout.colorPickerShadowBlur,
+                        blurRadius: EffectLayout.colorPickerShadowBlur,
                         offset: const Offset(0, AppSpacing.xxs),
                       ),
                     ]

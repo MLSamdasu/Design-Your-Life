@@ -2,8 +2,8 @@
 // google_sign_in 패키지를 직접 사용하여 Google OAuth 로그인, 세션 복원, 로그아웃을 처리한다.
 // Google Drive appdata 접근을 위해 Drive scope를 요청한다.
 // Windows에서는 google_sign_in 구현이 없으므로 플랫폼 가드로 크래시를 방지한다.
-// IN: 없음 (google_sign_in 패키지 직접 사용)
-// OUT: AuthState (userId, displayName, photoUrl, isAuthenticated)
+// 입력: 없음 (google_sign_in 패키지 직접 사용)
+// 출력: AuthState (userId, displayName, photoUrl, isAuthenticated)
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';

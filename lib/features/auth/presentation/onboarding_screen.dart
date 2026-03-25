@@ -4,8 +4,8 @@
 // AC-ON-04: 이름은 1~20자 이내, 빈 값 불가
 // AC-ON-05: "시작하기" 탭 시 UserProfile을 Hive에 저장 후 홈으로 이동
 // SRP 분리: 하위 위젯 → onboarding_widgets.dart
-// IN: currentAuthStateProvider (C0.3)
-// OUT: Hive UserProfile 저장 → GoRouter /home 리다이렉트
+// 입력: currentAuthStateProvider (C0.3)
+// 출력: Hive UserProfile 저장 → GoRouter /home 리다이렉트
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';

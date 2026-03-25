@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
+import '../../../../core/theme/typography_tokens.dart';
 import '../../../../shared/widgets/section_title.dart';
 import '../../../../shared/widgets/today_stat_card.dart';
 import '../../../timer/providers/timer_provider.dart';
@@ -113,6 +114,24 @@ class TodaySummarySection extends ConsumerWidget {
             ),
           ],
         ),
+
+        // Google Calendar 이벤트가 있으면 추가 정보 표시
+        if (summary.googleEventCount > 0) ...[
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Icon(Icons.event_rounded, size: 14,
+                color: ColorTokens.googleBrand.withValues(alpha: 0.7)),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                '구글 일정 ${summary.googleEventCount}개',
+                style: AppTypography.captionMd.copyWith(
+                  color: context.themeColors.textPrimaryWithAlpha(0.5),
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }

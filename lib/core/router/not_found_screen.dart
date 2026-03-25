@@ -1,6 +1,6 @@
 // C0.4: NotFoundScreen - 404 에러 화면
 // 존재하지 않는 경로 접근 시 Glassmorphism 디자인으로 표시한다.
-// SRP: 404 오류 상태만 시각적으로 표현한다.
+// SRP 분리: 404 오류 상태만 시각적으로 표현한다.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../theme/color_tokens.dart';

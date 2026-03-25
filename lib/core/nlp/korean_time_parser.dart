@@ -1,7 +1,7 @@
 // C0.NLP: 한국어 시간 표현 정규식 파서
 // 순수 함수: 외부 상태에 의존하지 않는다.
-// IN: String (한국어 텍스트)
-// OUT: TimeParseResult? (파싱된 시간 + 매칭된 텍스트 범위)
+// 입력: String (한국어 텍스트)
+// 출력: TimeParseResult? (파싱된 시간 + 매칭된 텍스트 범위)
 import 'package:flutter/material.dart';
 
 /// 시간 파싱 결과

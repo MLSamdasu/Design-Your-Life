@@ -52,8 +52,8 @@ abstract class MandalartMapper {
     required List<GoalTask> tasks,
   }) {
     // 81개 셀 초기화 (모두 빈 셀)
-    final cells = List.generate(AppLayout.mandalartGridSize, (row) {
-      return List.generate(AppLayout.mandalartGridSize, (col) {
+    final cells = List.generate(GoalLayout.mandalartGridSize, (row) {
+      return List.generate(GoalLayout.mandalartGridSize, (col) {
         return MandalartCell(
           row: row,
           col: col,
@@ -66,7 +66,7 @@ abstract class MandalartMapper {
     });
 
     // 핵심 목표 셀 설정 (중앙: mandalartCenterIndex)
-    final center = AppLayout.mandalartCenterIndex;
+    final center = GoalLayout.mandalartCenterIndex;
     cells[center][center] = MandalartCell(
       row: center,
       col: center,
@@ -78,7 +78,7 @@ abstract class MandalartMapper {
 
     // 세부목표 셀 설정 (8개)
     for (final subGoal in subGoals) {
-      final idx = subGoal.orderIndex.clamp(0, AppLayout.mandalartSubGoalCount - 1);
+      final idx = subGoal.orderIndex.clamp(0, GoalLayout.mandalartSubGoalCount - 1);
       final pos = _subGoalPositions[idx];
 
       cells[pos.row][pos.col] = MandalartCell(
@@ -96,13 +96,13 @@ abstract class MandalartMapper {
           .toList();
 
       for (final task in subGoalTasks) {
-        final taskIdx = task.orderIndex.clamp(0, AppLayout.mandalartSubGoalCount - 1);
+        final taskIdx = task.orderIndex.clamp(0, GoalLayout.mandalartSubGoalCount - 1);
         final offset = _taskOffsets[taskIdx];
         final taskRow = pos.row + offset.dr;
         final taskCol = pos.col + offset.dc;
 
         // 범위 내 셀에만 배치
-        if (taskRow >= 0 && taskRow < AppLayout.mandalartGridSize && taskCol >= 0 && taskCol < AppLayout.mandalartGridSize) {
+        if (taskRow >= 0 && taskRow < GoalLayout.mandalartGridSize && taskCol >= 0 && taskCol < GoalLayout.mandalartGridSize) {
           cells[taskRow][taskCol] = MandalartCell(
             row: taskRow,
             col: taskCol,

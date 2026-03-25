@@ -23,11 +23,12 @@ class MandalartGrid {
   });
 
   /// JSON에서 MandalartGrid 생성 (뷰 상태 복원용)
+  /// null-safe 캐스팅으로 손상된 데이터에서도 크래시를 방지한다
   factory MandalartGrid.fromJson(Map<String, dynamic> json) {
     return MandalartGrid(
-      coreGoalTitle: json['coreGoalTitle'] as String,
-      goalId: json['goalId'] as String,
-      cells: (json['cells'] as List)
+      coreGoalTitle: (json['coreGoalTitle'] as String?) ?? '',
+      goalId: (json['goalId'] as String?) ?? '',
+      cells: ((json['cells'] as List?) ?? [])
           .map((e) => MandalartCell.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -74,13 +75,14 @@ class MandalartCell {
   });
 
   /// JSON에서 MandalartCell 생성
+  /// null-safe 캐스팅으로 누락된 필드에서도 안전하게 복원한다
   factory MandalartCell.fromJson(Map<String, dynamic> json) {
     return MandalartCell(
-      row: json['row'] as int,
-      col: json['col'] as int,
+      row: (json['row'] as int?) ?? 0,
+      col: (json['col'] as int?) ?? 0,
       text: json['text'] as String? ?? '',
       type: MandalartCellType.values.firstWhere(
-        (e) => e.name == (json['type'] as String),
+        (e) => e.name == ((json['type'] as String?) ?? 'empty'),
         orElse: () => MandalartCellType.empty,
       ),
       isCompleted: json['isCompleted'] as bool? ?? false,

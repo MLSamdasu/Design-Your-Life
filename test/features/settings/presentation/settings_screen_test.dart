@@ -3,8 +3,8 @@
 // API/Hive 의존성은 Provider override로 격리한다.
 import 'package:design_your_life/core/auth/auth_service.dart';
 import 'package:design_your_life/core/cache/hive_cache_service.dart';
-import 'package:design_your_life/core/calendar_sync/calendar_sync_provider.dart';
-import 'package:design_your_life/core/calendar_sync/google_calendar_service.dart';
+import 'package:design_your_life/features/calendar/sync/calendar_sync_provider.dart';
+import 'package:design_your_life/features/calendar/sync/google_calendar_service.dart';
 import 'package:design_your_life/core/auth/auth_provider.dart';
 import 'package:design_your_life/core/providers/global_providers.dart';
 import 'package:design_your_life/core/theme/theme_preset.dart';

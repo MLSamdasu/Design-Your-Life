@@ -1,6 +1,6 @@
 // F1: 홈 대시보드 인사 헤더 위젯
 // 시간대별 인사말 ("좋은 아침이에요" / "좋은 오후에요" / "좋은 저녁이에요")
-// 사용자 이름 + 오늘 날짜를 표시하고, 우측에 업적/설정 아이콘을 배치한다.
+// 사용자 이름 + 오늘 날짜 + 오늘 집중 시간을 표시하고, 우측에 업적/설정 아이콘을 배치한다.
 // design-system.md 헤더 스펙: padding 20px 상, 24px 좌우, 8px 하
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +10,7 @@ import '../../../../core/theme/theme_colors.dart';
 import '../../../../core/theme/typography_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../shared/widgets/global_action_bar.dart';
+import '../../../timer/providers/timer_provider.dart';
 
 /// 인사 헤더 위젯 (인사 메시지 + 이름 + 날짜 + 업적/설정 아이콘)
 class GreetingHeader extends ConsumerWidget {
@@ -24,13 +25,7 @@ class GreetingHeader extends ConsumerWidget {
     return '좋은 저녁이에요';
   }
 
-  /// 오늘 날짜 포맷 (예: "3월 9일 일요일")
-  /// [now]를 외부에서 전달받아 _getGreeting()과 동일한 시각 기준을 보장한다
-  String _getDateLabel(DateTime now) {
-    const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일', '일요일'];
-    final weekday = weekdays[now.weekday - 1];
-    return '${now.month}월 ${now.day}일 $weekday';
-  }
+  // _getDateLabel은 _FocusTimeDateLabel 위젯으로 이동하였다
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -73,13 +68,8 @@ class GreetingHeader extends ConsumerWidget {
 
                 const SizedBox(height: AppSpacing.sm),
 
-                // 오늘 날짜 (caption-md: 11px, opacity 0.6)
-                Text(
-                  _getDateLabel(now),
-                  style: AppTypography.captionMd.copyWith(
-                    color: context.themeColors.textPrimaryWithAlpha(0.60),
-                  ),
-                ),
+                // 오늘 날짜 + 집중 시간 (caption-md: 11px, opacity 0.6)
+                _FocusTimeDateLabel(now: now),
               ],
             ),
           ),
@@ -89,5 +79,40 @@ class GreetingHeader extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// 날짜 라벨 + 오늘 집중 시간 표시 위젯
+/// todayOnlyFocusMinutesProvider를 watch하여 타이머 로그가 있을 때만 집중 시간을 표시한다
+class _FocusTimeDateLabel extends ConsumerWidget {
+  final DateTime now;
+  const _FocusTimeDateLabel({required this.now});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final focusMinutes = ref.watch(todayOnlyFocusMinutesProvider);
+    final dateLabel = _formatDate(now);
+
+    // 오늘 집중 기록이 있으면 날짜 옆에 "오늘 집중: Xmin" 표시
+    final label = focusMinutes > 0
+        ? '$dateLabel  ·  오늘 집중: ${focusMinutes}min'
+        : dateLabel;
+
+    return Text(
+      label,
+      style: AppTypography.captionMd.copyWith(
+        color: context.themeColors.textPrimaryWithAlpha(0.60),
+      ),
+    );
+  }
+
+  /// 오늘 날짜 포맷 (예: "3월 9일 일요일")
+  String _formatDate(DateTime dt) {
+    const weekdays = [
+      '월요일', '화요일', '수요일', '목요일',
+      '금요일', '토요일', '일요일',
+    ];
+    final weekday = weekdays[dt.weekday - 1];
+    return '${dt.month}월 ${dt.day}일 $weekday';
   }
 }

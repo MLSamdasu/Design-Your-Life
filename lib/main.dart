@@ -1,7 +1,7 @@
 // C0.1/C0.6: 앱 진입점
 // 초기화 순서: Hive(AES 암호화) → 세션 복원 → ProviderScope → runApp
-// IN: 없음 (시스템 진입점)
-// OUT: Flutter 앱 실행
+// 입력: 없음 (시스템 진입점)
+// 출력: Flutter 앱 실행
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';

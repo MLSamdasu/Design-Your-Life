@@ -84,6 +84,7 @@ class _CheckItemState extends State<CheckItem>
     if (_isDebouncePending) return;
     _isDebouncePending = true;
     Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return; // 위젯 해제 후 상태 접근 방지
       _isDebouncePending = false;
     });
 

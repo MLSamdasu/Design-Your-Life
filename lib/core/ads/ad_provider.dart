@@ -96,25 +96,8 @@ final showBackupAdProvider =
   };
 });
 
-// ─── 미완료 작업 전면 광고 Provider ──────────────────────────────────────────
-/// 미완료 작업(습관/루틴/할일) 시 전면 광고를 표시하는 함수 Provider
-/// 쿨다운과 로드 상태를 내부적으로 관리한다
-final showIncompleteTaskAdProvider = Provider<bool Function()>((ref) {
-  final adService = ref.watch(adServiceProvider);
-
-  return () {
-    return adService.showInterstitialAd();
-  };
-});
-
-// ─── 광고 로드 상태 Provider ─────────────────────────────────────────────────
-/// 전면 광고 준비 완료 여부 Provider
-/// 데스크톱에서는 항상 false를 반환한다 (광고 미지원)
-final isInterstitialReadyProvider = Provider<bool>((ref) {
-  if (!AdConstants.isAdSupported) return false;
-  final adService = ref.watch(adServiceProvider);
-  return adService.isInterstitialReady;
-});
+// showIncompleteTaskAdProvider, isInterstitialReadyProvider 제거:
+// 프로젝트 전역에서 소비하는 곳이 없어 데드 코드로 판별되었다.
 
 /// 리워드 광고 준비 완료 여부 Provider
 /// 데스크톱에서는 항상 false를 반환한다 (광고 미지원)

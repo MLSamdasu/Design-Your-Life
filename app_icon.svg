@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0A84FF"/>
+      <stop offset="50%" stop-color="#007AFF"/>
+      <stop offset="100%" stop-color="#005EC4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background: iOS-style rounded square -->
+  <rect width="1024" height="1024" rx="224" ry="224" fill="url(#bgGrad)"/>
+
+  <!--
+    Icon concept: Compass rose + check
+    A stylized compass pointing upward (designing your direction in life)
+    with a subtle checkmark integrated (achievement/completion).
+    The four points represent the app's pillars:
+    Todo, Habits, Timer, Goals
+  -->
+
+  <!-- Outer compass ring -->
+  <circle cx="512" cy="512" r="280" fill="none" stroke="#FFFFFF" stroke-width="32" stroke-opacity="0.85"/>
+
+  <!-- North pointer (primary, larger — represents main direction/goal) -->
+  <polygon points="512,200 480,400 512,360 544,400" fill="#FFFFFF" fill-opacity="0.95"/>
+
+  <!-- South pointer -->
+  <polygon points="512,824 480,624 512,664 544,624" fill="#FFFFFF" fill-opacity="0.55"/>
+
+  <!-- East pointer -->
+  <polygon points="824,512 624,480 664,512 624,544" fill="#FFFFFF" fill-opacity="0.55"/>
+
+  <!-- West pointer -->
+  <polygon points="200,512 400,480 360,512 400,544" fill="#FFFFFF" fill-opacity="0.55"/>
+
+  <!-- Center circle (pivot point) -->
+  <circle cx="512" cy="512" r="48" fill="#FFFFFF" fill-opacity="0.9"/>
+
+  <!-- Inner accent ring -->
+  <circle cx="512" cy="512" r="80" fill="none" stroke="#FFFFFF" stroke-width="6" stroke-opacity="0.5"/>
+
+  <!-- Checkmark integrated into center (life design = achievement) -->
+  <path d="M488 518 L506 540 L542 492"
+        fill="none" stroke="#007AFF" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

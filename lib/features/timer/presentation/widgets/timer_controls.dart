@@ -60,26 +60,41 @@ class TimerControls extends ConsumerWidget {
         );
 
       case TimerPhase.running:
-        // 실행 중: 일시정지 + 리셋 버튼
+        // 실행 중: 일시정지 + 정지(로그 저장) + 리셋 — compact 모드로 오버플로우 방지
         return Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 3,
               child: GlassButton(
                 label: '일시정지',
                 leadingIcon: Icons.pause_rounded,
                 variant: GlassButtonVariant.primary,
                 fullWidth: true,
+                compact: true,
                 onTap: notifier.pause,
               ),
             ),
-            const SizedBox(width: AppSpacing.lg),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
+              flex: 2,
+              child: GlassButton(
+                label: '정지',
+                leadingIcon: Icons.stop_rounded,
+                variant: GlassButtonVariant.secondary,
+                fullWidth: true,
+                compact: true,
+                onTap: notifier.stop,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              flex: 2,
               child: GlassButton(
                 label: '리셋',
                 leadingIcon: Icons.refresh_rounded,
                 variant: GlassButtonVariant.secondary,
                 fullWidth: true,
+                compact: true,
                 onTap: notifier.reset,
               ),
             ),
@@ -87,26 +102,41 @@ class TimerControls extends ConsumerWidget {
         );
 
       case TimerPhase.paused:
-        // 일시정지 상태: 재개 + 리셋 버튼
+        // 일시정지 상태: 재개 + 정지(로그 저장) + 리셋 — compact 모드로 오버플로우 방지
         return Row(
           children: [
             Expanded(
-              flex: 2,
+              flex: 3,
               child: GlassButton(
                 label: '재개',
                 leadingIcon: Icons.play_arrow_rounded,
                 variant: GlassButtonVariant.primary,
                 fullWidth: true,
+                compact: true,
                 onTap: notifier.resume,
               ),
             ),
-            const SizedBox(width: AppSpacing.lg),
+            const SizedBox(width: AppSpacing.sm),
             Expanded(
+              flex: 2,
+              child: GlassButton(
+                label: '정지',
+                leadingIcon: Icons.stop_rounded,
+                variant: GlassButtonVariant.secondary,
+                fullWidth: true,
+                compact: true,
+                onTap: notifier.stop,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              flex: 2,
               child: GlassButton(
                 label: '리셋',
                 leadingIcon: Icons.refresh_rounded,
                 variant: GlassButtonVariant.secondary,
                 fullWidth: true,
+                compact: true,
                 onTap: notifier.reset,
               ),
             ),

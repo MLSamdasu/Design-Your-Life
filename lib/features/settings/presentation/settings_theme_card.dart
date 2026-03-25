@@ -54,7 +54,7 @@ class SettingsThemeCard extends ConsumerWidget {
             mainAxisSpacing: AppSpacing.md,
             crossAxisSpacing: AppSpacing.md,
             // 미리보기 카드의 가로:세로 비율 (가로가 더 넓은 카드 형태)
-            childAspectRatio: AppLayout.themePreviewAspectRatio,
+            childAspectRatio: MiscLayout.themePreviewAspectRatio,
             children: ThemePreset.values.map((preset) {
               return ThemePreviewCard(
                 preset: preset,

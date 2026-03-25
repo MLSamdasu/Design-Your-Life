@@ -20,11 +20,12 @@ GoalTask _task(String id, String subGoalId, {bool isCompleted = false}) {
   );
 }
 
-SubGoal _subGoal(String id, String goalId) {
+SubGoal _subGoal(String id, String goalId, {bool isCompleted = false}) {
   return SubGoal(
     id: id,
     goalId: goalId,
     title: '세부목표 $id',
+    isCompleted: isCompleted,
     orderIndex: 0,
     createdAt: _now,
   );
@@ -84,8 +85,12 @@ void main() {
       expect(result, 0.0);
     });
 
-    test('모든 하위 목표의 tasks가 완료되면 1.0을 반환한다', () {
-      final subGoals = [_subGoal('sg-1', 'g-1'), _subGoal('sg-2', 'g-1')];
+    test('SubGoal과 GoalTask가 모두 완료되면 1.0을 반환한다', () {
+      // SubGoal 2개 (모두 완료) + GoalTask 2개 (모두 완료) = 4/4 = 1.0
+      final subGoals = [
+        _subGoal('sg-1', 'g-1', isCompleted: true),
+        _subGoal('sg-2', 'g-1', isCompleted: true),
+      ];
       final tasks = [
         _task('t1', 'sg-1', isCompleted: true),
         _task('t2', 'sg-2', isCompleted: true),
@@ -95,16 +100,41 @@ void main() {
       expect(result, 1.0);
     });
 
-    test('하위 목표별 진행률 평균을 반환한다', () {
-      final subGoals = [_subGoal('sg-1', 'g-1'), _subGoal('sg-2', 'g-1')];
+    test('SubGoal과 GoalTask 완료 수 합산으로 진행률을 계산한다', () {
+      // SubGoal 2개 (1완료) + GoalTask 2개 (1완료) = 2/4 = 0.5
+      final subGoals = [
+        _subGoal('sg-1', 'g-1', isCompleted: true),
+        _subGoal('sg-2', 'g-1'),
+      ];
       final tasks = [
         _task('t1', 'sg-1', isCompleted: true),
-        _task('t2', 'sg-1', isCompleted: true),
-        // sg-2는 tasks 없음 -> 진행률 0
+        _task('t2', 'sg-2', isCompleted: false),
       ];
       final result =
           ProgressCalculator.calcGoalProgress('g-1', subGoals, tasks);
-      // sg-1: 1.0, sg-2: 0.0 -> 평균 0.5
+      expect(result, 0.5);
+    });
+
+    test('GoalTask만 완료되고 SubGoal은 미완료일 때 부분 진행률을 반환한다', () {
+      // SubGoal 1개 (미완료) + GoalTask 2개 (모두 완료) = 2/3
+      final subGoals = [_subGoal('sg-1', 'g-1')];
+      final tasks = [
+        _task('t1', 'sg-1', isCompleted: true),
+        _task('t2', 'sg-1', isCompleted: true),
+      ];
+      final result =
+          ProgressCalculator.calcGoalProgress('g-1', subGoals, tasks);
+      // 0 + 2 = 2 completed, 1 + 2 = 3 total → 2/3
+      expect(result, closeTo(0.6667, 0.001));
+    });
+
+    test('체크포인트 모드: tasks 없으면 SubGoal isCompleted로 계산한다', () {
+      final subGoals = [
+        _subGoal('sg-1', 'g-1', isCompleted: true),
+        _subGoal('sg-2', 'g-1'),
+      ];
+      final result =
+          ProgressCalculator.calcGoalProgress('g-1', subGoals, []);
       expect(result, 0.5);
     });
   });
@@ -131,6 +161,48 @@ void main() {
       final goals = [_goal('g-1'), _goal('g-2'), _goal('g-3')];
       final stats = ProgressCalculator.calcStats(goals, [], []);
       expect(stats.totalGoalCount, 3);
+    });
+
+    test('avgProgress가 SubGoal과 GoalTask를 포함하여 정확히 계산된다', () {
+      // 목표 1개 + SubGoal 2개(1완료) + GoalTask 2개(1완료) = 2/4 = 0.5
+      final goals = [_goal('g-1')];
+      final subGoals = [
+        _subGoal('sg-1', 'g-1', isCompleted: true),
+        _subGoal('sg-2', 'g-1'),
+      ];
+      final tasks = [
+        _task('t1', 'sg-1', isCompleted: true),
+        _task('t2', 'sg-2'),
+      ];
+      final stats = ProgressCalculator.calcStats(goals, subGoals, tasks);
+      expect(stats.avgProgress, 0.5);
+      expect(stats.avgProgressPercent, 50);
+    });
+
+    test('avgProgress가 여러 목표의 진행률 평균을 반환한다', () {
+      // 목표 2개:
+      // g-1: SubGoal 2개(2완료) + Task 2개(2완료) = 4/4 = 1.0
+      // g-2: SubGoal 1개(0완료) + Task 0개 = 체크포인트 모드 0/1 = 0.0
+      // 평균: (1.0 + 0.0) / 2 = 0.5
+      final goals = [_goal('g-1'), _goal('g-2')];
+      final subGoals = [
+        _subGoal('sg-1', 'g-1', isCompleted: true),
+        _subGoal('sg-2', 'g-1', isCompleted: true),
+        _subGoal('sg-3', 'g-2'),
+      ];
+      final tasks = [
+        _task('t1', 'sg-1', isCompleted: true),
+        _task('t2', 'sg-2', isCompleted: true),
+      ];
+      final stats = ProgressCalculator.calcStats(goals, subGoals, tasks);
+      expect(stats.avgProgress, 0.5);
+    });
+
+    test('SubGoal이 없는 목표의 avgProgress는 0이다', () {
+      // SubGoal이 없으면 calcGoalProgress가 0.0을 반환한다
+      final goals = [_goal('g-1')];
+      final stats = ProgressCalculator.calcStats(goals, [], []);
+      expect(stats.avgProgress, 0.0);
     });
   });
 

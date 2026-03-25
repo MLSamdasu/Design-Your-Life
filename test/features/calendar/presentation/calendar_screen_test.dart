@@ -2,7 +2,7 @@
 // 캘린더 뷰 타입 전환, 날짜 선택, 이벤트 필터링 로직을 검증한다.
 import 'package:design_your_life/core/auth/auth_service.dart';
 import 'package:design_your_life/core/cache/hive_cache_service.dart';
-import 'package:design_your_life/core/calendar_sync/calendar_sync_provider.dart';
+import 'package:design_your_life/features/calendar/sync/calendar_sync_provider.dart';
 import 'package:design_your_life/core/auth/auth_provider.dart';
 import 'package:design_your_life/core/providers/data_store_providers.dart';
 import 'package:design_your_life/core/providers/global_providers.dart';

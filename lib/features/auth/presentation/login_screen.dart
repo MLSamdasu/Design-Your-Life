@@ -2,8 +2,8 @@
 // Google Sign-In 버튼 하나로 구성된 심플한 로그인 화면이다.
 // 로그인 성공 시 GoRouter authStateStreamProvider 리다이렉트가 /home으로 이동한다.
 // SRP 분리: 하위 위젯 → login_widgets.dart
-// IN: authServiceProvider (C0.3의 OUT)
-// OUT: GoRouter redirect → /home
+// 입력: authServiceProvider (C0.3의 출력)
+// 출력: GoRouter redirect → /home
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/color_tokens.dart';
@@ -137,7 +137,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           'Design Your Life',
                           style: AppTypography.displayMd.copyWith(
                     color: context.themeColors.textPrimary,
-                            letterSpacing: AppLayout.letterSpacingTight,
+                            letterSpacing: MiscLayout.letterSpacingTight,
                           ),
                           textAlign: TextAlign.center,
                         ),

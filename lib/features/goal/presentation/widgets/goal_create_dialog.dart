@@ -1,20 +1,15 @@
-// F5 위젯: GoalCreateDialog - 목표 생성 다이얼로그
-// 목표 이름(필수), 설명(선택), 기간(년간/월간), 연도, 월(월간일 때)을 입력받는다.
-// SRP 분리: 폼 필드 위젯 → goal_create_form_fields.dart
+// F5 위젯: GoalCreateDialog - 목표 생성/수정 다이얼로그 (Glass 모달 셸)
+// SRP 분리: form_fields / action_buttons / checkpoint_input / form_body
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/color_tokens.dart';
-import '../../../../core/theme/typography_tokens.dart';
-import '../../../../core/theme/theme_colors.dart';
 import '../../../../core/theme/glassmorphism.dart';
 import '../../../../shared/models/goal.dart';
 import '../../../../shared/enums/goal_period.dart';
-import '../../../../shared/widgets/tag_chip_selector.dart';
 import '../../providers/goal_provider.dart';
-import 'goal_create_form_fields.dart';
+import 'goal_create_form_body.dart';
 import '../../../../core/theme/layout_tokens.dart';
 import '../../../../core/theme/radius_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
@@ -54,14 +49,9 @@ class _GoalCreateDialogState extends ConsumerState<GoalCreateDialog> {
   int _month = DateTime.now().month;
   bool _isSubmitting = false;
 
-  /// 선택된 태그 ID 집합 (태그 시스템)
-  Set<String> _selectedTagIds = {};
-
-  /// 체크포인트 입력 컨트롤러 목록
-  final List<TextEditingController> _checkpointControllers = [];
-
-  /// 수정 모드 여부
-  bool get _isEditMode => widget.existingGoal != null;
+  Set<String> _selectedTagIds = {}; // 선택된 태그 ID 집합
+  final List<TextEditingController> _checkpointControllers = []; // 체크포인트 컨트롤러
+  bool get _isEditMode => widget.existingGoal != null; // 수정 모드 여부
 
   @override
   void initState() {
@@ -91,15 +81,12 @@ class _GoalCreateDialogState extends ConsumerState<GoalCreateDialog> {
     super.dispose();
   }
 
-  /// 목표 저장 처리
   /// 폼 유효성 검사 후 로컬 Hive에 목표를 저장한다
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isSubmitting = true);
-
-    final errorMsg = _isEditMode ? '목표 수정에 실패했습니다' : '목표 추가에 실패했습니다';
-
+    final errorMsg =
+        _isEditMode ? '목표 수정에 실패했습니다' : '목표 추가에 실패했습니다';
     try {
       final now = DateTime.now();
       final existing = widget.existingGoal;
@@ -128,7 +115,6 @@ class _GoalCreateDialogState extends ConsumerState<GoalCreateDialog> {
         Navigator.of(context).pop(true);
       } else {
         // 생성 모드: 목표 + 체크포인트를 원자적으로 생성한다
-        // state 변경과 버전 갱신을 한 번만 수행하여 크래시를 방지한다
         final checkpointTitles = <String>[];
         for (final c in _checkpointControllers) {
           final title = c.text.trim();
@@ -156,7 +142,8 @@ class _GoalCreateDialogState extends ConsumerState<GoalCreateDialog> {
   Widget build(BuildContext context) {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: AppLayout.dialogMaxWidthLg),
+        constraints:
+            const BoxConstraints(maxWidth: AppLayout.dialogMaxWidthLg),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.pill),
           child: BackdropFilter(
@@ -167,305 +154,43 @@ class _GoalCreateDialogState extends ConsumerState<GoalCreateDialog> {
             child: Material(
               type: MaterialType.transparency,
               child: Container(
-              decoration: GlassDecoration.modal(),
-              // 태그 섹션 추가로 콘텐츠가 길어질 수 있으므로
-              // SingleChildScrollView로 오버플로우를 방지한다
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.xxxl),
-                child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // 다이얼로그 제목 (수정/생성 모드 구분)
-                    Text(
-                      _isEditMode ? '목표 수정' : '새 목표 추가',
-                      style: AppTypography.titleMd.copyWith(
-                    color: context.themeColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxl),
-
-                    // 기간 선택 탭 (goal_create_form_fields.dart)
-                    PeriodSelector(
-                      selected: _period,
-                      onChanged: (p) => setState(() => _period = p),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 연도/월 선택 (goal_create_form_fields.dart)
-                    YearMonthSelector(
-                      period: _period,
-                      year: _year,
-                      month: _month,
-                      onYearChanged: (y) => setState(() => _year = y),
-                      onMonthChanged: (m) => setState(() => _month = m),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 목표 제목 입력 (goal_create_form_fields.dart)
-                    GlassTextFormField(
-                      controller: _titleController,
-                      hintText: '목표 제목을 입력해주세요',
-                      maxLength: 200,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return '목표 제목을 입력해주세요';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // 목표 설명 입력 (선택, goal_create_form_fields.dart)
-                    GlassTextFormField(
-                      controller: _descController,
-                      hintText: '설명을 입력해주세요 (선택)',
-                      maxLength: 1000,
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 태그 선택 (TagChipSelector 공용 위젯 재사용)
-                    TagChipSelector(
-                      selectedTagIds: _selectedTagIds,
-                      onChanged: (tagIds) =>
-                          setState(() => _selectedTagIds = tagIds),
-                    ),
-                    const SizedBox(height: AppSpacing.xl),
-
-                    // 체크포인트 입력 섹션 (선택, 생성 모드에서만 표시)
-                    if (!_isEditMode)
-                      _CheckpointInputSection(
-                        controllers: _checkpointControllers,
-                        onAdd: () => setState(() {
-                          _checkpointControllers.add(TextEditingController());
-                        }),
-                        onRemove: (index) => setState(() {
-                          _checkpointControllers[index].dispose();
-                          _checkpointControllers.removeAt(index);
-                        }),
-                      ),
-                    const SizedBox(height: AppSpacing.xxxl),
-
-                    // 버튼 행 (취소 / 추가 또는 저장)
-                    _DialogActionButtons(
-                      isSubmitting: _isSubmitting,
-                      submitLabel: _isEditMode ? '저장' : '추가',
-                      onCancel: () => Navigator.of(context).pop(),
-                      onSubmit: _submit,
-                    ),
-                  ],
+                decoration: GlassDecoration.modal(),
+                // 태그 섹션 추가로 콘텐츠가 길어질 수 있으므로
+                // SingleChildScrollView로 오버플로우를 방지한다
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpacing.xxxl),
+                  child: GoalCreateFormBody(
+                    formKey: _formKey,
+                    isEditMode: _isEditMode,
+                    period: _period,
+                    onPeriodChanged: (p) => setState(() => _period = p),
+                    year: _year,
+                    onYearChanged: (y) => setState(() => _year = y),
+                    month: _month,
+                    onMonthChanged: (m) => setState(() => _month = m),
+                    titleController: _titleController,
+                    descController: _descController,
+                    selectedTagIds: _selectedTagIds,
+                    onTagsChanged: (tags) =>
+                        setState(() => _selectedTagIds = tags),
+                    checkpointControllers: _checkpointControllers,
+                    onCheckpointAdd: () => setState(() {
+                      _checkpointControllers.add(TextEditingController());
+                    }),
+                    onCheckpointRemove: (index) => setState(() {
+                      _checkpointControllers[index].dispose();
+                      _checkpointControllers.removeAt(index);
+                    }),
+                    isSubmitting: _isSubmitting,
+                    onCancel: () => Navigator.of(context).pop(),
+                    onSubmit: _submit,
+                  ),
                 ),
               ),
-              ),
-            ),
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-// ─── 다이얼로그 액션 버튼 ─────────────────────────────────────────────────
-
-/// 다이얼로그 하단 버튼 행 (취소 / 추가 또는 저장)
-class _DialogActionButtons extends StatelessWidget {
-  final bool isSubmitting;
-  final String submitLabel;
-  final VoidCallback onCancel;
-  final VoidCallback onSubmit;
-
-  const _DialogActionButtons({
-    required this.isSubmitting,
-    this.submitLabel = '추가',
-    required this.onCancel,
-    required this.onSubmit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // 취소 버튼
-        Expanded(
-          child: TextButton(
-            onPressed: onCancel,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lgXl),
-              foregroundColor: context.themeColors.textPrimaryWithAlpha(0.7),
-            ),
-            child: Text(
-              '취소',
-              style: AppTypography.titleMd.copyWith(
-                color: context.themeColors.textPrimaryWithAlpha(0.7),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.lg),
-        // 추가 버튼 (로딩 중 비활성화)
-        Expanded(
-          child: ElevatedButton(
-            onPressed: isSubmitting ? null : onSubmit,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: ColorTokens.main,
-              foregroundColor: ColorTokens.white,
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lgXl),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppRadius.xl),
-              ),
-              elevation: AppLayout.elevationNone,
-            ),
-            child: isSubmitting
-                ? const SizedBox(
-                    width: AppLayout.iconMd,
-                    height: AppLayout.iconMd,
-                    child: CircularProgressIndicator(
-                      strokeWidth: AppLayout.spinnerStrokeWidth,
-                      // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-                      color: ColorTokens.white,
-                    ),
-                  )
-                : Text(
-                    submitLabel,
-                    style: AppTypography.titleMd.copyWith(
-                      // MAIN 컬러 배경(#7C3AED) 위이므로 항상 흰색이 적절하다
-                      color: ColorTokens.white,
-                    ),
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ─── 체크포인트 입력 섹션 ─────────────────────────────────────────────────
-
-/// 목표 생성 시 체크포인트(중간 단계) 입력 섹션
-/// 각 체크포인트는 SubGoal로 저장되어 진행률 자동 계산에 사용된다
-class _CheckpointInputSection extends StatelessWidget {
-  final List<TextEditingController> controllers;
-  final VoidCallback onAdd;
-  final void Function(int) onRemove;
-
-  const _CheckpointInputSection({
-    required this.controllers,
-    required this.onAdd,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 섹션 제목
-        Text(
-          '체크포인트 (선택)',
-          style: AppTypography.captionLg.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.6),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          '목표 달성 과정의 중간 단계를 추가하세요',
-          style: AppTypography.captionMd.copyWith(
-            color: context.themeColors.textPrimaryWithAlpha(0.4),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        // 체크포인트 목록
-        ...List.generate(controllers.length, (index) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-            child: Row(
-              children: [
-                // 순번 뱃지
-                Container(
-                  width: AppLayout.badgeSm,
-                  height: AppLayout.badgeSm,
-                  decoration: BoxDecoration(
-                    color: context.themeColors.accentWithAlpha(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: AppTypography.captionSm.copyWith(
-                        // WCAG 대비: accent 배경 위에서 테마 텍스트 색상으로 고대비 확보
-                        color: context.themeColors.textPrimaryWithAlpha(0.85),
-                        fontWeight: AppTypography.weightSemiBold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                // 입력 필드
-                Expanded(
-                  child: GlassTextFormField(
-                    controller: controllers[index],
-                    hintText: '체크포인트 ${index + 1}',
-                    maxLength: 200,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                // 삭제 버튼
-                GestureDetector(
-                  onTap: () => onRemove(index),
-                  child: SizedBox(
-                    width: AppLayout.minTouchTarget,
-                    height: AppLayout.minTouchTarget,
-                    child: Center(
-                      child: Icon(
-                        Icons.close_rounded,
-                        size: AppLayout.iconMd,
-                        color: context.themeColors.textPrimaryWithAlpha(0.4),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }),
-        // 추가 버튼
-        GestureDetector(
-          onTap: onAdd,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              vertical: AppSpacing.md,
-              horizontal: AppSpacing.lg,
-            ),
-            decoration: BoxDecoration(
-              border: Border.all(
-                color: context.themeColors.textPrimaryWithAlpha(0.2),
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.xl),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.add_rounded,
-                  size: AppLayout.iconMd,
-                  color: context.themeColors.accentWithAlpha(0.7),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  '체크포인트 추가',
-                  style: AppTypography.bodyMd.copyWith(
-                    color: context.themeColors.accentWithAlpha(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

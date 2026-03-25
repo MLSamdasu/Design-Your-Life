@@ -33,12 +33,13 @@ abstract class RoutePaths {
   /// StatefulShellRoute 6번째 탭으로 포함
   static const String timer = '/timer';
 
+  /// 메모 드로잉 (F7)
+  /// StatefulShellRoute 7번째 탭으로 포함
+  static const String memo = '/memo';
+
   /// 업적/배지 화면 (F8)
   /// StatefulShellRoute 바깥 독립 라우트 (홈 대시보드 카드에서 진입)
   static const String achievements = '/achievements';
-
-  /// 404 에러 화면 (존재하지 않는 경로 접근 시)
-  static const String notFound = '/404';
 
   /// 태그 관리 화면 (F16)
   /// 설정 화면에서 진입하는 독립 라우트 (하단 탭 없음)
@@ -54,4 +55,5 @@ abstract class TabIndex {
   static const int habit = 3;
   static const int goal = 4;
   static const int timer = 5;
+  static const int memo = 6;
 }
