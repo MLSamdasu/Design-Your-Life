@@ -92,16 +92,30 @@ class _DailyViewState extends ConsumerState<DailyView>
 
     return Column(
       children: [
-        // 종일 이벤트 섹션
-        DailyAllDaySection(
-          allDayEvents: allDayEvents,
-          onEventTap: _openEditDialog,
-          onToggleTodo: (todoId, isCompleted) {
-            ref.read(toggleTodoProvider)(todoId, isCompleted);
-          },
+        // 종일 이벤트 + 습관 섹션 — 최대 높이를 제한하여 타임라인 영역 오버플로를 방지한다
+        Flexible(
+          flex: 0,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.3,
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                children: [
+                  DailyAllDaySection(
+                    allDayEvents: allDayEvents,
+                    onEventTap: _openEditDialog,
+                    onToggleTodo: (todoId, isCompleted) {
+                      ref.read(toggleTodoProvider)(todoId, isCompleted);
+                    },
+                  ),
+                  DailyHabitSection(habitsForDay: habitsForDay),
+                ],
+              ),
+            ),
+          ),
         ),
-        // 습관 체크리스트 섹션
-        DailyHabitSection(habitsForDay: habitsForDay),
         // 타임라인 영역
         Expanded(
           child: SingleChildScrollView(

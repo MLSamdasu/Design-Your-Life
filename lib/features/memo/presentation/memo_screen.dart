@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/ads/ad_provider.dart';
 import '../../../core/theme/color_tokens.dart';
 import '../../../core/theme/layout_tokens.dart';
 import '../../../core/theme/spacing_tokens.dart';
@@ -117,7 +118,12 @@ class _MemoScreenState extends ConsumerState<MemoScreen> {
           alignment: Alignment.centerRight,
           child: Padding(
             padding: const EdgeInsets.only(right: AppSpacing.sm),
-            child: MemoSaveButton(onSave: () => _saveNow(memo)),
+            child: MemoSaveButton(
+              onSave: () => _saveNow(memo),
+              // 데스크톱에서는 AdConstants.isAdSupported가 false이므로 자동 무시된다
+              onPostSave: () =>
+                  ref.read(adServiceProvider).showInterstitialAd(),
+            ),
           ),
         ),
         // 모드 전환 + 드로잉 도구 툴바

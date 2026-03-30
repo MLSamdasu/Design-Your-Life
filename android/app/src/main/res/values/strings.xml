@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Google Sign-In 기본 웹 클라이언트 ID 플레이스홀더 -->
-    <!-- 실제 값은 google-services.json을 프로젝트에 추가하면 자동 생성된다 -->
-    <!-- Firebase Console > 프로젝트 설정 > Android 앱에서 확인 가능하다 -->
-    <string name="default_web_client_id">YOUR_WEB_CLIENT_ID_PLACEHOLDER</string>
+    <!-- default_web_client_id는 google-services.json에서 Google Services 플러그인이 자동 생성한다 -->
+    <!-- 수동 지정 불필요 — 플러그인이 oauth_client(client_type:3)에서 추출한다 -->
 
     <!-- 앱 이름 -->
     <string name="app_name">Design Your Life</string>

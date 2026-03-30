@@ -41,11 +41,10 @@
             android:name="flutterEmbedding"
             android:value="2"/>
 
-        <!-- AdMob 앱 ID (테스트용 Google 공식 샘플 앱 ID) -->
-        <!-- 프로덕션 배포 시 AdMob 콘솔에서 발급받은 실제 앱 ID로 교체한다 -->
+        <!-- AdMob 앱 ID (프로덕션) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713"/>
+            android:value="ca-app-pub-1188822284077857~8485548224"/>
 
         <!-- Google Sign-In OAuth 클라이언트 ID 플레이스홀더 -->
         <!-- 실제 배포 시 Firebase Console에서 발급받은 클라이언트 ID로 교체한다 -->

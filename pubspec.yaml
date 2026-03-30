@@ -68,6 +68,16 @@ dependencies:
   # 전면 광고(interstitial)와 리워드 광고(rewarded) 지원
   google_mobile_ads: 5.3.0
 
+  # ── Firebase (무료 서비스) ────────────────────────────────────
+  # Firebase 코어 초기화 (모든 Firebase 서비스의 필수 의존성)
+  firebase_core: 3.15.2
+  # 크래시 자동 리포팅 (프로덕션 안정성 모니터링)
+  firebase_crashlytics: 4.3.10
+  # DAU/리텐션/이벤트 트래킹 (사용자 행동 분석)
+  firebase_analytics: 11.6.0
+  # 강제 업데이트 팝업, 기능 토글 (서버 배포 없이 원격 제어)
+  firebase_remote_config: 5.5.0
+
   # ── HTTP 클라이언트 ─────────────────────────────────────────
   # GitHub API 통신용 HTTP 클라이언트 (GitHub 백업 기능)
   http: 1.3.0

@@ -23,6 +23,8 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
     // Firebase/Google Sign-In 통합을 위한 Google Services 플러그인
     id("com.google.gms.google-services") version "4.4.2" apply false
+    // Firebase Crashlytics 크래시 리포팅 Gradle 플러그인
+    id("com.google.firebase.crashlytics") version "3.0.3" apply false
 }
 
 include(":app")

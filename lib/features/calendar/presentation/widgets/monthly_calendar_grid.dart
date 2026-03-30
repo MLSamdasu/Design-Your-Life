@@ -48,21 +48,10 @@ class MonthlyCalendarGrid extends StatelessWidget {
       selectedDayPredicate: (day) => isSameDay(day, selectedDate),
       onDaySelected: onDaySelected,
       onPageChanged: onPageChanged,
-      // 헤더 스타일: 글래스 텍스트
-      headerStyle: HeaderStyle(
-        formatButtonVisible: false,
-        titleCentered: true,
-        titleTextStyle: AppTypography.titleLg
-            .copyWith(color: context.themeColors.textPrimary),
-        leftChevronIcon: Icon(
-          Icons.chevron_left_rounded,
-          color: context.themeColors.textPrimaryWithAlpha(0.70),
-        ),
-        rightChevronIcon: Icon(
-          Icons.chevron_right_rounded,
-          color: context.themeColors.textPrimaryWithAlpha(0.70),
-        ),
-      ),
+      // 부모 Flexible 영역을 채우도록 설정하여 6행 월의 오버플로를 방지한다
+      shouldFillViewport: true,
+      // 헤더 숨김: CalendarHeader에서 이미 월/연도 네비게이션을 제공한다
+      headerVisible: false,
       // 요일 헤더 스타일
       daysOfWeekStyle: DaysOfWeekStyle(
         weekdayStyle: AppTypography.captionLg.copyWith(

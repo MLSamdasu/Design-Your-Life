@@ -19,7 +19,10 @@ class MemoSaveButton extends StatefulWidget {
   /// 즉시 저장 콜백
   final VoidCallback onSave;
 
-  const MemoSaveButton({super.key, required this.onSave});
+  /// 저장 완료 후 추가 동작 콜백 (예: 전면 광고 표시)
+  final VoidCallback? onPostSave;
+
+  const MemoSaveButton({super.key, required this.onSave, this.onPostSave});
 
   @override
   State<MemoSaveButton> createState() => _MemoSaveButtonState();
@@ -47,6 +50,8 @@ class _MemoSaveButtonState extends State<MemoSaveButton> {
       const Duration(milliseconds: _kSavedFeedbackMs),
       () {
         if (mounted) setState(() => _showSaved = false);
+        // 피드백 애니메이션 완료 후 후속 동작 실행 (전면 광고 등)
+        widget.onPostSave?.call();
       },
     );
   }

@@ -1,5 +1,5 @@
 // C0.1/C0.6: 앱 진입점
-// 초기화 순서: Hive(AES 암호화) → 세션 복원 → ProviderScope → runApp
+// 초기화 순서: Firebase → Hive(AES 암호화) → 세션 복원 → ProviderScope → runApp
 // 입력: 없음 (시스템 진입점)
 // 출력: Flutter 앱 실행
 import 'package:flutter/material.dart';
@@ -10,21 +10,31 @@ import 'app.dart';
 import 'core/ads/ad_provider.dart';
 import 'core/auth/auth_provider.dart';
 import 'core/cache/hive_initializer.dart';
+import 'core/config/analytics_service.dart';
+import 'core/config/firebase_config.dart';
 import 'core/error/error_handler.dart';
 import 'core/providers/global_providers.dart';
 
 /// 앱 진입점
-/// Hive 초기화 완료 후 ProviderScope를 씌워 runApp을 호출한다.
+/// Firebase → Hive 초기화 완료 후 ProviderScope를 씌워 runApp을 호출한다.
 /// 초기화 중 발생하는 예외는 ErrorHandler.setupGlobalErrorHandlers가 처리한다.
 Future<void> main() async {
   // Flutter 바인딩을 먼저 초기화해야 플랫폼 채널을 사용할 수 있다
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('[STARTUP] WidgetsFlutterBinding 완료');
 
-  // 전역 Flutter/Dart 에러 핸들러 등록
-  // unhandledError가 발생해도 앱이 강제 종료되지 않고 로깅 후 복구를 시도한다
-  ErrorHandler.setupGlobalErrorHandlers();
-  debugPrint('[STARTUP] ErrorHandler 등록 완료');
+  // Firebase 초기화 (Crashlytics, Analytics, Remote Config)
+  // Hive보다 먼저 초기화하여 이후 발생하는 크래시도 수집한다.
+  // 미구성 플랫폼에서는 내부적으로 예외를 삼키고 로컬 모드로 진행한다.
+  await FirebaseConfig.initialize();
+  debugPrint('[STARTUP] Firebase 초기화 완료 (isInitialized=${FirebaseConfig.isInitialized})');
+
+  // Firebase 초기화 성공 시 Crashlytics가 에러 핸들러를 덮어쓰므로
+  // Firebase 미초기화 시에만 로컬 ErrorHandler를 등록한다
+  if (!FirebaseConfig.isInitialized) {
+    ErrorHandler.setupGlobalErrorHandlers();
+    debugPrint('[STARTUP] ErrorHandler 등록 완료 (Firebase 미사용 폴백)');
+  }
 
   // 한국어 로케일 데이터 초기화 (DateFormat 'ko_KR' 사용 전 필수)
   await initializeDateFormatting('ko_KR');
@@ -78,6 +88,9 @@ class _AppWithAuthRestoreState extends ConsumerState<_AppWithAuthRestore>
         debugPrint('[STARTUP] restoreSession 실패: $e');
         ErrorHandler.logServiceError('Main:restoreSession', e, stack);
       }
+
+      // Firebase Analytics: 앱 오픈 이벤트 로깅
+      AnalyticsService.logEvent('app_open');
 
       // AdMob 광고 미리 로드 (인증 복원 후 백그라운드에서 수행)
       debugPrint('[STARTUP] adInit 시작...');

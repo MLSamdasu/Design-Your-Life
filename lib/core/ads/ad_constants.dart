@@ -39,11 +39,11 @@ abstract final class AdConstants {
 
   /// Android 프로덕션 전면 광고 ID
   static const _androidProdInterstitialId =
-      'YOUR_ANDROID_INTERSTITIAL_AD_UNIT_ID';
+      'ca-app-pub-1188822284077857/8698871458';
 
   /// Android 프로덕션 리워드 광고 ID
   static const _androidProdRewardedId =
-      'YOUR_ANDROID_REWARDED_AD_UNIT_ID';
+      'ca-app-pub-1188822284077857/7118399730';
 
   /// iOS 프로덕션 전면 광고 ID
   static const _iosProdInterstitialId =

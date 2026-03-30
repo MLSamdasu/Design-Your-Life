@@ -1,10 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // google-services.json 파싱을 위한 Google Services 플러그인
     id("com.google.gms.google-services")
+    // Firebase Crashlytics 크래시 리포팅 플러그인
+    id("com.google.firebase.crashlytics")
     // Flutter Gradle 플러그인은 Android/Kotlin 플러그인 이후에 적용해야 한다
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// 릴리즈 서명 키 정보를 key.properties 파일에서 읽어온다
+// key.properties에는 storePassword, keyPassword, keyAlias, storeFile이 정의되어 있다
+val keystorePropertiesFile = rootProject.file("app/key.properties")
+val keystoreProperties = Properties().apply {
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
 }
 
 android {
@@ -22,8 +35,10 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
 
     defaultConfig {
@@ -40,20 +55,32 @@ android {
         multiDexEnabled = true
     }
 
+    // 릴리즈 서명 구성 (key.properties 파일에서 읽어온다)
+    // 비밀번호를 소스 코드에 하드코딩하지 않고 외부 파일에서 로드한다
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            storeFile = keystoreProperties.getProperty("storeFile")?.let(::file)
+            storePassword = keystoreProperties.getProperty("storePassword")
+        }
+    }
+
     buildTypes {
-        // 릴리스 빌드: R8 난독화 + 리소스 축소 활성화 (보안 요구사항)
+        // 릴리스 빌드: R8 난독화 + 리소스 축소 + 프로덕션 서명
         release {
-            // R8 코드 최소화 및 난독화 활성화
             isMinifyEnabled = true
-            // 사용하지 않는 리소스 제거로 APK 크기 최적화
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // 릴리스용 서명 설정
-            // 실제 배포 시 key.properties 파일로 서명 키를 구성한다
-            signingConfig = signingConfigs.getByName("debug")
+            // key.properties 존재 시 릴리즈 서명, 없으면 디버그 서명
+            signingConfig = try {
+                signingConfigs.getByName("release")
+            } catch (_: Exception) {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
             // 디버그 빌드: 난독화 비활성화로 디버깅 편의성 확보
