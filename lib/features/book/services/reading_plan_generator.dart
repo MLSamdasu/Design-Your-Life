@@ -5,11 +5,20 @@ import '../models/book.dart';
 import '../models/reading_plan.dart';
 
 /// 수동 분배 항목 모델
+/// 페이지 모드: startPage~endPage / 챕터 모드: chapter 번호
 class ManualPlanEntry {
   final DateTime date;
   final int startPage;
   final int endPage;
-  const ManualPlanEntry({required this.date, required this.startPage, required this.endPage});
+  final int chapter; // 챕터 모드 전용
+  final bool isRestDay; // 쉬는 날 여부
+  const ManualPlanEntry({
+    required this.date,
+    this.startPage = 0,
+    this.endPage = 0,
+    this.chapter = 0,
+    this.isRestDay = false,
+  });
 }
 
 /// 독서 계획 자동/수동 생성 및 재분배 서비스
@@ -23,13 +32,23 @@ class ReadingPlanGenerator {
   }
 
   /// 수동 분배 모드: 사용자 입력 기반으로 독서 계획을 생성한다
-  static List<ReadingPlan> generateManualPlans(Book book, List<ManualPlanEntry> entries) {
+  /// 쉬는 날은 제외하고, 챕터 모드에서는 chapter 값을 사용한다
+  static List<ReadingPlan> generateManualPlans(
+    Book book, List<ManualPlanEntry> entries,
+  ) {
     final now = DateTime.now();
-    return entries.map((e) => ReadingPlan(
-      id: _uuid.v4(), bookId: book.id,
-      date: AppDateUtils.toDateString(e.date),
-      startUnit: e.startPage, endUnit: e.endPage, createdAt: now,
-    )).toList();
+    final isChapter = book.trackingMode == 'chapter';
+    return entries
+        .where((e) => !e.isRestDay)
+        .map((e) => ReadingPlan(
+              id: _uuid.v4(),
+              bookId: book.id,
+              date: AppDateUtils.toDateString(e.date),
+              startUnit: isChapter ? e.chapter : e.startPage,
+              endUnit: isChapter ? e.chapter : e.endPage,
+              createdAt: now,
+            ))
+        .toList();
   }
 
   /// 페이지 기반 계획: 총 페이지를 균등 배분, 마지막 날에 나머지 합산
@@ -118,9 +137,10 @@ class ReadingPlanGenerator {
     return AppDateUtils.toDateString(shiftedLast).compareTo(examStr) > 0;
   }
 
-  /// 목표 날짜 결정 (targetDate > targetMonth 순서)
+  /// 목표 날짜 결정 — targetDate 우선, targetMonth는 하위 호환용 폴백
   static DateTime? _resolveTargetDate(Book book) {
     if (book.targetDate != null) return book.targetDate;
+    // 하위 호환: 기존 targetMonth 데이터가 있는 경우 해당 월의 말일을 반환
     if (book.targetMonth != null && book.targetMonth!.isNotEmpty) {
       final parts = book.targetMonth!.split('-');
       if (parts.length == 2) {

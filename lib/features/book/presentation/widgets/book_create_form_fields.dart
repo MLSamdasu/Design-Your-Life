@@ -1,5 +1,5 @@
 // F-Book: 책 생성 폼 필드 — BookCreateDialog에서 사용하는 입력 위젯 모음
-// 제목, 설명, 페이지수/챕터수 토글, 시작일, 목표월, 시험일 등
+// 제목, 설명, 페이지수/챕터수 토글, 시작일, 목표일, 시험일 등
 import 'package:flutter/material.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../shared/widgets/glass_input_field.dart';
@@ -22,8 +22,8 @@ class BookCreateFormFields extends StatelessWidget {
   final ValueChanged<TrackingMode> onTrackingModeChanged;
   final DateTime startDate;
   final VoidCallback onStartDateTap;
-  final DateTime? targetMonth;
-  final VoidCallback onTargetMonthTap;
+  final DateTime? targetDate;
+  final VoidCallback onTargetDateTap;
   final bool hasExam;
   final ValueChanged<bool> onHasExamChanged;
   final DateTime? examDate;
@@ -39,8 +39,8 @@ class BookCreateFormFields extends StatelessWidget {
     required this.onTrackingModeChanged,
     required this.startDate,
     required this.onStartDateTap,
-    required this.targetMonth,
-    required this.onTargetMonthTap,
+    required this.targetDate,
+    required this.onTargetDateTap,
     required this.hasExam,
     required this.onHasExamChanged,
     required this.examDate,
@@ -101,13 +101,13 @@ class BookCreateFormFields extends StatelessWidget {
           onTap: onStartDateTap,
         ),
         const SizedBox(height: AppSpacing.xl),
-        // 목표 달 선택
+        // 목표일 선택 (날짜 기반)
         DatePickerRow(
-          label: '목표 달',
-          value: targetMonth != null
-              ? '${targetMonth!.year}년 ${targetMonth!.month}월'
+          label: '목표일',
+          value: targetDate != null
+              ? _formatDate(targetDate!)
               : '선택하세요',
-          onTap: onTargetMonthTap,
+          onTap: onTargetDateTap,
         ),
         const SizedBox(height: AppSpacing.xl),
         // 시험 있음 토글

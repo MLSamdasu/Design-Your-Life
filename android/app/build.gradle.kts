@@ -49,8 +49,8 @@ android {
         // API 35 (Android 15) 대상
         targetSdk = 35
         // Google Play Store 버전 코드 (업데이트 시 반드시 증가)
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
         // 64K 메서드 제한 초과를 대비한 멀티덱스 활성화
         multiDexEnabled = true
     }

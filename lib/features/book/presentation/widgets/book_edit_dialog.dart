@@ -29,7 +29,7 @@ class _State extends ConsumerState<BookEditDialog> {
   late final TextEditingController _daysCtrl;
   late TrackingMode _mode;
   late DateTime _startDate;
-  DateTime? _targetMonth;
+  DateTime? _targetDate;
   late bool _hasExam;
   DateTime? _examDate;
   bool _regenerate = false;
@@ -45,17 +45,9 @@ class _State extends ConsumerState<BookEditDialog> {
         text: _mode == TrackingMode.pages ? '${b.totalPages}' : '${b.totalChapters}');
     _daysCtrl = TextEditingController(text: '${b.daysPerChapter}');
     _startDate = b.startDate;
-    _targetMonth = _parseMonth(b.targetMonth);
+    _targetDate = b.targetDate;
     _hasExam = b.examDate != null;
     _examDate = b.examDate;
-  }
-
-  DateTime? _parseMonth(String? s) {
-    if (s == null || s.isEmpty) return null;
-    final p = s.split('-');
-    if (p.length != 2) return null;
-    final y = int.tryParse(p[0]), m = int.tryParse(p[1]);
-    return (y != null && m != null) ? DateTime(y, m) : null;
   }
 
   @override
@@ -91,10 +83,10 @@ class _State extends ConsumerState<BookEditDialog> {
                 onTrackingModeChanged: (m) => setState(() => _mode = m),
                 startDate: _startDate,
                 onStartDateTap: () => _pick(_startDate, (d) => _startDate = d),
-                targetMonth: _targetMonth,
-                onTargetMonthTap: () => _pick(
-                    _targetMonth ?? DateTime.now().add(const Duration(days: 30)),
-                    (d) => _targetMonth = DateTime(d.year, d.month)),
+                targetDate: _targetDate,
+                onTargetDateTap: () => _pick(
+                    _targetDate ?? DateTime.now().add(const Duration(days: 30)),
+                    (d) => _targetDate = d),
                 hasExam: _hasExam,
                 onHasExamChanged: (v) => setState(() { _hasExam = v; if (!v) _examDate = null; }),
                 examDate: _examDate,
@@ -152,15 +144,13 @@ class _State extends ConsumerState<BookEditDialog> {
           _mode == TrackingMode.pages ? '총 페이지 수를 입력해주세요' : '총 챕터 수를 입력해주세요');
       return;
     }
-    final tStr = _targetMonth != null
-        ? '${_targetMonth!.year}-${_targetMonth!.month.toString().padLeft(2, '0')}' : null;
     final updated = widget.book.copyWith(
       title: title,
       description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
       totalPages: _mode == TrackingMode.pages ? total : 0,
       totalChapters: _mode == TrackingMode.chapters ? total : 0,
       trackingMode: _mode == TrackingMode.pages ? 'page' : 'chapter',
-      startDate: _startDate, targetMonth: tStr, examDate: _examDate,
+      startDate: _startDate, targetDate: _targetDate, examDate: _examDate,
       daysPerChapter: int.tryParse(_daysCtrl.text.trim()) ?? 1,
       updatedAt: DateTime.now(),
     );

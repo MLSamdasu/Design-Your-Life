@@ -8,7 +8,6 @@ import '../../../../core/theme/color_tokens.dart';
 import '../../../../core/theme/spacing_tokens.dart';
 import '../../../../core/theme/theme_colors.dart';
 import '../../../../core/theme/typography_tokens.dart';
-import '../../../../shared/widgets/animated_checkbox.dart';
 import '../../../../shared/widgets/animated_strikethrough.dart';
 import '../../../../shared/widgets/app_snack_bar.dart';
 import '../../models/reading_plan.dart';
@@ -46,12 +45,18 @@ class ReadingPlanItem extends ConsumerWidget {
 
     return Row(
       children: [
-        // 체크박스
-        AnimatedCheckbox(
-          isCompleted: isCompleted,
-          onTap: () => _handleToggle(context, ref, isCompleted),
+        // 체크박스 — Material Checkbox로 터치 영역 보장
+        SizedBox(
+          width: 40, height: 40,
+          child: Checkbox(
+            value: isCompleted,
+            onChanged: (v) => _handleToggle(context, ref, isCompleted),
+            activeColor: context.themeColors.accent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(6)),
+          ),
         ),
-        const SizedBox(width: AppSpacing.lg),
+        const SizedBox(width: AppSpacing.sm),
         // 책 제목 + 페이지 범위 (취소선 애니메이션)
         Expanded(
           child: AnimatedStrikethrough(

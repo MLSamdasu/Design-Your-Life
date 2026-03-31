@@ -18,7 +18,7 @@ final readingPlansForBookProvider =
     Provider.family<List<ReadingPlan>, String>((ref, bookId) {
   final rawList = ref.watch(allReadingPlansRawProvider);
   final plans = rawList
-      .where((m) => m['book_id'] == bookId)
+      .where((m) => m['book_id']?.toString() == bookId)
       .map((m) => ReadingPlan.fromMap(m))
       .toList();
   plans.sort((a, b) => a.date.compareTo(b.date));
@@ -32,7 +32,7 @@ final todayReadingPlansProvider = Provider<List<ReadingPlan>>((ref) {
   final rawList = ref.watch(allReadingPlansRawProvider);
 
   return rawList
-      .where((m) => m['date'] == todayStr)
+      .where((m) => m['date']?.toString() == todayStr)
       .map((m) => ReadingPlan.fromMap(m))
       .toList();
 });
@@ -44,7 +44,7 @@ final selectedDayReadingPlansProvider =
   final rawList = ref.watch(allReadingPlansRawProvider);
 
   final plans = rawList
-      .where((m) => m['date'] == dateStr)
+      .where((m) => m['date']?.toString() == dateStr)
       .map((m) => ReadingPlan.fromMap(m))
       .toList();
   plans.sort((a, b) => a.date.compareTo(b.date));
@@ -61,7 +61,7 @@ final toggleReadingPlanProvider =
   return (String planId, bool completed) async {
     // 계획을 조회하여 완료 상태를 변경한다
     final rawList = ref.read(allReadingPlansRawProvider);
-    final planMap = rawList.where((m) => m['id'] == planId).firstOrNull;
+    final planMap = rawList.where((m) => m['id']?.toString() == planId).firstOrNull;
     if (planMap == null) return;
 
     final plan = ReadingPlan.fromMap(planMap);
@@ -138,7 +138,7 @@ final postponePlanProvider =
 /// 도서별 진행률 Provider (0.0 ~ 1.0)
 final bookProgressProvider = Provider.family<double, String>((ref, bookId) {
   final rawBooks = ref.watch(allBooksRawProvider);
-  final bookMap = rawBooks.where((m) => m['id'] == bookId).firstOrNull;
+  final bookMap = rawBooks.where((m) => m['id']?.toString() == bookId).firstOrNull;
   if (bookMap == null) return 0.0;
 
   final book = Book.fromMap(bookMap);
@@ -152,7 +152,7 @@ final bookProgressProvider = Provider.family<double, String>((ref, bookId) {
 /// 시험일 경고 Provider (경고 문자열 또는 null)
 final examWarningProvider = Provider.family<String?, String>((ref, bookId) {
   final rawBooks = ref.watch(allBooksRawProvider);
-  final bookMap = rawBooks.where((m) => m['id'] == bookId).firstOrNull;
+  final bookMap = rawBooks.where((m) => m['id']?.toString() == bookId).firstOrNull;
   if (bookMap == null) return null;
 
   final book = Book.fromMap(bookMap);

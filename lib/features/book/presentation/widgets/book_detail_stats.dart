@@ -1,4 +1,4 @@
-// F-Book: 책 상세 통계 위젯 — 통계 행, 시험 카운트다운, 목표 달 표시
+// F-Book: 책 상세 통계 위젯 — 통계 행, 시험 카운트다운, 목표일 표시
 // BookDetailScreen에서 분리된 통계/정보 위젯 모음
 import 'package:flutter/material.dart';
 import '../../../../core/theme/color_tokens.dart';
@@ -77,21 +77,21 @@ class BookExamCountdown extends StatelessWidget {
   }
 }
 
-/// 목표 달 표시
-class BookTargetMonthRow extends StatelessWidget {
-  final String targetMonth;
-  const BookTargetMonthRow({super.key, required this.targetMonth});
+/// 목표일 표시
+class BookTargetDateRow extends StatelessWidget {
+  final DateTime targetDate;
+  const BookTargetDateRow({super.key, required this.targetDate});
 
   @override
   Widget build(BuildContext context) {
-    final parts = targetMonth.split('-');
-    final year = parts.isNotEmpty ? parts[0] : '';
-    final month = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    final formatted = '${targetDate.year}.'
+        '${targetDate.month.toString().padLeft(2, '0')}.'
+        '${targetDate.day.toString().padLeft(2, '0')}';
     return Row(children: [
       Icon(Icons.flag_rounded, color: ColorTokens.main, size: AppLayout.iconMd),
       const SizedBox(width: AppSpacing.md),
       Flexible(
-        child: Text('목표: $year년 $month월 완독',
+        child: Text('목표일: $formatted 완독',
             overflow: TextOverflow.ellipsis,
             style: AppTypography.bodyMd.copyWith(
                 color: context.themeColors.textPrimaryWithAlpha(0.7))),

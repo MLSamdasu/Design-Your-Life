@@ -58,8 +58,8 @@ class BookDetailScreen extends ConsumerWidget {
               if (book.examDate != null) BookExamCountdown(examDate: book.examDate!, book: book),
               if (warning != null) ...[const SizedBox(height: AppSpacing.lg), ExamWarningBanner(message: warning)],
               const SizedBox(height: AppSpacing.xl),
-              if (book.targetMonth != null) ...[
-                BookTargetMonthRow(targetMonth: book.targetMonth!),
+              if (book.targetDate != null) ...[
+                BookTargetDateRow(targetDate: book.targetDate!),
                 const SizedBox(height: AppSpacing.xl),
               ],
               if (book.isCompleted) ...[BookCompletionBanner(bookTitle: book.title), const SizedBox(height: AppSpacing.xl)],
