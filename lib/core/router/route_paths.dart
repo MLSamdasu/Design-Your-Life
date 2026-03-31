@@ -37,6 +37,10 @@ abstract class RoutePaths {
   /// StatefulShellRoute 7번째 탭으로 포함
   static const String memo = '/memo';
 
+  /// 독서 캘린더 (F9)
+  /// StatefulShellRoute 8번째 탭으로 포함
+  static const String book = '/book';
+
   /// 업적/배지 화면 (F8)
   /// StatefulShellRoute 바깥 독립 라우트 (홈 대시보드 카드에서 진입)
   static const String achievements = '/achievements';
@@ -56,4 +60,5 @@ abstract class TabIndex {
   static const int goal = 4;
   static const int timer = 5;
   static const int memo = 6;
+  static const int book = 7;
 }

@@ -28,6 +28,8 @@ const allowedRestoreBoxes = {
   AppConstants.dailyRitualBox,
   AppConstants.dailyThreeBox,
   AppConstants.memosBox,
+  AppConstants.booksBox,
+  AppConstants.readingPlansBox,
 };
 
 /// 백업 JSON 파싱 결과

@@ -71,7 +71,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // 독립 라우트 (업적, 태그 관리 등 — 하단 탭 바 없음)
       ...buildStandaloneRoutes(),
 
-      // 메인 7탭 Shell (StatefulShellRoute.indexedStack)
+      // 메인 8탭 Shell (StatefulShellRoute.indexedStack)
       buildTabShellRoute(),
     ],
   );

@@ -1,7 +1,4 @@
-// F1: 홈 대시보드 메인 화면
-// 인사 헤더 + 투두 요약 카드 + 습관 요약 카드 + D-day 섹션 + 오늘의 요약으로 구성
-// AN-02: 화면 진입 시 카드 staggered fade-in + slide-up 애니메이션 (첫 진입만)
-// Pull-to-refresh: RefreshIndicator로 전체 데이터 갱신 (AN-15)
+// F1: 홈 대시보드 메인 화면 (AN-02 stagger + AN-15 pull-to-refresh)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/theme_colors.dart';
@@ -14,6 +11,7 @@ import 'widgets/timer_summary_card.dart';
 import 'widgets/todo_summary_card.dart';
 import 'widgets/habit_routine_summary_card.dart';
 import 'widgets/goal_summary_card.dart';
+import '../../book/presentation/widgets/today_reading_card.dart';
 import '../../../core/providers/data_store_providers.dart';
 import '../../../core/theme/spacing_tokens.dart';
 import '../../../core/theme/animation_tokens.dart';
@@ -179,8 +177,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                       const SizedBox(height: AppSpacing.xl),
 
-                      // 6. 올해의 목표 카드 (AN-02 index 7)
-                      _staggeredCard(const GoalSummaryCard(), 7),
+                      // 5.5. 오늘의 독서 카드 (AN-02 index 7)
+                      _staggeredCard(const TodayReadingCard(), 7),
+
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // 6. 올해의 목표 카드 (AN-02 index 8)
+                      _staggeredCard(const GoalSummaryCard(), 8),
                     ],
                   ),
                 ),

@@ -1,7 +1,4 @@
-// C0: 중앙 데이터 스토어 Provider (Single Source of Truth)
-// 각 데이터 타입별 버전 카운터 + 전체 목록 Provider를 정의한다.
-// 모든 파생 Provider는 이 파일의 allXxxRawProvider를 watch하여 데이터를 읽는다.
-// CRUD 후 해당 버전 카운터를 증가시키면 의존 Provider가 자동 갱신된다.
+// C0: 중앙 데이터 스토어 Provider (SSOT — 버전 카운터 + allXxxRawProvider)
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../constants/app_constants.dart';
@@ -49,6 +46,12 @@ final subGoalDataVersionProvider = StateProvider<int>((ref) => 0);
 
 /// 실천 할일 데이터 버전 카운터
 final goalTaskDataVersionProvider = StateProvider<int>((ref) => 0);
+
+/// 도서 데이터 버전 카운터
+final bookDataVersionProvider = StateProvider<int>((ref) => 0);
+
+/// 독서 계획 데이터 버전 카운터
+final readingPlanDataVersionProvider = StateProvider<int>((ref) => 0);
 
 // ─── 전체 데이터 Provider (Single Source of Truth) ───────────────────────
 // 각 Provider는 해당 버전 카운터를 watch하여 CRUD 시 자동 재로드된다
@@ -139,6 +142,21 @@ final allGoalTasksRawProvider = Provider<List<Map<String, dynamic>>>((ref) {
   return cache.getAll(AppConstants.goalTasksBox);
 });
 
+/// 전체 도서 목록 (Map 형태) — Single Source of Truth
+final allBooksRawProvider = Provider<List<Map<String, dynamic>>>((ref) {
+  ref.watch(bookDataVersionProvider);
+  final cache = ref.watch(hiveCacheServiceProvider);
+  return cache.getAll(AppConstants.booksBox);
+});
+
+/// 전체 독서 계획 목록 (Map 형태) — Single Source of Truth
+final allReadingPlansRawProvider =
+    Provider<List<Map<String, dynamic>>>((ref) {
+  ref.watch(readingPlanDataVersionProvider);
+  final cache = ref.watch(hiveCacheServiceProvider);
+  return cache.getAll(AppConstants.readingPlansBox);
+});
+
 // ─── 버전 일괄 증가 헬퍼 ──────────────────────────────────────────────────
 
 /// 모든 데이터 버전 카운터를 일괄 증가시킨다
@@ -176,4 +194,6 @@ void _bumpAll(T Function<T>(ProviderListenable<T>) read) {
   read(ritualDataVersionProvider.notifier).state++;
   read(dailyThreeDataVersionProvider.notifier).state++;
   read(memoDataVersionProvider.notifier).state++;
+  read(bookDataVersionProvider.notifier).state++;
+  read(readingPlanDataVersionProvider.notifier).state++;
 }

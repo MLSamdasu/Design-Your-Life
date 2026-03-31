@@ -70,6 +70,8 @@ abstract class AppConstants {
   static const String dailyThreeBox = 'dailyThreeBox';
   static const String memosBox = 'memosBox';
   static const String settingsBox = 'settingsBox';
+  static const String booksBox = 'booksBox';
+  static const String readingPlansBox = 'readingPlansBox';
   static const String syncMetaBox = 'syncMetaBox';
 
   // ─── Hive 설정 키 (HiveKeys 위임, 하위 호환) ──────────────────────────────

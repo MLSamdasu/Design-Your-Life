@@ -1,4 +1,4 @@
-// 공용 위젯: MainShell - 7탭 메인 레이아웃 쉘
+// 공용 위젯: MainShell - 8탭 메인 레이아웃 쉘
 // SRP 분리: SideNavRail→side_nav_rail.dart, SideNavItem→side_nav_item.dart,
 //      FloatingNavRail→floating_nav_rail.dart
 // 입력: StatefulNavigationShell / 출력: Scaffold
@@ -19,7 +19,7 @@ import '../providers/tutorial_provider.dart';
 import 'floating_nav_rail.dart';
 import 'tutorial_overlay.dart';
 
-/// 7탭 메인 레이아웃 Shell — 전체 화면 콘텐츠 + 플로팅 글래스 네비 레일
+/// 8탭 메인 레이아웃 Shell — 전체 화면 콘텐츠 + 플로팅 글래스 네비 레일
 class MainShell extends ConsumerStatefulWidget {
   final StatefulNavigationShell navigationShell;
 
@@ -104,8 +104,8 @@ class _MainShellState extends ConsumerState<MainShell>
 
     final current = widget.navigationShell.currentIndex;
     final newIndex = velocity < 0
-        ? (current + 1).clamp(TabIndex.home, TabIndex.memo)
-        : (current - 1).clamp(TabIndex.home, TabIndex.memo);
+        ? (current + 1).clamp(TabIndex.home, TabIndex.book)
+        : (current - 1).clamp(TabIndex.home, TabIndex.book);
 
     if (newIndex != current) {
       widget.navigationShell.goBranch(newIndex, initialLocation: false);

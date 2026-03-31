@@ -1,5 +1,5 @@
 // C0.4-B: 탭 및 독립 라우트 정의
-// StatefulShellRoute.indexedStack으로 7탭 하단 네비게이션을 구성한다.
+// StatefulShellRoute.indexedStack으로 8탭 하단 네비게이션을 구성한다.
 // 업적/태그 관리 등 탭 바깥 독립 라우트도 포함한다.
 // 입력: RoutePaths 상수, AppAnimation 토큰
 // 출력: List<RouteBase> (탭 셸 + 독립 라우트 목록)
@@ -17,6 +17,7 @@ import '../../features/habit/presentation/habit_screen.dart';
 import '../../features/goal/presentation/goal_screen.dart';
 import '../../features/timer/presentation/timer_screen.dart';
 import '../../features/memo/presentation/memo_screen.dart';
+import '../../features/book/presentation/book_screen.dart';
 
 // 독립 라우트 화면
 import '../../features/achievement/presentation/achievement_screen.dart';
@@ -69,7 +70,7 @@ List<RouteBase> buildStandaloneRoutes() => [
   ),
 ];
 
-/// 메인 7탭 StatefulShellRoute를 반환한다
+/// 메인 8탭 StatefulShellRoute를 반환한다
 /// 탭 전환 시 각 탭의 상태(스크롤 위치, 선택된 날짜)를 보존한다
 StatefulShellRoute buildTabShellRoute() =>
     StatefulShellRoute.indexedStack(
@@ -143,6 +144,16 @@ StatefulShellRoute buildTabShellRoute() =>
             GoRoute(
               path: RoutePaths.memo,
               builder: (context, state) => const MemoScreen(),
+            ),
+          ],
+        ),
+
+        // 탭 7: 독서 캘린더 (F9)
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: RoutePaths.book,
+              builder: (context, state) => const BookScreen(),
             ),
           ],
         ),

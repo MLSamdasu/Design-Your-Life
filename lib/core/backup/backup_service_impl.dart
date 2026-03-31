@@ -42,6 +42,8 @@ class BackupService {
     AppConstants.dailyRitualBox,
     AppConstants.dailyThreeBox,
     AppConstants.memosBox,
+    AppConstants.booksBox,
+    AppConstants.readingPlansBox,
   ];
 
   BackupService({

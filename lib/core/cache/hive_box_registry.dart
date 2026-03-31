@@ -40,6 +40,9 @@ abstract class HiveBoxRegistry {
       _safeOpenBox(AppConstants.dailyThreeBox, cipher: cipher),
       // 메모 (텍스트/드로잉)
       _safeOpenBox(AppConstants.memosBox, cipher: cipher),
+      // 독서 캘린더 (도서 + 독서 계획)
+      _safeOpenBox(AppConstants.booksBox, cipher: cipher),
+      _safeOpenBox(AppConstants.readingPlansBox, cipher: cipher),
     ]);
   }
 
@@ -76,6 +79,8 @@ abstract class HiveBoxRegistry {
       AppConstants.dailyRitualBox,
       AppConstants.dailyThreeBox,
       AppConstants.memosBox,
+      AppConstants.booksBox,
+      AppConstants.readingPlansBox,
       AppConstants.settingsBox,
       AppConstants.syncMetaBox,
     ];
